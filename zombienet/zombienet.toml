@@ -26,3 +26,8 @@ cumulus_based = true
   name = "charlie"
   command = "../target/release/xode-node"
   ws_port = 9988
+
+  [[parachains.collators]]
+  name = "dave"
+  command = "../target/release/xode-node"
+  ws_port = 9999
