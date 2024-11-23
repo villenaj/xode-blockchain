@@ -305,6 +305,10 @@ mod runtime {
 	#[runtime::pallet_index(33)]
 	pub type MessageQueue = pallet_message_queue;
 
+	// Xode Blockchain
+	#[runtime::pallet_index(40)]
+	pub type Assets = pallet_assets;
+
 	// Xode Staking
 	#[runtime::pallet_index(50)]
 	pub type XodeStaking = pallet_xode_staking;
