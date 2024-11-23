@@ -78,6 +78,9 @@ parachain-info.workspace = true
 
 pallet-assets.workspace = true
 
+sp-std.workspace = true
+pallet-contracts.workspace = true
+
 [features]
 default = ["std"]
 std = [
@@ -134,6 +137,7 @@ std = [
 	"xcm-executor/std",
 	"xcm/std",
 	"pallet-assets/std",
+	"pallet-contracts/std",
 ]
 
 runtime-benchmarks = [
@@ -161,6 +165,7 @@ runtime-benchmarks = [
 	"xcm-builder/runtime-benchmarks",
 	"xcm-executor/runtime-benchmarks",
 	"pallet-assets/runtime-benchmarks",
+	"pallet-contracts/runtime-benchmarks",
 ]
 
 try-runtime = [
@@ -187,6 +192,7 @@ try-runtime = [
 	"polkadot-runtime-common/try-runtime",
 	"sp-runtime/try-runtime",
 	"pallet-assets/try-runtime",
+	"pallet-contracts/try-runtime",
 ]
 
 # Enable the metadata hash generation.
