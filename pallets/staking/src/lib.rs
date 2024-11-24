@@ -79,6 +79,7 @@ pub mod pallet {
 		AuthoritiesRetrieved { authorities: Vec<T::AuthorityId>,},
 		MaxAuthoritiesRetrieved { max_authorities: u32,},
 		CandidateAdded { candidate: T::AuthorityId, },
+		CandidateRemoved { candidate: T::AuthorityId, },
 	}
 
 	/// Errors inform users that something went wrong.
@@ -178,6 +179,24 @@ pub mod pallet {
 				candidates.try_push(new_candidate.clone()).map_err(|_| "Max candidates reached")?;
 
 				Self::deposit_event(Event::CandidateAdded { candidate: new_candidate });
+				
+				Ok(())
+			})
+		}
+
+		#[pallet::call_index(5)] // Increment the call index appropriately
+		#[pallet::weight(Weight::from_parts(10_000, 0) + T::DbWeight::get().writes(1))]
+		pub fn remove_candidate(_origin: OriginFor<T>, candidate_to_remove: T::AuthorityId) -> DispatchResult {
+			let _who = ensure_signed(_origin)?;
+			Candidates::<T>::try_mutate(|candidates| -> DispatchResult {
+				ensure!(candidates.contains(&candidate_to_remove), "Candidate does not exist");
+				if let Some(pos) = candidates.iter().position(|x| x == &candidate_to_remove) {
+					candidates.remove(pos);
+				} else {
+					return Err("Failed to remove candidate".into());
+				}
+		
+				Self::deposit_event(Event::CandidateRemoved { candidate: candidate_to_remove });
 				
 				Ok(())
 			})
