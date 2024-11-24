@@ -40,6 +40,9 @@ pub mod pallet {
 
 		/// A type representing the weights required by the dispatchables of this pallet.
 		type WeightInfo: crate::weights::WeightInfo;
+
+		/// Maximum Candidates (Must match with Aura's maximum authorities)
+		type MaxCandidates: Get<u32>;
 	}
 
 	#[pallet::pallet]
@@ -56,6 +59,10 @@ pub mod pallet {
 		pub(crate) block_number: BlockNumberFor<T>,
 	}
 
+	/// Candidates
+	#[pallet::storage]
+	pub type Candidates<T: Config> = StorageValue<_, BoundedVec<T::AuthorityId, T::MaxCandidates>, ValueQuery>;
+
 	/// The pallet's storage items.
 	/// <https://paritytech.github.io/polkadot-sdk/master/polkadot_sdk_docs/guides/your_first_pallet/index.html#storage>
 	/// <https://paritytech.github.io/polkadot-sdk/master/frame_support/pallet_macros/attr.storage.html>
@@ -70,6 +77,8 @@ pub mod pallet {
 		/// We usually use passive tense for events.
 		SomethingStored { block_number: BlockNumberFor<T>, who: T::AccountId },
 		AuthoritiesRetrieved { authorities: Vec<T::AuthorityId>,},
+		MaxAuthoritiesRetrieved { max_authorities: u32,},
+		CandidateAdded { candidate: T::AuthorityId, },
 	}
 
 	/// Errors inform users that something went wrong.
@@ -146,10 +155,32 @@ pub mod pallet {
 		/// Retrieve the authorities in the Aura pallet.
 		#[pallet::call_index(2)]
 		#[pallet::weight(Weight::from_parts(10_000, 0) + T::DbWeight::get().writes(1))]
-		pub fn retrieve_authorities(origin: OriginFor<T>) -> DispatchResultWithPostInfo {
+		pub fn retrieve_authorities(_origin: OriginFor<T>) -> DispatchResultWithPostInfo {
 			let authorities = pallet_aura::Authorities::<T>::get();
 			Self::deposit_event(Event::AuthoritiesRetrieved { authorities: authorities.iter().cloned().collect() });
 			Ok(().into())
+		}
+
+		#[pallet::call_index(3)]
+		#[pallet::weight(Weight::from_parts(10_000, 0) + T::DbWeight::get().writes(1))]
+		pub fn retrieve_max_authorities(_origin: OriginFor<T>) -> DispatchResultWithPostInfo {
+			// Todo: Convert this code by getting the maximum authorities not the number of authorities
+			Self::deposit_event(Event::MaxAuthoritiesRetrieved { max_authorities: pallet_aura::Authorities::<T>::decode_len().unwrap_or(0) as u32});
+			Ok(().into())
+		}
+
+		#[pallet::call_index(4)]
+		#[pallet::weight(Weight::from_parts(10_000, 0) + T::DbWeight::get().writes(1))]
+		pub fn add_candidate(_origin: OriginFor<T>, new_candidate: T::AuthorityId) -> DispatchResult {
+			let _who = ensure_signed(_origin)?;
+        	Candidates::<T>::try_mutate(|candidates| -> DispatchResult {
+				ensure!(!candidates.contains(&new_candidate), "Candidate already exists");
+				candidates.try_push(new_candidate.clone()).map_err(|_| "Max candidates reached")?;
+
+				Self::deposit_event(Event::CandidateAdded { candidate: new_candidate });
+				
+				Ok(())
+			})
 		}
 
 	}
