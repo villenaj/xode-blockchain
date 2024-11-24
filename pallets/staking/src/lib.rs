@@ -103,28 +103,22 @@ pub mod pallet {
 	#[pallet::hooks]
 	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
 		fn on_initialize(current_block: BlockNumberFor<T>) -> Weight {
-			let interval = T::BlockInterval::get();
 			match NextBlockNumber::<T>::get() {
 				Some(next_block) => {
 					if current_block == next_block {
-						let new_block = current_block + BlockNumberFor::<T>::from(interval);
-						NextBlockNumber::<T>::put(new_block);
+						Self::update_next_block_number(current_block);
 					}
 					T::DbWeight::get().reads(1)
 				}
 				None => {
-					let new_block = current_block + BlockNumberFor::<T>::from(interval);
-					NextBlockNumber::<T>::put(new_block);
+					Self::update_next_block_number(current_block);
 					T::DbWeight::get().reads(1)
 				}
 			}
 		}
 	}
 
-	/// Dispatchable functions allows users to interact with the pallet and invoke state changes.
-	/// These functions materialize as "extrinsics", which are often compared to transactions.
-	/// Dispatchable functions must be annotated with a weight and must return a DispatchResult.
-	/// <https://paritytech.github.io/polkadot-sdk/master/polkadot_sdk_docs/guides/your_first_pallet/index.html#dispatchables>
+	/// Calls
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
 		/// An example dispatchable that takes a singles value as a parameter, writes the value to
@@ -227,6 +221,17 @@ pub mod pallet {
 				Ok(())
 			})
 		}
+
+	}
+
+	/// Helper functions
+	impl<T: Config> Pallet<T> {
+		/// Update the next block number event trigger
+		pub fn update_next_block_number(current_block: BlockNumberFor<T>) {
+			let interval = T::BlockInterval::get();
+			let new_block = current_block + BlockNumberFor::<T>::from(interval);
+			NextBlockNumber::<T>::put(new_block);
+		}	
 
 	}
 }
