@@ -7600,6 +7600,7 @@ dependencies = [
  "frame-benchmarking",
  "frame-support",
  "frame-system",
+ "hex",
  "pallet-aura",
  "parity-scale-codec",
  "scale-info",

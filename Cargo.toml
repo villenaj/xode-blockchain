@@ -15,6 +15,7 @@ pallet-xode-staking = { path = "./pallets/staking", default-features = false }
 clap = { version = "4.5.10" }
 codec = { version = "3.6.12", default-features = false, package = "parity-scale-codec" }
 color-print = { version = "0.3.4" }
+hex = { version = "0.4.3", default-features = false }
 cumulus-client-cli = { version = "0.18.0", default-features = false }
 cumulus-client-collator = { version = "0.18.0", default-features = false }
 cumulus-client-consensus-aura = { version = "0.18.0", default-features = false }

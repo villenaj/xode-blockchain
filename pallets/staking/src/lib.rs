@@ -30,6 +30,7 @@ pub mod pallet {
 	use frame_system::pallet_prelude::*;
 	use sp_runtime::traits::{CheckedAdd, One};
 	use scale_info::prelude::vec::Vec;
+	use hex::decode;
 
 	/// Configure the pallet by specifying the parameters and types on which it depends.
 	#[pallet::config]
@@ -46,6 +47,9 @@ pub mod pallet {
 
 		/// Block interval (used to determine the next block number)
 		type BlockInterval: Get<u32>;
+
+		/// Authorities that will be always present: vec!["",""]
+		type Invulnerables: Get<&'static [&'static str]>;
 	}
 
 	#[pallet::pallet]
@@ -98,6 +102,9 @@ pub mod pallet {
 		NoneValue,
 		/// Errors should have helpful documentation associated with them.
 		StorageOverflow,
+		InvulnerableDecodeError,
+		InvulnerableConversionError,
+		ExceedsMaxCandidates,
 	}
 
 	#[pallet::hooks]
@@ -106,12 +113,16 @@ pub mod pallet {
 			match NextBlockNumber::<T>::get() {
 				Some(next_block) => {
 					if current_block == next_block {
+						// Todo: Replace the authorities with candidates 
 						Self::update_next_block_number(current_block);
 					}
 					T::DbWeight::get().reads(1)
 				}
 				None => {
+					Self::add_invulnerables();
+
 					Self::update_next_block_number(current_block);
+					
 					T::DbWeight::get().reads(1)
 				}
 			}
@@ -226,12 +237,35 @@ pub mod pallet {
 
 	/// Helper functions
 	impl<T: Config> Pallet<T> {
+		
+		/// Add candidate
+		pub fn push_candidate(candidate: T::AuthorityId) -> DispatchResult {
+			Candidates::<T>::try_mutate(|candidates| -> DispatchResult {
+				ensure!(!candidates.contains(&candidate), "Candidate already exists");
+				candidates.try_push(candidate.clone()).map_err(|_| "Max candidates reached")?;
+
+				Self::deposit_event(Event::CandidateAdded { candidate: candidate });
+				
+				Ok(())
+			})
+		}
+
 		/// Update the next block number event trigger
 		pub fn update_next_block_number(current_block: BlockNumberFor<T>) {
 			let interval = T::BlockInterval::get();
 			let new_block = current_block + BlockNumberFor::<T>::from(interval);
 			NextBlockNumber::<T>::put(new_block);
 		}	
+
+		/// Push the invulnerables
+		pub fn add_invulnerables() {
+			for invulnerable in T::Invulnerables::get() {
+				let invulnerable = if invulnerable.starts_with("0x") { &invulnerable[2..] } else { invulnerable };
+				let decoded_bytes = decode(invulnerable).expect("Invalid hex string");
+				let candidate = T::AuthorityId::decode(&mut decoded_bytes.as_slice()).expect("Error in decoding");
+				let _ = Self::push_candidate(candidate);
+			}
+		}
 
 	}
 }

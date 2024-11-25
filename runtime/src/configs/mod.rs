@@ -436,10 +436,18 @@ impl pallet_contracts::Config for Runtime {
 	type MaxTransientStorageSize = ConstU32<{ 1 * 1024 * 1024 }>;
 }
 
-/// Configure the pallet xode staking in pallets/staking.
+// Configure the pallet xode staking in pallets/staking.
+parameter_types! {
+	pub const InvulnerableNodes: &'static [&'static str] = &[
+		"0x306721211d5404bd9da88e0204360a1a9ab8b87c66c1bc2fcdd37f3c2222cc20",  // Charlie (Use for development)
+		"0x90b5ab205c6974c9ea841be688864633dc9ca8a357843eeacf2314649965fe22" // Dave (Use for development)
+	];
+}
+
 impl pallet_xode_staking::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type WeightInfo = pallet_xode_staking::weights::SubstrateWeight<Runtime>;
 	type MaxCandidates = ConstU32<1_000>;
 	type BlockInterval = ConstU32<5>;  // In production this must accomodate all authorities
+	type Invulnerables = InvulnerableNodes;
 }

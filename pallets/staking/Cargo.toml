@@ -24,6 +24,7 @@ frame-support.workspace = true
 frame-system.workspace = true
 sp-runtime.workspace = true
 pallet-aura.workspace = true
+hex.workspace = true
 
 [dev-dependencies]
 sp-core = { default-features = true, workspace = true }
