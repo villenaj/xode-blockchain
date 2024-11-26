@@ -93,6 +93,7 @@ pub mod pallet {
 		CandidateAdded { candidate: T::AuthorityId, },
 		CandidateRemoved { candidate: T::AuthorityId, },
 		AuthorityAdded { authority: T::AuthorityId, },
+		AuthorityRemoved { authority: T::AuthorityId, },
 	}
 
 	/// Errors inform users that something went wrong.
@@ -106,8 +107,13 @@ pub mod pallet {
 		/// Staking errors
 		ExceedsMaxCandidates,
 		ErrorAddingCandidate,
+		CandidateAlreadyExist,
 		ExceedsMaxAuthorities,
 		ErrorAddingAuthority,
+		ErrorRemovingAuthority,
+		AuthorityAlreadyExist,
+		AuthorityDoesNotExist,
+		AuthorityDoesNotExistInCandidates,
 	}
 
 	#[pallet::hooks]
@@ -116,8 +122,7 @@ pub mod pallet {
 			match NextBlockNumber::<T>::get() {
 				Some(next_block) => {
 					if current_block == next_block {
-						// Todo: Replace the authorities with candidates 
-
+						Self::merge_candidates_to_authorities();
 
 						Self::update_next_block_number(current_block);
 					}
@@ -243,26 +248,45 @@ pub mod pallet {
 	/// Helper functions
 	impl<T: Config> Pallet<T> {
 		
-		/// Add candidate
+		/// Add a candidate
 		pub fn add_candidate(candidate: T::AuthorityId) -> DispatchResult {
 			Candidates::<T>::try_mutate(|candidates| -> DispatchResult {
-				ensure!(!candidates.contains(&candidate), Error::<T>::ExceedsMaxCandidates);
-				candidates.try_push(candidate.clone()).map_err(|_| Error::<T>::ErrorAddingCandidate)?;
-
+				// Search if the candidate already exist
+				ensure!(!candidates.contains(&candidate), Error::<T>::CandidateAlreadyExist);
+				// Push the candidate
+				candidates.try_push(candidate.clone()).map_err(|_| Error::<T>::ExceedsMaxCandidates)?;
+				// Log the event
 				Self::deposit_event(Event::CandidateAdded { candidate: candidate });
-				
 				Ok(())
 			})
 		}
 
-		/// Add authority
+		/// Add an authority
 		pub fn add_authority(authority: T::AuthorityId) -> DispatchResult {
 			pallet_aura::Authorities::<T>::try_mutate(|authorities| -> DispatchResult {
-				ensure!(!authorities.contains(&authority), Error::<T>::ExceedsMaxAuthorities);
-				authorities.try_push(authority.clone()).map_err(|_| Error::<T>::ErrorAddingAuthority)?;
-
+				// Search if the authority already exist
+				ensure!(!authorities.contains(&authority), Error::<T>::AuthorityAlreadyExist);
+				// Push the authority
+				authorities.try_push(authority.clone()).map_err(|_| Error::<T>::ExceedsMaxAuthorities)?;
+				// Log the event
 				Self::deposit_event(Event::AuthorityAdded { authority: authority });
-				
+				Ok(())
+			})
+		}
+
+		/// Delete an authority
+		pub fn delete_authority(authority: T::AuthorityId) -> DispatchResult {
+			pallet_aura::Authorities::<T>::try_mutate(|authorities| -> DispatchResult {
+				// Search the authority
+				ensure!(authorities.contains(&authority), Error::<T>::AuthorityDoesNotExist);
+				// Remove the authority
+				if let Some(pos) = authorities.iter().position(|x| x == &authority) {
+					authorities.remove(pos);
+				} else {
+					return Err(Error::<T>::ErrorRemovingAuthority.into());
+				}
+				// Log event
+				Self::deposit_event(Event::AuthorityRemoved { authority: authority });
 				Ok(())
 			})
 		}
@@ -281,6 +305,21 @@ pub mod pallet {
 				let decoded_bytes = decode(invulnerable).expect("Invalid hex string");
 				let candidate = T::AuthorityId::decode(&mut decoded_bytes.as_slice()).expect("Error in decoding");
 				let _ = Self::add_candidate(candidate);
+			}
+		}
+
+		/// Merge candidates to authorities
+		pub fn merge_candidates_to_authorities() {
+			let candidates = Candidates::<T>::get();
+			// Add candidates to athorities
+			for candidate in candidates.clone() {
+				let _ = Self::add_authority(candidate);
+			}
+			// Delete authorities if not found in candidates
+			for authority in pallet_aura::Authorities::<T>::get() {
+				if !candidates.contains(&authority) {
+					let _ = Self::delete_authority(authority);
+				} 	
 			}
 		}
 
