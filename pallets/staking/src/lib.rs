@@ -92,6 +92,7 @@ pub mod pallet {
 		MaxAuthoritiesRetrieved { max_authorities: u32,},
 		CandidateAdded { candidate: T::AuthorityId, },
 		CandidateRemoved { candidate: T::AuthorityId, },
+		AuthorityAdded { authority: T::AuthorityId, },
 	}
 
 	/// Errors inform users that something went wrong.
@@ -102,9 +103,11 @@ pub mod pallet {
 		NoneValue,
 		/// Errors should have helpful documentation associated with them.
 		StorageOverflow,
-		InvulnerableDecodeError,
-		InvulnerableConversionError,
+		/// Staking errors
 		ExceedsMaxCandidates,
+		ErrorAddingCandidate,
+		ExceedsMaxAuthorities,
+		ErrorAddingAuthority,
 	}
 
 	#[pallet::hooks]
@@ -114,6 +117,8 @@ pub mod pallet {
 				Some(next_block) => {
 					if current_block == next_block {
 						// Todo: Replace the authorities with candidates 
+
+
 						Self::update_next_block_number(current_block);
 					}
 					T::DbWeight::get().reads(1)
@@ -203,7 +208,7 @@ pub mod pallet {
 
 		#[pallet::call_index(4)]
 		#[pallet::weight(Weight::from_parts(10_000, 0) + T::DbWeight::get().writes(1))]
-		pub fn add_candidate(_origin: OriginFor<T>, new_candidate: T::AuthorityId) -> DispatchResult {
+		pub fn stake(_origin: OriginFor<T>, new_candidate: T::AuthorityId) -> DispatchResult {
 			let _who = ensure_signed(_origin)?;
         	Candidates::<T>::try_mutate(|candidates| -> DispatchResult {
 				ensure!(!candidates.contains(&new_candidate), "Candidate already exists");
@@ -217,7 +222,7 @@ pub mod pallet {
 
 		#[pallet::call_index(5)] // Increment the call index appropriately
 		#[pallet::weight(Weight::from_parts(10_000, 0) + T::DbWeight::get().writes(1))]
-		pub fn remove_candidate(_origin: OriginFor<T>, candidate_to_remove: T::AuthorityId) -> DispatchResult {
+		pub fn unstake(_origin: OriginFor<T>, candidate_to_remove: T::AuthorityId) -> DispatchResult {
 			let _who = ensure_signed(_origin)?;
 			Candidates::<T>::try_mutate(|candidates| -> DispatchResult {
 				ensure!(candidates.contains(&candidate_to_remove), "Candidate does not exist");
@@ -239,12 +244,24 @@ pub mod pallet {
 	impl<T: Config> Pallet<T> {
 		
 		/// Add candidate
-		pub fn push_candidate(candidate: T::AuthorityId) -> DispatchResult {
+		pub fn add_candidate(candidate: T::AuthorityId) -> DispatchResult {
 			Candidates::<T>::try_mutate(|candidates| -> DispatchResult {
-				ensure!(!candidates.contains(&candidate), "Candidate already exists");
-				candidates.try_push(candidate.clone()).map_err(|_| "Max candidates reached")?;
+				ensure!(!candidates.contains(&candidate), Error::<T>::ExceedsMaxCandidates);
+				candidates.try_push(candidate.clone()).map_err(|_| Error::<T>::ErrorAddingCandidate)?;
 
 				Self::deposit_event(Event::CandidateAdded { candidate: candidate });
+				
+				Ok(())
+			})
+		}
+
+		/// Add authority
+		pub fn add_authority(authority: T::AuthorityId) -> DispatchResult {
+			pallet_aura::Authorities::<T>::try_mutate(|authorities| -> DispatchResult {
+				ensure!(!authorities.contains(&authority), Error::<T>::ExceedsMaxAuthorities);
+				authorities.try_push(authority.clone()).map_err(|_| Error::<T>::ErrorAddingAuthority)?;
+
+				Self::deposit_event(Event::AuthorityAdded { authority: authority });
 				
 				Ok(())
 			})
@@ -263,7 +280,7 @@ pub mod pallet {
 				let invulnerable = if invulnerable.starts_with("0x") { &invulnerable[2..] } else { invulnerable };
 				let decoded_bytes = decode(invulnerable).expect("Invalid hex string");
 				let candidate = T::AuthorityId::decode(&mut decoded_bytes.as_slice()).expect("Error in decoding");
-				let _ = Self::push_candidate(candidate);
+				let _ = Self::add_candidate(candidate);
 			}
 		}
 
