@@ -46,7 +46,7 @@ curl http://127.0.0.1:9977 -H "Content-Type:application/json;charset=utf-8" -d '
 {"jsonrpc":"2.0","id":1,"result":"0xa85644f08a9ad24e0f847afdef92113a8e36e286f817676764a856652d46556c"}
 ```
 Developer->Extrinsics->Session->SetKeys (Proof: 0x).  Signed using the account owner of the node
-
+![Screenshot 2024-11-28 at 9 35 47 AM](https://github.com/user-attachments/assets/9547ebfd-c282-4c1c-8958-f5ea09c6b506)
 
 
 
