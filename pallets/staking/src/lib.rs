@@ -26,11 +26,13 @@ mod benchmarking;
 // <https://paritytech.github.io/polkadot-sdk/master/frame_support/pallet_macros/index.html>
 #[frame_support::pallet]
 pub mod pallet {
-	use frame_support::{dispatch::DispatchResultWithPostInfo, pallet_prelude::*, DefaultNoBound};
+	use frame_support::{dispatch::DispatchResultWithPostInfo, pallet_prelude::*, DefaultNoBound, };
 	use frame_system::pallet_prelude::*;
-	use sp_runtime::traits::{CheckedAdd, One};
+	use sp_runtime::traits::{CheckedAdd, One, IdentifyAccount};
 	use scale_info::prelude::vec::Vec;
+	use scale_info::prelude::vec;
 	use hex::decode;
+	use hex::encode;
 
 	/// Configure the pallet by specifying the parameters and types on which it depends.
 	#[pallet::config]
@@ -89,6 +91,7 @@ pub mod pallet {
 		/// We usually use passive tense for events.
 		SomethingStored { block_number: BlockNumberFor<T>, who: T::AccountId },
 		AuthoritiesRetrieved { authorities: Vec<T::AuthorityId>,},
+		ValidatorsRetrieved { validators: Vec<T::AccountId>,},
 		MaxAuthoritiesRetrieved { max_authorities: u32,},
 		CandidateAdded { candidate: T::AuthorityId, },
 		CandidateRemoved { candidate: T::AuthorityId, },
@@ -243,6 +246,20 @@ pub mod pallet {
 			})
 		}
 
+		/// Retrieve the authorities in the Aura pallet.
+		#[pallet::call_index(6)]
+		#[pallet::weight(Weight::from_parts(10_000, 0) + T::DbWeight::get().writes(1))]
+		pub fn retrieve_validators(_origin: OriginFor<T>) -> DispatchResultWithPostInfo {
+			let mut validators: Vec<T::AccountId> = vec![];
+			for authority in pallet_aura::Authorities::<T>::get(){
+				//let account =  sp_runtime::traits::AccountIdConversion::<Vec<u8>>::into_account_truncating(&authority.encode());
+				let authority_bytes = authority.encode();
+				let account = <T as frame_system::Config>::AccountId::decode(&mut authority_bytes.as_slice()).unwrap();
+				validators.push(account);
+			}
+			Self::deposit_event(Event::ValidatorsRetrieved { validators: validators });
+			Ok(().into())
+		}
 	}
 
 	/// Helper functions
