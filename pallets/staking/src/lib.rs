@@ -131,7 +131,7 @@ pub mod pallet {
 				None => {
 					Self::add_invulnerables();
 
-					Self::update_next_block_number(current_block);
+					Self::update_next_block_number(current_block); 
 					
 					T::DbWeight::get().reads(1)
 				}

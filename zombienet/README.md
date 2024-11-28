@@ -22,3 +22,31 @@ cargo build --release
 
 ## Zombienet binaries
 https://github.com/paritytech/zombienet/releases
+
+## Adding collator after launching Zombienet
+### Generate a node key
+```
+../../polkadot/target/release/polkadot key generate-node-key 
+```
+### Output of generate-node-key (may change)
+```
+12D3KooWN5T5mGDMar9ZQfWs6JGpMVRBcVB135oxZUpsp5Y4bmMh
+e6997cefc28303ba028c0cf854b9ccd7af9ae1931588f6a0247df7160f4794a3
+```
+### Run the node (use Zombienet chainspecs command)
+```
+../target/release/xode-node --name fredie --node-key 6fd556e9f3180c20d9d968e028f6bf97e9c962e57be6edf6143b3c48a172c388 --chain /var/folders/yl/9c9fgyj10wd29cbk4gc0bd7h0000gn/T/zombie-3af541275f25a65e6b6fbe244c2e4bf9_-15259-GnYSNiAYYb0G/dave/cfg/rococo-local-1000.json --base-path ./collator/data --rpc-cors all --unsafe-rpc-external --rpc-methods unsafe --rpc-port 9977 --collator -- --chain /var/folders/yl/9c9fgyj10wd29cbk4gc0bd7h0000gn/T/zombie-3af541275f25a65e6b6fbe244c2e4bf9_-15259-GnYSNiAYYb0G/dave/cfg/rococo-local.json --execution wasm --port 55877 --rpc-port 55878    
+```
+### Get the rotated keys of the parachain
+```
+curl http://127.0.0.1:9977 -H "Content-Type:application/json;charset=utf-8" -d '{ "jsonrpc":"2.0", "id":1,"method":"author_rotateKeys", "params": [] }'
+```
+### Output of the curl (may change)
+```
+{"jsonrpc":"2.0","id":1,"result":"0xa85644f08a9ad24e0f847afdef92113a8e36e286f817676764a856652d46556c"}
+```
+Developer->Extrinsics->Session->SetKeys (Proof: 0x).  Signed using the account owner of the node
+
+
+
+
