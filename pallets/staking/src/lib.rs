@@ -28,15 +28,14 @@ mod benchmarking;
 pub mod pallet {
 	use frame_support::{dispatch::DispatchResultWithPostInfo, pallet_prelude::*, DefaultNoBound, };
 	use frame_system::pallet_prelude::*;
-	use sp_runtime::traits::{CheckedAdd, One, IdentifyAccount};
+	use sp_runtime::traits::{CheckedAdd, One,};
 	use scale_info::prelude::vec::Vec;
 	use scale_info::prelude::vec;
 	use hex::decode;
-	use hex::encode;
 
 	/// Configure the pallet by specifying the parameters and types on which it depends.
 	#[pallet::config]
-	pub trait Config: pallet_aura::Config + frame_system::Config {
+	pub trait Config: pallet_collator_selection::Config + pallet_aura::Config + frame_system::Config {
 		/// Because this pallet emits events, it depends on the runtime's definition of an event.
 		/// <https://paritytech.github.io/polkadot-sdk/master/polkadot_sdk_docs/reference_docs/frame_runtime_types/index.html>
 		type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
@@ -45,7 +44,7 @@ pub mod pallet {
 		type WeightInfo: crate::weights::WeightInfo;
 
 		/// Maximum Candidates (Must match with Aura's maximum authorities)
-		type MaxCandidates: Get<u32>;
+		// type MaxCandidates: Get<u32>;
 
 		/// Block interval (used to determine the next block number)
 		type BlockInterval: Get<u32>;
@@ -97,6 +96,7 @@ pub mod pallet {
 		CandidateRemoved { candidate: T::AuthorityId, },
 		AuthorityAdded { authority: T::AuthorityId, },
 		AuthorityRemoved { authority: T::AuthorityId, },
+		CollatorAdded { collator: T::AccountId, },
 	}
 
 	/// Errors inform users that something went wrong.
@@ -107,16 +107,23 @@ pub mod pallet {
 		NoneValue,
 		/// Errors should have helpful documentation associated with them.
 		StorageOverflow,
+
 		/// Staking errors
 		ExceedsMaxCandidates,
 		ErrorAddingCandidate,
 		CandidateAlreadyExist,
-		ExceedsMaxAuthorities,
+		
 		ErrorAddingAuthority,
 		ErrorRemovingAuthority,
 		AuthorityAlreadyExist,
 		AuthorityDoesNotExist,
 		AuthorityDoesNotExistInCandidates,
+		ExceedsMaxAuthorities,
+
+		CollatorAlreadyExist,
+		CollatorDoesNotExist,
+		CollatorDoesNotExistInCandidates,
+		ExceedsMaxCollators,
 	}
 
 	#[pallet::hooks]
@@ -125,7 +132,7 @@ pub mod pallet {
 			match NextBlockNumber::<T>::get() {
 				Some(next_block) => {
 					if current_block == next_block {
-						Self::merge_candidates_to_authorities();
+						Self::merge_candidates();
 
 						Self::update_next_block_number(current_block);
 					}
@@ -252,9 +259,7 @@ pub mod pallet {
 		pub fn retrieve_validators(_origin: OriginFor<T>) -> DispatchResultWithPostInfo {
 			let mut validators: Vec<T::AccountId> = vec![];
 			for authority in pallet_aura::Authorities::<T>::get(){
-				//let account =  sp_runtime::traits::AccountIdConversion::<Vec<u8>>::into_account_truncating(&authority.encode());
-				let authority_bytes = authority.encode();
-				let account = <T as frame_system::Config>::AccountId::decode(&mut authority_bytes.as_slice()).unwrap();
+				let account = Self::convert_to_account(authority);
 				validators.push(account);
 			}
 			Self::deposit_event(Event::ValidatorsRetrieved { validators: validators });
@@ -265,6 +270,13 @@ pub mod pallet {
 	/// Helper functions
 	impl<T: Config> Pallet<T> {
 		
+		/// Convert AuthorityId to AccountId
+		pub fn convert_to_account(authority: T::AuthorityId) -> T::AccountId {
+			let authority_bytes = authority.encode();
+			let account = <T as frame_system::Config>::AccountId::decode(&mut authority_bytes.as_slice()).unwrap();
+			account
+		}
+
 		/// Add a candidate
 		pub fn add_candidate(candidate: T::AuthorityId) -> DispatchResult {
 			Candidates::<T>::try_mutate(|candidates| -> DispatchResult {
@@ -308,6 +320,20 @@ pub mod pallet {
 			})
 		}
 
+		/// Add a collator
+		pub fn add_collator(collator: T::AccountId) -> DispatchResult {
+			// https://github.com/paritytech/polkadot-sdk/blob/stable2409/cumulus/pallets/collator-selection/src/lib.rs#L841
+			pallet_collator_selection::Invulnerables::<T>::try_mutate(|collators| -> DispatchResult {
+				// Search if the invulnerable already exist
+				ensure!(!collators.contains(&collator), Error::<T>::CollatorAlreadyExist);
+				// Push the authority
+				collators.try_push(collator.clone()).map_err(|_| Error::<T>::ExceedsMaxCollators)?;
+				// Log the event
+				Self::deposit_event(Event::CollatorAdded { collator: collator });
+				Ok(())
+			})
+		}
+
 		/// Update the next block number event trigger
 		pub fn update_next_block_number(current_block: BlockNumberFor<T>) {
 			let interval = T::BlockInterval::get();
@@ -315,7 +341,7 @@ pub mod pallet {
 			NextBlockNumber::<T>::put(new_block);
 		}	
 
-		/// Push the invulnerables
+		/// Push the invulnerables define in the Runtime
 		pub fn add_invulnerables() {
 			for invulnerable in T::Invulnerables::get() {
 				let invulnerable = if invulnerable.starts_with("0x") { &invulnerable[2..] } else { invulnerable };
@@ -325,12 +351,15 @@ pub mod pallet {
 			}
 		}
 
-		/// Merge candidates to authorities
-		pub fn merge_candidates_to_authorities() {
+		/// Merge staking candidates, aura authorities and collator invulnerables
+		pub fn merge_candidates() {
 			let candidates = Candidates::<T>::get();
-			// Add candidates to athorities
 			for candidate in candidates.clone() {
-				let _ = Self::add_authority(candidate);
+				// Add candidates to athorities
+				let _ = Self::add_authority(candidate.clone());
+				// Add candidates to collators
+				let account = Self::convert_to_account(candidate.clone());
+				let _ = Self::add_collator(account);
 			}
 			// Delete authorities if not found in candidates
 			for authority in pallet_aura::Authorities::<T>::get() {

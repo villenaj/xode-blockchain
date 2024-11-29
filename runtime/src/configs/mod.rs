@@ -449,7 +449,7 @@ parameter_types! {
 impl pallet_xode_staking::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type WeightInfo = pallet_xode_staking::weights::SubstrateWeight<Runtime>;
-	type MaxCandidates = ConstU32<1_000>;
+	// type MaxCandidates = ConstU32<1_000>;
 	type BlockInterval = ConstU32<5>;  // In production this must accomodate all authorities
 	type Invulnerables = InvulnerableNodes;
 }

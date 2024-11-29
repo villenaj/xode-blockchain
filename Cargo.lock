@@ -7602,6 +7602,7 @@ dependencies = [
  "frame-system",
  "hex",
  "pallet-aura",
+ "pallet-collator-selection",
  "parity-scale-codec",
  "scale-info",
  "sp-core",
