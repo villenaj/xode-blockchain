@@ -7603,11 +7603,13 @@ dependencies = [
  "hex",
  "pallet-aura",
  "pallet-collator-selection",
+ "pallet-session",
  "parity-scale-codec",
  "scale-info",
  "sp-core",
  "sp-io",
  "sp-runtime",
+ "sp-staking 36.0.0",
 ]
 
 [[package]]

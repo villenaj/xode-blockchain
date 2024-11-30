@@ -33,6 +33,10 @@ pub mod pallet {
 	use scale_info::prelude::vec;
 	use hex::decode;
 
+	// Sessions
+	use pallet_session::SessionManager;
+	use sp_staking::SessionIndex;
+
 	/// Configure the pallet by specifying the parameters and types on which it depends.
 	#[pallet::config]
 	pub trait Config: pallet_collator_selection::Config + pallet_aura::Config + frame_system::Config {
@@ -132,7 +136,7 @@ pub mod pallet {
 			match NextBlockNumber::<T>::get() {
 				Some(next_block) => {
 					if current_block == next_block {
-						Self::merge_candidates();
+						//Self::merge_candidates();
 
 						Self::update_next_block_number(current_block);
 					}
@@ -356,18 +360,34 @@ pub mod pallet {
 			let candidates = Candidates::<T>::get();
 			for candidate in candidates.clone() {
 				// Add candidates to athorities
-				let _ = Self::add_authority(candidate.clone());
+				// let _ = Self::add_authority(candidate.clone());
 				// Add candidates to collators
-				let account = Self::convert_to_account(candidate.clone());
+				let account = Self::convert_to_account(candidate);
 				let _ = Self::add_collator(account);
 			}
 			// Delete authorities if not found in candidates
-			for authority in pallet_aura::Authorities::<T>::get() {
-				if !candidates.contains(&authority) {
-					let _ = Self::delete_authority(authority);
-				} 	
-			}
+			//for authority in pallet_aura::Authorities::<T>::get() {
+			//	if !candidates.contains(&authority) {
+			//		let _ = Self::delete_authority(authority);
+			//	} 	
+			//}
 		}
 
 	}
+
+	/// Session Manager
+	impl<T: Config> SessionManager<T::AccountId> for Pallet<T> {
+		fn new_session(index: SessionIndex) -> Option<Vec<T::AccountId>> {
+			Self::merge_candidates();
+			let  collators = pallet_collator_selection::Invulnerables::<T>::get().to_vec();
+			Some(collators)
+		}
+		fn start_session(_: SessionIndex) {
+			// todo
+		}
+		fn end_session(_: SessionIndex) {
+			// todo
+		}
+	}
+
 }

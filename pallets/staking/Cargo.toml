@@ -24,7 +24,9 @@ frame-support.workspace = true
 frame-system.workspace = true
 sp-runtime.workspace = true
 pallet-aura.workspace = true
-pallet-collator-selection.workspace =true
+pallet-collator-selection.workspace = true
+pallet-session.workspace = true
+sp-staking.workspace = true
 hex.workspace = true
 
 [dev-dependencies]
