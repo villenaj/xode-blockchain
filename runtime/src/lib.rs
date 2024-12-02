@@ -311,13 +311,19 @@ mod runtime {
 	#[runtime::pallet_index(33)]
 	pub type MessageQueue = pallet_message_queue;
 
-	// Xode Blockchain
+	// Frames (Xode Blockchain)
 	#[runtime::pallet_index(40)]
 	pub type Assets = pallet_assets;
 	#[runtime::pallet_index(41)]
 	pub type Contracts = pallet_contracts;
+	#[runtime::pallet_index(42)]
+	pub type Indices = pallet_indices;
+	#[runtime::pallet_index(43)]
+	pub type AssetRate = pallet_asset_rate;
+	#[runtime::pallet_index(44)]
+	pub type Treasury = pallet_treasury;
 
-	// Xode Staking
+	// Pallet (Xode Blockchain)
 	#[runtime::pallet_index(50)]
 	pub type XodeStaking = pallet_xode_staking;
 }
