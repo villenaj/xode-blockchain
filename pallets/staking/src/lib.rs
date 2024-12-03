@@ -1,8 +1,6 @@
 //! # Xode Staking Pallet
+//! 
 //!
-//!
-
-
 #![cfg_attr(not(feature = "std"), no_std)]
 
 pub use pallet::*;
@@ -18,17 +16,11 @@ pub mod weights;
 #[cfg(feature = "runtime-benchmarks")]
 mod benchmarking;
 
-// <https://paritytech.github.io/polkadot-sdk/master/polkadot_sdk_docs/polkadot_sdk/frame_runtime/index.html>
-// <https://paritytech.github.io/polkadot-sdk/master/polkadot_sdk_docs/guides/your_first_pallet/index.html>
-//
-// To see a full list of `pallet` macros and their use cases, see:
-// <https://paritytech.github.io/polkadot-sdk/master/pallet_example_kitchensink/index.html>
-// <https://paritytech.github.io/polkadot-sdk/master/frame_support/pallet_macros/index.html>
 #[frame_support::pallet]
 pub mod pallet {
 	use frame_support::{dispatch::DispatchResultWithPostInfo, pallet_prelude::*, DefaultNoBound, };
 	use frame_system::pallet_prelude::*;
-	use sp_runtime::traits::{CheckedAdd, One,};
+	use sp_runtime::traits::{CheckedAdd, One, AccountIdConversion,};
 	use scale_info::prelude::vec::Vec;
 	use scale_info::prelude::vec;
 	use hex::decode;
@@ -37,11 +29,15 @@ pub mod pallet {
 	use pallet_session::SessionManager;
 	use sp_staking::SessionIndex;
 
-	/// Configure the pallet by specifying the parameters and types on which it depends.
+	use frame_support::PalletId;
+	use frame_support::traits::{Currency, ReservableCurrency};
+
+	type BalanceOf<T> = <<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
+
+	/// Runtime configuration
 	#[pallet::config]
-	pub trait Config: pallet_collator_selection::Config + pallet_aura::Config + frame_system::Config {
+	pub trait Config: pallet_balances::Config + pallet_collator_selection::Config + pallet_aura::Config + frame_system::Config {
 		/// Because this pallet emits events, it depends on the runtime's definition of an event.
-		/// <https://paritytech.github.io/polkadot-sdk/master/polkadot_sdk_docs/reference_docs/frame_runtime_types/index.html>
 		type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
 
 		/// A type representing the weights required by the dispatchables of this pallet.
@@ -55,43 +51,38 @@ pub mod pallet {
 
 		/// Authorities that will be always present: vec!["",""]
 		type Invulnerables: Get<&'static [&'static str]>;
+
+		/// The currency trait.
+		type Currency: ReservableCurrency<Self::AccountId>;
 	}
 
 	#[pallet::pallet]
 	pub struct Pallet<T>(_);
 
-	/// A struct to store a single block-number. Has all the right derives to store it in storage.
-	/// <https://paritytech.github.io/polkadot-sdk/master/polkadot_sdk_docs/reference_docs/frame_storage_derives/index.html>
-	#[derive(
-		Encode, Decode, MaxEncodedLen, TypeInfo, CloneNoBound, PartialEqNoBound, DefaultNoBound,
-	)]
+	/// Pallet template sample struct (A struct to store a single block-number. Has all the right derives to store it in storage.)
+	#[derive(Encode, Decode, MaxEncodedLen, TypeInfo, CloneNoBound, PartialEqNoBound, DefaultNoBound,)]
 	#[scale_info(skip_type_params(T))]
 	pub struct CompositeStruct<T: Config> {
-		/// A block number.
 		pub(crate) block_number: BlockNumberFor<T>,
 	}
 
-	/// Candidates
+	/// Candidates storage
 	#[pallet::storage]
 	pub type Candidates<T: Config> = StorageValue<_, BoundedVec<T::AuthorityId, T::MaxCandidates>, ValueQuery>;
 
-	/// Next block number
+	/// Next block number storage
 	#[pallet::storage]
     #[pallet::getter(fn next_block_number)]
     pub type NextBlockNumber<T: Config> = StorageValue<_, BlockNumberFor<T>, OptionQuery>;
 
-	/// The pallet's storage items.
-	/// <https://paritytech.github.io/polkadot-sdk/master/polkadot_sdk_docs/guides/your_first_pallet/index.html#storage>
-	/// <https://paritytech.github.io/polkadot-sdk/master/frame_support/pallet_macros/attr.storage.html>
+	/// Pallet Template sample storage
 	#[pallet::storage]
 	pub type Something<T: Config> = StorageValue<_, CompositeStruct<T>>;
 
-	/// Pallets use events to inform users when important changes are made.
-	/// <https://paritytech.github.io/polkadot-sdk/master/polkadot_sdk_docs/guides/your_first_pallet/index.html#event-and-error>
+	/// Events (past events)
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event<T: Config> {
-		/// We usually use passive tense for events.
 		SomethingStored { block_number: BlockNumberFor<T>, who: T::AccountId },
 		AuthoritiesRetrieved { authorities: Vec<T::AuthorityId>,},
 		ValidatorsRetrieved { validators: Vec<T::AccountId>,},
@@ -101,10 +92,10 @@ pub mod pallet {
 		AuthorityAdded { authority: T::AuthorityId, },
 		AuthorityRemoved { authority: T::AuthorityId, },
 		CollatorAdded { collator: T::AccountId, },
+		TreasuryAccountRetrieved { treasury: T::AccountId, data: T::AccountData, },
 	}
 
-	/// Errors inform users that something went wrong.
-	/// <https://paritytech.github.io/polkadot-sdk/master/polkadot_sdk_docs/guides/your_first_pallet/index.html#event-and-error>
+	/// Errors
 	#[pallet::error]
 	pub enum Error<T> {
 		/// Error names should be descriptive.
@@ -130,6 +121,7 @@ pub mod pallet {
 		ExceedsMaxCollators,
 	}
 
+	/// Hooks
 	#[pallet::hooks]
 	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
 		fn on_initialize(current_block: BlockNumberFor<T>) -> Weight {
@@ -157,26 +149,17 @@ pub mod pallet {
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
 		/// An example dispatchable that takes a singles value as a parameter, writes the value to
-		/// storage and emits an event. This function must be dispatched by a signed extrinsic.
 		#[pallet::call_index(0)]
 		#[pallet::weight(Weight::from_parts(10_000, 0) + T::DbWeight::get().writes(1))]
 		pub fn do_something(origin: OriginFor<T>, bn: u32) -> DispatchResultWithPostInfo {
-			// Check that the extrinsic was signed and get the signer.
-			// This function will return an error if the extrinsic is not signed.
-			// <https://paritytech.github.io/polkadot-sdk/master/polkadot_sdk_docs/reference_docs/frame_origin/index.html>
 			let who = ensure_signed(origin)?;
 
-			// Convert the u32 into a block number. This is possible because the set of trait bounds
-			// defined in [`frame_system::Config::BlockNumber`].
 			let block_number: BlockNumberFor<T> = bn.into();
 
-			// Update storage.
 			<Something<T>>::put(CompositeStruct { block_number });
 
-			// Emit an event.
 			Self::deposit_event(Event::SomethingStored { block_number, who });
 
-			// Return a successful [`DispatchResultWithPostInfo`] or [`DispatchResult`].
 			Ok(().into())
 		}
 
@@ -188,21 +171,15 @@ pub mod pallet {
 
 			// Read a value from storage.
 			match <Something<T>>::get() {
-				// Return an error if the value has not been set.
 				None => Err(Error::<T>::NoneValue)?,
 				Some(mut old) => {
-					// Increment the value read from storage; will error in the event of overflow.
 					old.block_number = old
 						.block_number
 						.checked_add(&One::one())
-						// ^^ equivalent is to:
-						// .checked_add(&1u32.into())
-						// both of which build a `One` instance for the type `BlockNumber`.
 						.ok_or(Error::<T>::StorageOverflow)?;
-					// Update the value in storage with the incremented result.
+
 					<Something<T>>::put(old);
-					// Explore how you can rewrite this using
-					// [`frame_support::storage::StorageValue::mutate`].
+
 					Ok(().into())
 				},
 			}
@@ -232,9 +209,7 @@ pub mod pallet {
         	Candidates::<T>::try_mutate(|candidates| -> DispatchResult {
 				ensure!(!candidates.contains(&new_candidate), "Candidate already exists");
 				candidates.try_push(new_candidate.clone()).map_err(|_| "Max candidates reached")?;
-
 				Self::deposit_event(Event::CandidateAdded { candidate: new_candidate });
-				
 				Ok(())
 			})
 		}
@@ -250,9 +225,7 @@ pub mod pallet {
 				} else {
 					return Err("Failed to remove candidate".into());
 				}
-		
 				Self::deposit_event(Event::CandidateRemoved { candidate: candidate_to_remove });
-				
 				Ok(())
 			})
 		}
@@ -269,9 +242,21 @@ pub mod pallet {
 			Self::deposit_event(Event::ValidatorsRetrieved { validators: validators });
 			Ok(().into())
 		}
+
+		/// Retrieve the treasury account
+		#[pallet::call_index(7)]
+		#[pallet::weight(Weight::from_parts(10_000, 0) + T::DbWeight::get().writes(1))]
+		pub fn retrieve_treasury_account(_origin: OriginFor<T>) -> DispatchResultWithPostInfo {
+			let treasury= PalletId(*b"py/trsry").try_into_account().expect("Error converting to account");
+			let account_info = frame_system::Pallet::<T>::account(&treasury);
+			let account_data = account_info.data;	
+			Self::deposit_event(Event::TreasuryAccountRetrieved { treasury: treasury, data: account_data, });
+			Ok(().into())
+		}
+
 	}
 
-	/// Helper functions
+	/// Helpers
 	impl<T: Config> Pallet<T> {
 		
 		/// Convert AuthorityId to AccountId

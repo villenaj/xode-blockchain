@@ -7602,6 +7602,7 @@ dependencies = [
  "frame-system",
  "hex",
  "pallet-aura",
+ "pallet-balances",
  "pallet-collator-selection",
  "pallet-session",
  "parity-scale-codec",

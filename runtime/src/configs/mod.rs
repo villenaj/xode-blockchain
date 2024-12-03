@@ -511,4 +511,5 @@ impl pallet_xode_staking::Config for Runtime {
 	// type MaxCandidates = ConstU32<1_000>;
 	type BlockInterval = ConstU32<5>;  // In production this must accomodate all authorities
 	type Invulnerables = InvulnerableNodes;
+	type Currency = Balances;
 }
