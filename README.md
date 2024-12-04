@@ -1,2 +1,2 @@
-# Xode Blockchain Template
+# Xode Blockchain
 
