@@ -33,9 +33,12 @@ use frame_support::{
 	derive_impl,
 	dispatch::DispatchClass,
 	parameter_types,
+	ord_parameter_types,
 	traits::{
 		ConstBool, ConstU32, ConstU64, ConstU8, EitherOfDiverse, TransformOrigin, VariantCountOf,
 		AsEnsureOriginWithArg,Randomness,
+		fungible::{Balanced, Credit},
+		OnUnbalanced,
 	},
 	weights::{ConstantMultiplier, Weight},
 	PalletId,
@@ -55,6 +58,7 @@ use sp_runtime::Perbill;
 use sp_runtime::traits::AccountIdConversion;
 use sp_version::RuntimeVersion;
 use xcm::latest::prelude::BodyId;
+
 
 // Local module imports
 use super::{
@@ -173,6 +177,22 @@ impl pallet_balances::Config for Runtime {
 	type RuntimeFreezeReason = RuntimeFreezeReason;
 	type FreezeIdentifier = RuntimeFreezeReason;
 	type MaxFreezes = VariantCountOf<RuntimeFreezeReason>;
+}
+
+pub struct ToAuthor<R>(core::marker::PhantomData<R>);
+impl<R> OnUnbalanced<Credit<R::AccountId, pallet_balances::Pallet<R>>> for ToAuthor<R>
+where
+    R: pallet_balances::Config + pallet_authorship::Config,
+    <R as frame_system::Config>::AccountId: From<AccountId>,
+    <R as frame_system::Config>::AccountId: Into<AccountId>,
+{
+    fn on_nonzero_unbalanced(
+        amount: Credit<<R as frame_system::Config>::AccountId, pallet_balances::Pallet<R>>,
+    ) {
+        if let Some(author) = <pallet_authorship::Pallet<R>>::author() {
+            let _ = <pallet_balances::Pallet<R>>::resolve(&author, amount);
+        }
+    }
 }
 
 parameter_types! {
