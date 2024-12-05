@@ -38,7 +38,8 @@ use frame_support::{
 		ConstBool, ConstU32, ConstU64, ConstU8, EitherOfDiverse, TransformOrigin, VariantCountOf,
 		AsEnsureOriginWithArg,Randomness,
 		fungible::{Balanced, Credit},
-		OnUnbalanced,
+		OnUnbalanced,Imbalance,
+		tokens::imbalance::ResolveTo,
 	},
 	weights::{ConstantMultiplier, Weight},
 	PalletId,
@@ -58,6 +59,7 @@ use sp_runtime::Perbill;
 use sp_runtime::traits::AccountIdConversion;
 use sp_version::RuntimeVersion;
 use xcm::latest::prelude::BodyId;
+
 
 
 // Local module imports
@@ -195,6 +197,27 @@ where
     }
 }
 
+pub struct DealWithFees<R>(core::marker::PhantomData<R>);
+impl<R> OnUnbalanced<Credit<R::AccountId, pallet_balances::Pallet<R>>> for DealWithFees<R>
+where
+	R: pallet_balances::Config + pallet_authorship::Config + pallet_treasury::Config,
+    <R as frame_system::Config>::AccountId: From<AccountId>,
+    <R as frame_system::Config>::AccountId: Into<AccountId>,
+{
+	fn on_unbalanceds(
+		mut fees_then_tips: impl Iterator<Item = Credit<R::AccountId, pallet_balances::Pallet<R>>>,
+	) {
+		if let Some(fees) = fees_then_tips.next() {
+			let mut split = fees.ration(80, 20);
+			if let Some(tips) = fees_then_tips.next() {
+				tips.merge_into(&mut split.1);
+			}
+			ResolveTo::<pallet_treasury::TreasuryAccountId<R>, pallet_balances::Pallet<R>>::on_unbalanced(split.0);
+			<ToAuthor<R> as OnUnbalanced<_>>::on_unbalanced(split.1);
+		}
+	}
+}
+
 parameter_types! {
 	/// Relay Chain `TransactionByteFee` / 10
 	pub const TransactionByteFee: Balance = 10 * MICRO_UNIT;
@@ -202,7 +225,7 @@ parameter_types! {
 
 impl pallet_transaction_payment::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
-	type OnChargeTransaction = pallet_transaction_payment::FungibleAdapter<Balances, ()>;
+	type OnChargeTransaction = pallet_transaction_payment::FungibleAdapter<Balances, DealWithFees<Runtime>>;
 	type WeightToFee = WeightToFee;
 	type LengthToFee = ConstantMultiplier<Balance, TransactionByteFee>;
 	type FeeMultiplierUpdate = SlowAdjustingFeeUpdate<Self>;
