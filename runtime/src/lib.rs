@@ -322,6 +322,8 @@ mod runtime {
 	pub type AssetRate = pallet_asset_rate;
 	#[runtime::pallet_index(44)]
 	pub type Treasury = pallet_treasury;
+	#[runtime::pallet_index(45)]
+	pub type  Council = pallet_collective::<Instance1>;
 
 	// Pallet (Xode Blockchain)
 	#[runtime::pallet_index(50)]

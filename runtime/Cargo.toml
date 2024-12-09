@@ -75,15 +75,18 @@ cumulus-primitives-storage-weight-reclaim.workspace = true
 pallet-collator-selection.workspace = true
 parachains-common.workspace = true
 parachain-info.workspace = true
-
+# Assets
 pallet-assets.workspace = true
-
+# WASM Contracts
 sp-std.workspace = true
 pallet-contracts.workspace = true
-
+# Treasury
 pallet-indices.workspace = true
 pallet-asset-rate.workspace = true
 pallet-treasury.workspace = true
+# Governance
+pallet-collective.workspace = true
+pallet-membership.workspace = true
 
 [features]
 default = ["std"]
@@ -143,6 +146,8 @@ std = [
 	"pallet-assets/std",
 	"pallet-contracts/std",
 	"pallet-treasury/std",
+	"pallet-collective/std",
+	"pallet-membership/std",
 ]
 
 runtime-benchmarks = [
@@ -172,6 +177,8 @@ runtime-benchmarks = [
 	"pallet-assets/runtime-benchmarks",
 	"pallet-contracts/runtime-benchmarks",
 	"pallet-treasury/runtime-benchmarks",
+	"pallet-collective/runtime-benchmarks",
+	"pallet-membership/runtime-benchmarks",
 ]
 
 try-runtime = [
@@ -200,6 +207,8 @@ try-runtime = [
 	"pallet-assets/try-runtime",
 	"pallet-contracts/try-runtime",
 	"pallet-treasury/try-runtime",
+	"pallet-collective/try-runtime",
+	"pallet-membership/try-runtime",
 ]
 
 # Enable the metadata hash generation.

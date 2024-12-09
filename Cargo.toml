@@ -108,15 +108,15 @@ sp-version = { version = "37.0.0", default-features = false }
 xcm-builder = { version = "17.0.0", default-features = false, package = "staging-xcm-builder" }
 xcm-executor = { version = "17.0.0", default-features = false, package = "staging-xcm-executor" }
 substrate-wasm-builder = { version = "24.0.1", default-features = false }
-
 # Assets
 pallet-assets = { version = "40.0.0", default-features = false }
-
 # Contracts
 sp-std = { version = "14.0.0", default-features = false }
 pallet-contracts = { version = "38.0.0", default-features = false }
-
 # Treasury
 pallet-indices = { version = "38.0.0", default-features = false }
 pallet-asset-rate = { version = "17.0.0", default-features = false }
 pallet-treasury = { version = "37.0.0", default-features = false }
+# Governance
+pallet-collective = { version = "38.0.0", default-features = false }
+pallet-membership = { version = "38.0.0", default-features = false }

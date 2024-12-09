@@ -197,6 +197,9 @@ where
     }
 }
 
+pub const TREASURY_SHARE: u32 = 20;
+pub const AUTHOR_SHARE: u32 = 80;
+
 pub struct DealWithFees<R>(core::marker::PhantomData<R>);
 impl<R> OnUnbalanced<Credit<R::AccountId, pallet_balances::Pallet<R>>> for DealWithFees<R>
 where
@@ -208,7 +211,7 @@ where
 		mut fees_then_tips: impl Iterator<Item = Credit<R::AccountId, pallet_balances::Pallet<R>>>,
 	) {
 		if let Some(fees) = fees_then_tips.next() {
-			let mut split = fees.ration(80, 20);
+			let mut split = fees.ration(TREASURY_SHARE, AUTHOR_SHARE);
 			if let Some(tips) = fees_then_tips.next() {
 				tips.merge_into(&mut split.1);
 			}
@@ -365,6 +368,8 @@ impl pallet_collator_selection::Config for Runtime {
 }
 
 /// Assets
+///
+///
 pub const ASSETS_UNIT: Balance = 1_000_000_000_000;
 pub const ASSETS_MILLIUNIT: Balance = 1_000_000_000;
 pub const ASSETS_MICROUNIT: Balance = 1_000_000;
@@ -407,6 +412,8 @@ impl pallet_assets::Config for Runtime {
 }
 
 /// Contracts
+///
+///
 pub struct DummyRandomness<T: pallet_contracts::Config>(sp_std::marker::PhantomData<T>);
 
 impl<T: pallet_contracts::Config> Randomness<T::Hash, BlockNumberFor<T>> for DummyRandomness<T> {
@@ -485,6 +492,8 @@ impl pallet_contracts::Config for Runtime {
 }
 
 /// Treasury  
+///
+///
 pub const MILLICENTS: Balance = 1_000_000_000;
 pub const CENTS: Balance = 1_000 * MILLICENTS; 
 pub const DOLLARS: Balance = 100 * CENTS;
@@ -540,7 +549,37 @@ impl pallet_treasury::Config for Runtime {
 	type PayoutPeriod = SpendPayoutPeriod;
 }
 
-// Staking (Xode)
+/// Governance
+///
+///
+pub type CouncilCollective = pallet_collective::Instance1;
+//pub type TechnicalCollective = pallet_collective::Instance2;
+
+parameter_types! {
+	// pub const CouncilMotionDuration: BlockNumber = 7 * DAYS;
+	pub const CouncilMotionDuration: BlockNumber = 7 * MINUTES;
+	pub const CouncilMaxProposals: u32 = 100;
+	pub const CouncilMaxMembers: u32 = 100;
+	pub MaxProposalWeight: Weight = Perbill::from_percent(50) * RuntimeBlockWeights::get().max_block;
+}
+
+impl pallet_collective::Config<CouncilCollective> for Runtime {
+	type DefaultVote = pallet_collective::PrimeDefaultVote;
+	type RuntimeEvent = RuntimeEvent;
+	type MaxMembers = CouncilMaxMembers;
+	type MaxProposals = CouncilMaxProposals;
+	type MotionDuration = CouncilMotionDuration;
+	type RuntimeOrigin = RuntimeOrigin
+	type Proposal = RuntimeCall;
+	type WeightInfo = pallet_collective::weights::SubstrateWeight<Runtime>;
+	type MaxProposalWeight = MaxProposalWeight;
+	type SetMembersOrigin = EnsureRoot<AccountId>;
+}
+
+
+/// Staking (Xode)
+///
+///
 parameter_types! {
 	pub const InvulnerableNodes: &'static [&'static str] = &[
 		"0x306721211d5404bd9da88e0204360a1a9ab8b87c66c1bc2fcdd37f3c2222cc20",  // Charlie (Use for development)
