@@ -40,6 +40,7 @@ use frame_support::{
 		fungible::{Balanced, Credit},
 		OnUnbalanced,Imbalance,
 		tokens::imbalance::ResolveTo,
+		EnsureOrigin
 	},
 	weights::{ConstantMultiplier, Weight},
 	PalletId,
@@ -65,6 +66,7 @@ use xcm::latest::prelude::BodyId;
 // Local module imports
 use super::{
 	weights::{BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight},
+	TechnicalCouncil,
 	AccountId, Aura, Balance, Balances, Block, BlockNumber, CollatorSelection, ConsensusHook, Hash,
 	MessageQueue, Nonce, PalletInfo, ParachainSystem, Runtime, RuntimeCall, RuntimeEvent,
 	RuntimeFreezeReason, RuntimeHoldReason, RuntimeOrigin, RuntimeTask, Session, SessionKeys,
@@ -556,3 +558,46 @@ impl pallet_xode_staking::Config for Runtime {
 	type Invulnerables = InvulnerableNodes;
 	type Currency = Balances;
 }
+
+// ============================
+// Technical Collective - start
+
+use pallet_collective::{EnsureMember, EnsureProportionAtLeast, EnsureProportionMoreThan};
+
+pub type EnsureRootOrTwoThirdsTechnicalCouncil  = EitherOfDiverse<
+	EnsureRoot<AccountId>, // Used for sudo, will remove later
+	EnsureProportionMoreThan<AccountId, TechnicalCommitteeInstance, 2, 3>, // Takes two-third of all members voted
+>;
+
+pub type EnsureRootOrAllTechnicalCouncil = EitherOfDiverse<
+	EnsureRoot<AccountId>,
+	EnsureProportionMoreThan<AccountId, TechnicalCommitteeInstance, 1, 1>, // Takes 100% of all members voted
+>;
+
+pub type TechnicalCommitteeInstance = pallet_collective::Instance1;
+
+parameter_types! {
+    pub const TecnicalCouncilMotionDuration: BlockNumber = 5 * DAYS;
+    pub const TecnicalCouncilMaxProposals: u32 = 100;
+    pub const TecnicalCouncilMaxMembers: u32 = 100;
+}
+
+parameter_types! {
+    pub TechnicalMaxProposalWeight: Weight = Perbill::from_percent(50) * RuntimeBlockWeights::get().max_block;
+}
+
+impl pallet_collective::Config<TechnicalCommitteeInstance> for Runtime {
+	type RuntimeOrigin = RuntimeOrigin;
+	type Proposal = RuntimeCall;
+	type RuntimeEvent = RuntimeEvent;
+	type MotionDuration = TecnicalCouncilMotionDuration;
+	type MaxProposals = TecnicalCouncilMaxProposals;
+	type MaxMembers = TecnicalCouncilMaxMembers;
+	type DefaultVote = pallet_collective::PrimeDefaultVote;
+	type SetMembersOrigin = EnsureRootOrAllTechnicalCouncil;
+	type WeightInfo = pallet_collective::weights::SubstrateWeight<Runtime>;
+	type MaxProposalWeight = TechnicalMaxProposalWeight;
+}
+
+// Technical Collective - end
+// ============================
