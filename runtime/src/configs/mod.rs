@@ -554,30 +554,39 @@ impl pallet_treasury::Config for Runtime {
 /// Governance
 ///
 ///
-pub type CouncilCollective = pallet_collective::Instance1;
-//pub type TechnicalCollective = pallet_collective::Instance2;
+use pallet_collective::{EnsureMember, EnsureProportionAtLeast, EnsureProportionMoreThan};
+
+pub type EnsureRootOrTwoThirdsTechnicalCouncil  = EitherOfDiverse<
+	EnsureRoot<AccountId>, 
+	EnsureProportionMoreThan<AccountId, TechnicalCommitteeInstance, 2, 3>, 
+>;
+
+pub type EnsureRootOrAllTechnicalCouncil = EitherOfDiverse<
+	EnsureRoot<AccountId>,
+	EnsureProportionMoreThan<AccountId, TechnicalCommitteeInstance, 1, 1>, 
+>;
+
+pub type TechnicalCommitteeInstance = pallet_collective::Instance1;
 
 parameter_types! {
-	// pub const CouncilMotionDuration: BlockNumber = 7 * DAYS;
-	pub const CouncilMotionDuration: BlockNumber = 7 * MINUTES;
-	pub const CouncilMaxProposals: u32 = 100;
-	pub const CouncilMaxMembers: u32 = 100;
-	pub MaxProposalWeight: Weight = Perbill::from_percent(50) * RuntimeBlockWeights::get().max_block;
+    pub const TecnicalCouncilMotionDuration: BlockNumber = 5 * DAYS;
+    pub const TecnicalCouncilMaxProposals: u32 = 100;
+    pub const TecnicalCouncilMaxMembers: u32 = 100;
+	pub TechnicalMaxProposalWeight: Weight = Perbill::from_percent(50) * RuntimeBlockWeights::get().max_block;
 }
 
-impl pallet_collective::Config<CouncilCollective> for Runtime {
-	type DefaultVote = pallet_collective::PrimeDefaultVote;
-	type RuntimeEvent = RuntimeEvent;
-	type MaxMembers = CouncilMaxMembers;
-	type MaxProposals = CouncilMaxProposals;
-	type MotionDuration = CouncilMotionDuration;
-	type RuntimeOrigin = RuntimeOrigin
+impl pallet_collective::Config<TechnicalCommitteeInstance> for Runtime {
+	type RuntimeOrigin = RuntimeOrigin;
 	type Proposal = RuntimeCall;
+	type RuntimeEvent = RuntimeEvent;
+	type MotionDuration = TecnicalCouncilMotionDuration;
+	type MaxProposals = TecnicalCouncilMaxProposals;
+	type MaxMembers = TecnicalCouncilMaxMembers;
+	type DefaultVote = pallet_collective::PrimeDefaultVote;
+	type SetMembersOrigin = EnsureRootOrAllTechnicalCouncil;
 	type WeightInfo = pallet_collective::weights::SubstrateWeight<Runtime>;
-	type MaxProposalWeight = MaxProposalWeight;
-	type SetMembersOrigin = EnsureRoot<AccountId>;
+	type MaxProposalWeight = TechnicalMaxProposalWeight;
 }
-
 
 /// Staking (Xode)
 ///
@@ -598,45 +607,3 @@ impl pallet_xode_staking::Config for Runtime {
 	type Currency = Balances;
 }
 
-// ============================
-// Technical Collective - start
-
-use pallet_collective::{EnsureMember, EnsureProportionAtLeast, EnsureProportionMoreThan};
-
-pub type EnsureRootOrTwoThirdsTechnicalCouncil  = EitherOfDiverse<
-	EnsureRoot<AccountId>, // Used for sudo, will remove later
-	EnsureProportionMoreThan<AccountId, TechnicalCommitteeInstance, 2, 3>, // Takes two-third of all members voted
->;
-
-pub type EnsureRootOrAllTechnicalCouncil = EitherOfDiverse<
-	EnsureRoot<AccountId>,
-	EnsureProportionMoreThan<AccountId, TechnicalCommitteeInstance, 1, 1>, // Takes 100% of all members voted
->;
-
-pub type TechnicalCommitteeInstance = pallet_collective::Instance1;
-
-parameter_types! {
-    pub const TecnicalCouncilMotionDuration: BlockNumber = 5 * DAYS;
-    pub const TecnicalCouncilMaxProposals: u32 = 100;
-    pub const TecnicalCouncilMaxMembers: u32 = 100;
-}
-
-parameter_types! {
-    pub TechnicalMaxProposalWeight: Weight = Perbill::from_percent(50) * RuntimeBlockWeights::get().max_block;
-}
-
-impl pallet_collective::Config<TechnicalCommitteeInstance> for Runtime {
-	type RuntimeOrigin = RuntimeOrigin;
-	type Proposal = RuntimeCall;
-	type RuntimeEvent = RuntimeEvent;
-	type MotionDuration = TecnicalCouncilMotionDuration;
-	type MaxProposals = TecnicalCouncilMaxProposals;
-	type MaxMembers = TecnicalCouncilMaxMembers;
-	type DefaultVote = pallet_collective::PrimeDefaultVote;
-	type SetMembersOrigin = EnsureRootOrAllTechnicalCouncil;
-	type WeightInfo = pallet_collective::weights::SubstrateWeight<Runtime>;
-	type MaxProposalWeight = TechnicalMaxProposalWeight;
-}
-
-// Technical Collective - end
-// ============================

@@ -40,7 +40,6 @@ frame-try-runtime = { optional = true, workspace = true }
 pallet-aura.workspace = true
 pallet-authorship.workspace = true
 pallet-balances.workspace = true
-pallet-collective.workspace = true
 pallet-message-queue.workspace = true
 pallet-session.workspace = true
 pallet-sudo.workspace = true
@@ -87,7 +86,6 @@ pallet-asset-rate.workspace = true
 pallet-treasury.workspace = true
 # Governance
 pallet-collective.workspace = true
-pallet-membership.workspace = true
 
 [features]
 default = ["std"]
@@ -115,7 +113,6 @@ std = [
 	"pallet-authorship/std",
 	"pallet-balances/std",
 	"pallet-collator-selection/std",
-	"pallet-collective/std",
 	"pallet-message-queue/std",
 	"pallet-xode-staking/std",
 	"pallet-session/std",
@@ -149,7 +146,6 @@ std = [
 	"pallet-contracts/std",
 	"pallet-treasury/std",
 	"pallet-collective/std",
-	"pallet-membership/std",
 ]
 
 runtime-benchmarks = [
@@ -165,7 +161,6 @@ runtime-benchmarks = [
 	"hex-literal",
 	"pallet-balances/runtime-benchmarks",
 	"pallet-collator-selection/runtime-benchmarks",
-	"pallet-collective/runtime-benchmarks",
 	"pallet-message-queue/runtime-benchmarks",
 	"pallet-xode-staking/runtime-benchmarks",
 	"pallet-sudo/runtime-benchmarks",
@@ -181,7 +176,6 @@ runtime-benchmarks = [
 	"pallet-contracts/runtime-benchmarks",
 	"pallet-treasury/runtime-benchmarks",
 	"pallet-collective/runtime-benchmarks",
-	"pallet-membership/runtime-benchmarks",
 ]
 
 try-runtime = [
@@ -197,7 +191,6 @@ try-runtime = [
 	"pallet-authorship/try-runtime",
 	"pallet-balances/try-runtime",
 	"pallet-collator-selection/try-runtime",
-	"pallet-collective/try-runtime",
 	"pallet-message-queue/try-runtime",
 	"pallet-xode-staking/try-runtime",
 	"pallet-session/try-runtime",
@@ -212,7 +205,6 @@ try-runtime = [
 	"pallet-contracts/try-runtime",
 	"pallet-treasury/try-runtime",
 	"pallet-collective/try-runtime",
-	"pallet-membership/try-runtime",
 ]
 
 # Enable the metadata hash generation.

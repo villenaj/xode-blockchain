@@ -87,7 +87,6 @@ pallet-aura = { version = "37.0.0", default-features = false }
 pallet-authorship = { version = "38.0.0", default-features = false }
 pallet-balances = { version = "39.0.0", default-features = false }
 pallet-collator-selection = { version = "19.0.0", default-features = false }
-pallet-collective = { version = "38.0.0", default-features = false }
 pallet-message-queue = { version = "41.0.0", default-features = false }
 pallet-session = { version = "38.0.0", default-features = false }
 pallet-sudo = { version = "38.0.0", default-features = false }
@@ -120,4 +119,3 @@ pallet-asset-rate = { version = "17.0.0", default-features = false }
 pallet-treasury = { version = "37.0.0", default-features = false }
 # Governance
 pallet-collective = { version = "38.0.0", default-features = false }
-pallet-membership = { version = "38.0.0", default-features = false }

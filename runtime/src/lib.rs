@@ -323,15 +323,12 @@ mod runtime {
 	#[runtime::pallet_index(44)]
 	pub type Treasury = pallet_treasury;
 	#[runtime::pallet_index(45)]
-	pub type  Council = pallet_collective::<Instance1>;
+	pub type TechnicalCouncil = pallet_collective::Pallet<Runtime, Instance1>;
 
 	// Pallet (Xode Blockchain)
 	#[runtime::pallet_index(50)]
 	pub type XodeStaking = pallet_xode_staking;
-
-	// Technical Collective
-	#[runtime::pallet_index(61)]
-	pub type TechnicalCouncil = pallet_collective::Pallet<Runtime, Instance1>;
+	
 }
 
 #[docify::export(register_validate_block)]
