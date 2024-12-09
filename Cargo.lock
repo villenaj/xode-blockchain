@@ -15522,6 +15522,7 @@ dependencies = [
  "pallet-collective",
  "pallet-contracts",
  "pallet-indices",
+ "pallet-membership",
  "pallet-message-queue",
  "pallet-session",
  "pallet-sudo",

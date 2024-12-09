@@ -2,7 +2,9 @@ use cumulus_primitives_core::ParaId;
 
 use crate::{
 	AccountId, BalancesConfig, CollatorSelectionConfig, ParachainInfoConfig, PolkadotXcmConfig,
-	RuntimeGenesisConfig, SessionConfig, SessionKeys, SudoConfig, EXISTENTIAL_DEPOSIT,
+	TechnicalCouncilConfig, TechnicalCouncilMembershipConfig,
+	RuntimeGenesisConfig, SessionConfig, SessionKeys, EXISTENTIAL_DEPOSIT,
+	configs::TechnicalMembershipMaxMembers,
 };
 use alloc::{vec, vec::Vec};
 use parachains_common::{genesis_config_helpers::*, AuraId};
@@ -20,12 +22,20 @@ pub fn template_session_keys(keys: AuraId) -> SessionKeys {
 	SessionKeys { aura: keys }
 }
 
+use sp_runtime::{BoundedVec, AccountId32};
+
 fn testnet_genesis(
 	invulnerables: Vec<(AccountId, AuraId)>,
 	endowed_accounts: Vec<AccountId>,
-	root: AccountId,
+	technical_committee: Vec<AccountId>,
 	id: ParaId,
 ) -> Value {
+	let technical_committee: Vec<AccountId32> = technical_committee.clone();
+
+    let bounded_technical_committee = BoundedVec::<_, TechnicalMembershipMaxMembers>::try_from(
+        technical_committee.clone(),
+    ).expect("Technical committee members exceed the allowed limit");
+
 	let config = RuntimeGenesisConfig {
 		balances: BalancesConfig {
 			balances: endowed_accounts
@@ -57,7 +67,14 @@ fn testnet_genesis(
 			safe_xcm_version: Some(SAFE_XCM_VERSION),
 			..Default::default()
 		},
-		sudo: SudoConfig { key: Some(root) },
+		technical_council: TechnicalCouncilConfig {
+            members: technical_committee,
+            phantom: Default::default(),
+        },
+		technical_council_membership: TechnicalCouncilMembershipConfig {
+            members: bounded_technical_committee,
+            phantom: Default::default(),
+        },
 		..Default::default()
 	};
 
@@ -91,7 +108,11 @@ fn local_testnet_genesis() -> Value {
 			get_account_id_from_seed::<sr25519::Public>("Eve//stash"),
 			get_account_id_from_seed::<sr25519::Public>("Ferdie//stash"),
 		],
-		get_account_id_from_seed::<sr25519::Public>("Alice"),
+		vec![
+			get_account_id_from_seed::<sr25519::Public>("Alice"),
+			get_account_id_from_seed::<sr25519::Public>("Bob"),
+			get_account_id_from_seed::<sr25519::Public>("Charlie"),
+		],
 		1000.into(),
 	)
 }
@@ -123,7 +144,11 @@ fn development_config_genesis() -> Value {
 			get_account_id_from_seed::<sr25519::Public>("Eve//stash"),
 			get_account_id_from_seed::<sr25519::Public>("Ferdie//stash"),
 		],
-		get_account_id_from_seed::<sr25519::Public>("Alice"),
+		vec![
+			get_account_id_from_seed::<sr25519::Public>("Alice"),
+			get_account_id_from_seed::<sr25519::Public>("Bob"),
+			get_account_id_from_seed::<sr25519::Public>("Charlie"),
+		],
 		1000.into(),
 	)
 }
