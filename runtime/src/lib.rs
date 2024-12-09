@@ -328,6 +328,10 @@ mod runtime {
 	// Pallet (Xode Blockchain)
 	#[runtime::pallet_index(50)]
 	pub type XodeStaking = pallet_xode_staking;
+
+	// Technical Collective
+	#[runtime::pallet_index(61)]
+	pub type TechnicalCouncil = pallet_collective::Pallet<Runtime, Instance1>;
 }
 
 #[docify::export(register_validate_block)]

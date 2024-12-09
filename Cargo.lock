@@ -15519,6 +15519,7 @@ dependencies = [
  "pallet-authorship",
  "pallet-balances",
  "pallet-collator-selection",
+ "pallet-collective",
  "pallet-contracts",
  "pallet-indices",
  "pallet-membership",
