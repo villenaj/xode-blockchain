@@ -75,18 +75,10 @@ fn testnet_genesis(
 			safe_xcm_version: Some(SAFE_XCM_VERSION),
 			..Default::default()
 		},
-/* 		technical_council: TechnicalCouncilConfig {
-            members: technical_council_members,
-            phantom: Default::default(),
-        }, */
 		technical_council_membership: TechnicalCouncilMembershipConfig {
             members: bounded_technical_council_members,
             phantom: Default::default(),
         },
-/* 		treasury_council: TreasuryCouncilConfig {
-            members: treasury_council_members,
-            phantom: Default::default(),
-        }, */
 		treasury_council_membership: TreasuryCouncilMembershipConfig {
             members: bounded_treasury_council_members,
             phantom: Default::default(),

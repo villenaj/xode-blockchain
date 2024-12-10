@@ -525,11 +525,13 @@ impl pallet_asset_rate::Config for Runtime {
 
 parameter_types! {
     pub const TreasuryPalletId: PalletId = PalletId(*b"py/trsry");
-	pub const SpendPeriod: BlockNumber = 1 * DAYS;
+	// pub const SpendPeriod: BlockNumber = 1 * DAYS;
+	pub const SpendPeriod: BlockNumber = 1 * MINUTES; // Testing purpose only
 	pub const MaxApprovals: u32 = 100;
 	pub const MaxBalance: Balance = Balance::max_value();
 	pub XodeTreasuryAccount: AccountId = TreasuryPalletId::get().into_account_truncating();
-	pub const SpendPayoutPeriod: BlockNumber = 30 * DAYS;
+	// pub const SpendPayoutPeriod: BlockNumber = 30 * DAYS;
+	pub const SpendPayoutPeriod: BlockNumber = 30 * MINUTES; // Testing purpose only
 }
 
 impl pallet_treasury::Config for Runtime {
@@ -567,7 +569,7 @@ pub type EnsureAllTreasuryCouncil = EnsureProportionMoreThan<AccountId, Treasury
 
 parameter_types! {
     // pub const TecnicalCouncilMotionDuration: BlockNumber = 5 * DAYS;
-	pub const TecnicalCouncilMotionDuration: BlockNumber = 5 * MINUTES; // For testing
+	pub const TecnicalCouncilMotionDuration: BlockNumber = 5 * MINUTES; // For testing purpose only
     pub const TecnicalCouncilMaxProposals: u32 = 100;
     pub const TecnicalCouncilMaxMembers: u32 = 100;
 	pub TechnicalMaxProposalWeight: Weight = Perbill::from_percent(50) * RuntimeBlockWeights::get().max_block;
@@ -605,7 +607,7 @@ impl pallet_membership::Config<TechnicalCouncilInstance> for Runtime {
 
 parameter_types! {
     // pub const TreasuryCouncilMotionDuration: BlockNumber = 5 * DAYS;
-	pub const TreasuryCouncilMotionDuration: BlockNumber = 5 * MINUTES; // For testing
+	pub const TreasuryCouncilMotionDuration: BlockNumber = 5 * MINUTES; // For testing purpose only
     pub const TreasuryCouncilMaxProposals: u32 = 100;
     pub const TreasuryCouncilMaxMembers: u32 = 100;
 	pub TreasuryMaxProposalWeight: Weight = Perbill::from_percent(50) * RuntimeBlockWeights::get().max_block;
