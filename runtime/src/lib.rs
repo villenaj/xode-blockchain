@@ -326,6 +326,10 @@ mod runtime {
 	pub type TechnicalCouncil = pallet_collective::Pallet<Runtime, Instance1>;
 	#[runtime::pallet_index(46)]
 	pub type TechnicalCouncilMembership = pallet_membership::Pallet<Runtime, Instance1>;
+	#[runtime::pallet_index(47)]
+	pub type TreasuryCouncil = pallet_collective::Pallet<Runtime, Instance2>;
+	#[runtime::pallet_index(48)]
+	pub type TreasuryCouncilMembership = pallet_membership::Pallet<Runtime, Instance2>;
 
 	// Pallet (Xode Blockchain)
 	#[runtime::pallet_index(50)]
