@@ -286,8 +286,8 @@ mod runtime {
 	pub type TransactionPayment = pallet_transaction_payment;
 
 	// Governance
-	#[runtime::pallet_index(15)]
-	pub type Sudo = pallet_sudo;
+	// #[runtime::pallet_index(15)]
+	// pub type Sudo = pallet_sudo;
 
 	// Collator support. The order of these 4 are important and shall not change.
 	#[runtime::pallet_index(20)]
@@ -324,6 +324,8 @@ mod runtime {
 	pub type Treasury = pallet_treasury;
 	#[runtime::pallet_index(45)]
 	pub type TechnicalCouncil = pallet_collective::Pallet<Runtime, Instance1>;
+	#[runtime::pallet_index(46)]
+	pub type TechnicalCouncilMembership = pallet_membership::Pallet<Runtime, Instance1>;
 
 	// Pallet (Xode Blockchain)
 	#[runtime::pallet_index(50)]
