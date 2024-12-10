@@ -4,7 +4,7 @@ timeout = 1000
 node_verifier = "None"
 
 [relaychain]
-default_command = "../../polkadot/target/release/polkadot"
+default_command = "../target/release/polkadot"
 default_args = [ "-l=parachain=debug,xcm=trace" ]
 chain = "rococo-local"
 
