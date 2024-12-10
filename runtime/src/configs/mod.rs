@@ -557,13 +557,13 @@ impl pallet_treasury::Config for Runtime {
 ///
 use pallet_collective::{EnsureMember, EnsureProportionAtLeast, EnsureProportionMoreThan};
 
-pub type TechnicalCommitteeInstance = pallet_collective::Instance1;
-pub type TreasuryCommitteeInstance = pallet_collective::Instance2;
+pub type TechnicalCouncilInstance = pallet_collective::Instance1;
+pub type TreasuryCouncilInstance = pallet_collective::Instance2;
 
-pub type EnsureTwoThirdsTechnicalCouncil = EnsureProportionMoreThan<AccountId, TechnicalCommitteeInstance, 2, 3>;
-pub type EnsureAllTechnicalCouncil = EnsureProportionMoreThan<AccountId, TechnicalCommitteeInstance, 1, 1>; // Adding members everyone must agree
-pub type EnsureTwoThirdsTreasuryCouncil = EnsureProportionMoreThan<AccountId, TreasuryCommitteeInstance, 2, 3>;
-pub type EnsureAllTreasuryCouncil = EnsureProportionMoreThan<AccountId, TreasuryCommitteeInstance, 1, 1>; // Adding members everyone must agree
+pub type EnsureTwoThirdsTechnicalCouncil = EnsureProportionMoreThan<AccountId, TechnicalCouncilInstance, 2, 3>;
+pub type EnsureAllTechnicalCouncil = EnsureProportionMoreThan<AccountId, TechnicalCouncilInstance, 1, 1>; // Adding members everyone must agree
+pub type EnsureTwoThirdsTreasuryCouncil = EnsureProportionMoreThan<AccountId, TreasuryCouncilInstance, 2, 3>;
+pub type EnsureAllTreasuryCouncil = EnsureProportionMoreThan<AccountId, TreasuryCouncilInstance, 1, 1>; // Adding members everyone must agree
 
 parameter_types! {
     // pub const TecnicalCouncilMotionDuration: BlockNumber = 5 * DAYS;
@@ -573,7 +573,7 @@ parameter_types! {
 	pub TechnicalMaxProposalWeight: Weight = Perbill::from_percent(50) * RuntimeBlockWeights::get().max_block;
 }
 
-impl pallet_collective::Config<TechnicalCommitteeInstance> for Runtime {
+impl pallet_collective::Config<TechnicalCouncilInstance> for Runtime {
 	type RuntimeOrigin = RuntimeOrigin;
 	type Proposal = RuntimeCall;
 	type RuntimeEvent = RuntimeEvent;
@@ -590,7 +590,7 @@ parameter_types! {
 	pub const TechnicalMembershipMaxMembers: u32 = 100;
 }
 
-impl pallet_membership::Config<TechnicalCommitteeInstance> for Runtime {
+impl pallet_membership::Config<TechnicalCouncilInstance> for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type AddOrigin = EnsureTwoThirdsTechnicalCouncil;
 	type RemoveOrigin = EnsureAllTechnicalCouncil;
@@ -611,7 +611,7 @@ parameter_types! {
 	pub TreasuryMaxProposalWeight: Weight = Perbill::from_percent(50) * RuntimeBlockWeights::get().max_block;
 }
 
-impl pallet_collective::Config<TreasuryCommitteeInstance> for Runtime {
+impl pallet_collective::Config<TreasuryCouncilInstance> for Runtime {
 	type RuntimeOrigin = RuntimeOrigin;
 	type Proposal = RuntimeCall;
 	type RuntimeEvent = RuntimeEvent;
@@ -628,7 +628,7 @@ parameter_types! {
 	pub const TreasuryMembershipMaxMembers: u32 = 100;
 }
 
-impl pallet_membership::Config<TreasuryCommitteeInstance> for Runtime {
+impl pallet_membership::Config<TreasuryCouncilInstance> for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type AddOrigin = EnsureTwoThirdsTreasuryCouncil;
 	type RemoveOrigin = EnsureAllTreasuryCouncil;
