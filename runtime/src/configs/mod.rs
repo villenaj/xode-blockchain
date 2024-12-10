@@ -535,6 +535,7 @@ impl pallet_treasury::Config for Runtime {
     type PalletId = TreasuryPalletId; 
     type Currency = Balances;        
     type RejectOrigin = EnsureTwoThirdsTechnicalCouncil;  
+	type SpendOrigin = EnsureWithSuccess<EnsureTwoThirdsTechnicalCouncil, AccountId, MaxBalance>; 
 	type RuntimeEvent = RuntimeEvent; 
 	type SpendPeriod = SpendPeriod;
     type Burn = ();                  
@@ -542,7 +543,6 @@ impl pallet_treasury::Config for Runtime {
 	type SpendFunds = ();  
     type WeightInfo = pallet_treasury::weights::SubstrateWeight<Runtime>;
     type MaxApprovals = MaxApprovals;
-	type SpendOrigin = EnsureWithSuccess<EnsureTwoThirdsTechnicalCouncil, AccountId, MaxBalance>;
 	type AssetKind = u32;
 	type Beneficiary = AccountId;
 	type BeneficiaryLookup = pallet_indices::Pallet<Runtime>;

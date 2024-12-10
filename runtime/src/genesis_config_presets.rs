@@ -2,15 +2,16 @@ use cumulus_primitives_core::ParaId;
 
 use crate::{
 	AccountId, BalancesConfig, CollatorSelectionConfig, ParachainInfoConfig, PolkadotXcmConfig,
-	TechnicalCouncilConfig, TechnicalCouncilMembershipConfig,
 	RuntimeGenesisConfig, SessionConfig, SessionKeys, EXISTENTIAL_DEPOSIT,
-	configs::TechnicalMembershipMaxMembers,
+	// Membership - Technical council (sudo replacement)
+	TechnicalCouncilConfig, TechnicalCouncilMembershipConfig,configs::TechnicalMembershipMaxMembers,
 };
 use alloc::{vec, vec::Vec};
 use parachains_common::{genesis_config_helpers::*, AuraId};
 use serde_json::Value;
 use sp_core::sr25519;
 use sp_genesis_builder::PresetId;
+use sp_runtime::{BoundedVec, AccountId32};
 
 /// The default XCM version to set in genesis config.
 const SAFE_XCM_VERSION: u32 = xcm::prelude::XCM_VERSION;
@@ -21,8 +22,6 @@ const SAFE_XCM_VERSION: u32 = xcm::prelude::XCM_VERSION;
 pub fn template_session_keys(keys: AuraId) -> SessionKeys {
 	SessionKeys { aura: keys }
 }
-
-use sp_runtime::{BoundedVec, AccountId32};
 
 fn testnet_genesis(
 	invulnerables: Vec<(AccountId, AuraId)>,
