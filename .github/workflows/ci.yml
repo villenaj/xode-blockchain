@@ -51,7 +51,7 @@ jobs:
       # Check the `test-zombienet` workflow for a parachain smoke test.
       - name: Check that the node starts up
         run: |
-          ./target/debug/parachain-template-node --help
+          ./target/debug/xode-node --help
 
   build-docker:
     runs-on: ubuntu-latest
@@ -61,5 +61,5 @@ jobs:
       - uses: ./.github/actions/free-disk-space
 
       - name: Build the Dockerfile
-        run: docker build . -t polkadot-sdk-parachain-template
+        run: docker build . -t xode-blockchain
         timeout-minutes: 90
