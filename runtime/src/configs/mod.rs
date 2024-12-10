@@ -237,11 +237,11 @@ impl pallet_transaction_payment::Config for Runtime {
 	type OperationalFeeMultiplier = ConstU8<5>;
 }
 
-impl pallet_sudo::Config for Runtime {
-	type RuntimeEvent = RuntimeEvent;
-	type RuntimeCall = RuntimeCall;
-	type WeightInfo = ();
-}
+// impl pallet_sudo::Config for Runtime {
+// 	type RuntimeEvent = RuntimeEvent;
+// 	type RuntimeCall = RuntimeCall;
+// 	type WeightInfo = ();
+// }
 
 parameter_types! {
 	pub const ReservedXcmpWeight: Weight = MAXIMUM_BLOCK_WEIGHT.saturating_div(4);
@@ -303,7 +303,7 @@ impl cumulus_pallet_xcmp_queue::Config for Runtime {
 	type MaxInboundSuspended = sp_core::ConstU32<1_000>;
 	type MaxActiveOutboundChannels = ConstU32<128>;
 	type MaxPageSize = ConstU32<{ 1 << 16 }>;
-	type ControllerOrigin = EnsureRoot<AccountId>;
+	type ControllerOrigin = EnsureTwoThirdsTechnicalCouncil;
 	type ControllerOriginConverter = XcmOriginToTransactDispatchOrigin;
 	type WeightInfo = ();
 	type PriceForSiblingDelivery = NoPriceForMessageDelivery<ParaId>;
@@ -349,7 +349,7 @@ parameter_types! {
 
 /// We allow root and the StakingAdmin to execute privileged collator selection operations.
 pub type CollatorSelectionUpdateOrigin = EitherOfDiverse<
-	EnsureRoot<AccountId>,
+	EnsureTwoThirdsTechnicalCouncil,
 	EnsureXcm<IsVoiceOfBody<RelayLocation, StakingAdminBodyId>>,
 >;
 
@@ -398,7 +398,7 @@ impl pallet_assets::Config for Runtime {
 	type AssetIdParameter = codec::Compact<u32>;
 	type Currency = Balances;
 	type CreateOrigin = AsEnsureOriginWithArg<EnsureSigned<AccountId>>;
-	type ForceOrigin = EnsureRoot<AccountId>;
+	type ForceOrigin = EnsureTwoThirdsTechnicalCouncil;
 	type AssetDeposit = AssetDeposit;
 	type AssetAccountDeposit = AssetAccountDeposit;
 	type MetadataDepositBase = MetadataDepositBase;
@@ -513,9 +513,9 @@ impl pallet_indices::Config for Runtime {
 }
 
 impl pallet_asset_rate::Config for Runtime {
-	type CreateOrigin = EnsureRoot<AccountId>;
-	type RemoveOrigin = EnsureRoot<AccountId>;
-	type UpdateOrigin = EnsureRoot<AccountId>;
+	type CreateOrigin = EnsureTwoThirdsTechnicalCouncil;
+	type RemoveOrigin = EnsureTwoThirdsTechnicalCouncil;
+	type UpdateOrigin = EnsureTwoThirdsTechnicalCouncil;
 	type Currency = Balances;
 	type AssetKind = u32;
 	type RuntimeEvent = RuntimeEvent;
@@ -534,7 +534,7 @@ parameter_types! {
 impl pallet_treasury::Config for Runtime {
     type PalletId = TreasuryPalletId; 
     type Currency = Balances;        
-    type RejectOrigin = EnsureRoot<AccountId>;  
+    type RejectOrigin = EnsureTwoThirdsTechnicalCouncil;  
 	type RuntimeEvent = RuntimeEvent; 
 	type SpendPeriod = SpendPeriod;
     type Burn = ();                  
@@ -542,7 +542,7 @@ impl pallet_treasury::Config for Runtime {
 	type SpendFunds = ();  
     type WeightInfo = pallet_treasury::weights::SubstrateWeight<Runtime>;
     type MaxApprovals = MaxApprovals;
-	type SpendOrigin = EnsureWithSuccess<EnsureRoot<AccountId>, AccountId, MaxBalance>;
+	type SpendOrigin = EnsureWithSuccess<EnsureTwoThirdsTechnicalCouncil, AccountId, MaxBalance>;
 	type AssetKind = u32;
 	type Beneficiary = AccountId;
 	type BeneficiaryLookup = pallet_indices::Pallet<Runtime>;
@@ -556,15 +556,9 @@ impl pallet_treasury::Config for Runtime {
 ///
 use pallet_collective::{EnsureMember, EnsureProportionAtLeast, EnsureProportionMoreThan};
 
-pub type EnsureRootOrTwoThirdsTechnicalCouncil  = EitherOfDiverse<
-	EnsureRoot<AccountId>, 
-	EnsureProportionMoreThan<AccountId, TechnicalCommitteeInstance, 2, 3>, 
->;
+pub type EnsureTwoThirdsTechnicalCouncil = EnsureProportionMoreThan<AccountId, TechnicalCommitteeInstance, 2, 3>;
 
-pub type EnsureRootOrAllTechnicalCouncil = EitherOfDiverse<
-	EnsureRoot<AccountId>,
-	EnsureProportionMoreThan<AccountId, TechnicalCommitteeInstance, 1, 1>, 
->;
+pub type EnsureAllTechnicalCouncil = EnsureProportionMoreThan<AccountId, TechnicalCommitteeInstance, 1, 1>;
 
 pub type TechnicalCommitteeInstance = pallet_collective::Instance1;
 
@@ -583,9 +577,26 @@ impl pallet_collective::Config<TechnicalCommitteeInstance> for Runtime {
 	type MaxProposals = TecnicalCouncilMaxProposals;
 	type MaxMembers = TecnicalCouncilMaxMembers;
 	type DefaultVote = pallet_collective::PrimeDefaultVote;
-	type SetMembersOrigin = EnsureRootOrAllTechnicalCouncil;
+	type SetMembersOrigin = EnsureAllTechnicalCouncil;
 	type WeightInfo = pallet_collective::weights::SubstrateWeight<Runtime>;
 	type MaxProposalWeight = TechnicalMaxProposalWeight;
+}
+
+parameter_types! {
+	pub const TechnicalMembershipMaxMembers: u32 = 100;
+}
+
+impl pallet_membership::Config<TechnicalCommitteeInstance> for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type AddOrigin = EnsureTwoThirdsTechnicalCouncil;
+	type RemoveOrigin = EnsureAllTechnicalCouncil;
+	type SwapOrigin = EnsureAllTechnicalCouncil;
+	type ResetOrigin = EnsureAllTechnicalCouncil;
+	type PrimeOrigin = EnsureAllTechnicalCouncil;
+	type MembershipInitialized = TechnicalCouncil;
+	type MembershipChanged = TechnicalCouncil;
+	type MaxMembers = TechnicalMembershipMaxMembers;
+	type WeightInfo = pallet_membership::weights::SubstrateWeight<Runtime>;
 }
 
 /// Staking (Xode)

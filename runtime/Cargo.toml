@@ -86,6 +86,7 @@ pallet-asset-rate.workspace = true
 pallet-treasury.workspace = true
 # Governance
 pallet-collective.workspace = true
+pallet-membership.workspace = true
 
 [features]
 default = ["std"]
@@ -146,6 +147,7 @@ std = [
 	"pallet-contracts/std",
 	"pallet-treasury/std",
 	"pallet-collective/std",
+	"pallet-membership/std",
 ]
 
 runtime-benchmarks = [
@@ -176,6 +178,7 @@ runtime-benchmarks = [
 	"pallet-contracts/runtime-benchmarks",
 	"pallet-treasury/runtime-benchmarks",
 	"pallet-collective/runtime-benchmarks",
+	"pallet-membership/runtime-benchmarks",
 ]
 
 try-runtime = [
@@ -205,6 +208,7 @@ try-runtime = [
 	"pallet-contracts/try-runtime",
 	"pallet-treasury/try-runtime",
 	"pallet-collective/try-runtime",
+	"pallet-membership/try-runtime",
 ]
 
 # Enable the metadata hash generation.
