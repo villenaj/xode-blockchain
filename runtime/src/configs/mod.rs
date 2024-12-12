@@ -563,9 +563,9 @@ pub type TechnicalCouncilInstance = pallet_collective::Instance1;
 pub type TreasuryCouncilInstance = pallet_collective::Instance2;
 
 pub type EnsureTwoThirdsTechnicalCouncil = EnsureProportionMoreThan<AccountId, TechnicalCouncilInstance, 2, 3>;
-pub type EnsureAllTechnicalCouncil = EnsureProportionMoreThan<AccountId, TechnicalCouncilInstance, 1, 1>; // Adding members everyone must agree
+pub type EnsureAllTechnicalCouncil = EnsureProportionAtLeast<AccountId, TechnicalCouncilInstance, 1, 1>; // Adding members everyone must agree
 pub type EnsureTwoThirdsTreasuryCouncil = EnsureProportionMoreThan<AccountId, TreasuryCouncilInstance, 2, 3>;
-pub type EnsureAllTreasuryCouncil = EnsureProportionMoreThan<AccountId, TreasuryCouncilInstance, 1, 1>; // Adding members everyone must agree
+pub type EnsureAllTreasuryCouncil = EnsureProportionAtLeast<AccountId, TreasuryCouncilInstance, 1, 1>; // Adding members everyone must agree
 
 parameter_types! {
     // pub const TecnicalCouncilMotionDuration: BlockNumber = 5 * DAYS;
