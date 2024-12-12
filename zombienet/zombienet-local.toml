@@ -1,0 +1,33 @@
+
+[settings]
+timeout = 1000
+node_verifier = "None"
+
+[relaychain]
+default_command = "../../polkadot/target/release/polkadot"
+default_args = [ "-l=parachain=debug,xcm=trace" ]
+chain = "rococo-local"
+
+  [[relaychain.nodes]]
+  name = "alice"
+  validator = true
+  ws_port = 9944
+
+  [[relaychain.nodes]]
+  name = "bob"
+  validator = true
+  ws_port = 9955
+
+[[parachains]]
+id = 1000
+cumulus_based = true
+
+  [[parachains.collators]]
+  name = "charlie"
+  command = "../target/release/xode-node"
+  ws_port = 9988
+
+  [[parachains.collators]]
+  name = "dave"
+  command = "../target/release/xode-node"
+  ws_port = 9999
