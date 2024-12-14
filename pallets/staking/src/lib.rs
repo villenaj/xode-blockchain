@@ -30,6 +30,7 @@ pub mod pallet {
 	use frame_support::{dispatch::DispatchResultWithPostInfo, pallet_prelude::*, DefaultNoBound, };
 	use frame_system::pallet_prelude::*;
 	use sp_runtime::traits::{AccountIdConversion, BlockNumber, CheckedAdd, Zero, One};
+	use sp_runtime::Saturating;
 	use scale_info::prelude::vec::Vec;
 	use scale_info::prelude::vec;
 	use hex::decode;
@@ -41,7 +42,7 @@ pub mod pallet {
 	use frame_support::PalletId;
 	use frame_support::traits::{Currency, ReservableCurrency};
 
-	type BalanceOf<T> = <<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
+	type BalanceOf<T> = <<T as Config>::StakingCurrency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
 
 	/// Runtime configuration
 	#[pallet::config]
@@ -58,8 +59,8 @@ pub mod pallet {
 		/// Xaver nodes that will be always present: vec!["",""]
 		type XaverNodes: Get<&'static [&'static str]>;
 
-		/// The currency trait.
-		type Currency: ReservableCurrency<Self::AccountId>;
+		/// The staking currency trait.
+		type StakingCurrency: ReservableCurrency<Self::AccountId>;
 	}
 
 	#[pallet::pallet]
@@ -105,6 +106,8 @@ pub mod pallet {
 		TreasuryAccountRetrieved { _treasury: T::AccountId, _data: T::AccountData, },
 
 		ProposedCandidateAdded  { _proposed_candidate: T::AccountId, },
+
+		ProposedCandidateBonded  { _proposed_candidate: T::AccountId, },
 	}
 
 	/// ======
@@ -123,6 +126,7 @@ pub mod pallet {
 
 		ProposedCandidateAlreadyExist,
 		ProposedCandidateMaxExceeded,
+		ProposedCandidateNotFound,
 	}
 
 	/// =====
@@ -163,10 +167,10 @@ pub mod pallet {
 		 	Ok(().into())
 		}
 
-		/// Register a new candidate
+		/// Register a new proposed candidate
 		#[pallet::call_index(1)]
 		#[pallet::weight(Weight::from_parts(10_000, 0) + T::DbWeight::get().writes(1))]
-		pub fn register_candidate(origin: OriginFor<T>) -> DispatchResultWithPostInfo {
+		pub fn register_proposed_candidate(origin: OriginFor<T>) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
             ensure!(!ProposedCandidates::<T>::get().iter().any(|c| c.who == who), Error::<T>::ProposedCandidateAlreadyExist);
             ensure!(
@@ -187,6 +191,39 @@ pub mod pallet {
 			Ok(().into())
 		}
 
+		/// Bond proposed candidate
+		/// Get the difference of the existing bond then effect the result: zero no change;
+		/// if greater than zero, reserved the difference; otherwise unreserved.  Once the bond is 
+		/// updated sort the proposed candidates.
+		#[pallet::call_index(2)]
+		#[pallet::weight(Weight::from_parts(10_000, 0) + T::DbWeight::get().writes(1))]
+		pub fn bond_proposed_candidate(origin: OriginFor<T>, new_bond: BalanceOf<T>,) -> DispatchResultWithPostInfo {
+			let who = ensure_signed(origin)?;
+			let mut proposed_candidates = ProposedCandidates::<T>::get();
+			let mut found = false;
+			for i in 0..proposed_candidates.len() {
+				if proposed_candidates[i].who == who {
+					let bond_diff = new_bond.saturating_sub(proposed_candidates[i].bond);
+                    if bond_diff.is_zero() {
+						// No change
+                    } else if bond_diff > Zero::zero() {
+                        T::StakingCurrency::reserve(&who, bond_diff)?;
+                        proposed_candidates[i].bond = new_bond;
+                    } else {
+                        T::StakingCurrency::unreserve(&who, bond_diff);
+                        proposed_candidates[i].bond = new_bond;
+                    }
+                    proposed_candidates[i].last_updated = frame_system::Pallet::<T>::block_number();
+                    found = true;
+                    break;
+				}
+			}
+			ensure!(found, Error::<T>::ProposedCandidateNotFound);
+			ProposedCandidates::<T>::put(proposed_candidates);
+			Self::sort_proposed_candidates();
+			Self::deposit_event(Event::ProposedCandidateBonded { _proposed_candidate: who });
+			Ok(().into())
+		}
 	}
 
 	/// =======
@@ -247,6 +284,18 @@ pub mod pallet {
 				let _ = Self::add_invulnerable(desired_candidate);
 			}
 		}
+
+		/// Sort proposed candidates:
+		/// Prioritize total_stake first, then bond, then oldest last_updated
+		pub fn sort_proposed_candidates() {
+            let mut proposed_candidates = ProposedCandidates::<T>::get();
+            proposed_candidates.sort_by(|a, b| {
+                b.total_stake.cmp(&a.total_stake)
+                    .then_with(|| b.bond.cmp(&a.bond))
+                    .then_with(|| a.last_updated.cmp(&b.last_updated)) 
+            });
+            ProposedCandidates::<T>::put(proposed_candidates);
+        }
 	}
 
 	/// ===============

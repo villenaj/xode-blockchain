@@ -654,6 +654,6 @@ impl pallet_xode_staking::Config for Runtime {
 	// Total number collator candidate - Total number of Xaver Nodes = Remaining slot for the proposed candidates
 	type MaxProposedCandidates = ConstU32<200>;  
 	type XaverNodes = Nodes;
-	type Currency = Balances;
+	type StakingCurrency = Balances;
 }
 
