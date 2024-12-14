@@ -238,12 +238,6 @@ impl pallet_transaction_payment::Config for Runtime {
 	type OperationalFeeMultiplier = ConstU8<5>;
 }
 
-// impl pallet_sudo::Config for Runtime {
-// 	type RuntimeEvent = RuntimeEvent;
-// 	type RuntimeCall = RuntimeCall;
-// 	type WeightInfo = ();
-// }
-
 parameter_types! {
 	pub const ReservedXcmpWeight: Weight = MAXIMUM_BLOCK_WEIGHT.saturating_div(4);
 	pub const ReservedDmpWeight: Weight = MAXIMUM_BLOCK_WEIGHT.saturating_div(4);
@@ -370,9 +364,9 @@ impl pallet_collator_selection::Config for Runtime {
 	type WeightInfo = ();
 }
 
+/// ======
 /// Assets
-///
-///
+/// ======
 pub const ASSETS_UNIT: Balance = 1_000_000_000_000;
 pub const ASSETS_MILLIUNIT: Balance = 1_000_000_000;
 pub const ASSETS_MICROUNIT: Balance = 1_000_000;
@@ -414,9 +408,9 @@ impl pallet_assets::Config for Runtime {
 	type BenchmarkHelper = ();
 }
 
+/// =========
 /// Contracts
-///
-///
+/// =========
 pub struct DummyRandomness<T: pallet_contracts::Config>(sp_std::marker::PhantomData<T>);
 
 impl<T: pallet_contracts::Config> Randomness<T::Hash, BlockNumberFor<T>> for DummyRandomness<T> {
@@ -494,9 +488,9 @@ impl pallet_contracts::Config for Runtime {
 	type MaxTransientStorageSize = ConstU32<{ 1 * 1024 * 1024 }>;
 }
 
+/// ========
 /// Treasury  
-///
-///
+/// ========
 pub const MILLICENTS: Balance = 1_000_000_000;
 pub const CENTS: Balance = 1_000 * MILLICENTS; 
 pub const DOLLARS: Balance = 100 * CENTS;
@@ -554,9 +548,9 @@ impl pallet_treasury::Config for Runtime {
 	type PayoutPeriod = SpendPayoutPeriod;
 }
 
+/// ==========
 /// Governance
-///
-///
+/// ==========
 use pallet_collective::{EnsureMember, EnsureProportionAtLeast, EnsureProportionMoreThan};
 
 pub type TechnicalCouncilInstance = pallet_collective::Instance1;
@@ -643,22 +637,21 @@ impl pallet_membership::Config<TreasuryCouncilInstance> for Runtime {
 	type WeightInfo = pallet_membership::weights::SubstrateWeight<Runtime>;
 }
 
+/// ==============
 /// Staking (Xode)
-///
-///
+/// ==============
 parameter_types! {
-	pub const InvulnerableNodes: &'static [&'static str] = &[
-		"0x306721211d5404bd9da88e0204360a1a9ab8b87c66c1bc2fcdd37f3c2222cc20",  // Charlie (Use for development)
-		"0x90b5ab205c6974c9ea841be688864633dc9ca8a357843eeacf2314649965fe22" // Dave (Use for development)
+	pub const Nodes: &'static [&'static str] = &[
+		"0x306721211d5404bd9da88e0204360a1a9ab8b87c66c1bc2fcdd37f3c2222cc20",  	// Charlie (Use for development)
+		"0x90b5ab205c6974c9ea841be688864633dc9ca8a357843eeacf2314649965fe22" 	// Dave (Use for development)
 	];
 }
 
 impl pallet_xode_staking::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type WeightInfo = pallet_xode_staking::weights::SubstrateWeight<Runtime>;
-	// type MaxCandidates = ConstU32<1_000>;
 	type BlockInterval = ConstU32<5>;  // In production this must accomodate all authorities
-	type Invulnerables = InvulnerableNodes;
+	type XaverNodes = Nodes;
 	type Currency = Balances;
 }
 
