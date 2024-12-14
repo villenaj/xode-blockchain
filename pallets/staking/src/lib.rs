@@ -5,6 +5,11 @@
 //! DesiredCandidates
 //! Invulnerables
 //! 
+//! Steps
+//! 1. add_xaver_nodes (Block 0/Hooks)
+//! 2. register_candidate
+//! 3. bond_candidate
+//! 
 #![cfg_attr(not(feature = "std"), no_std)]
 
 pub use pallet::*;
@@ -24,7 +29,7 @@ mod benchmarking;
 pub mod pallet {
 	use frame_support::{dispatch::DispatchResultWithPostInfo, pallet_prelude::*, DefaultNoBound, };
 	use frame_system::pallet_prelude::*;
-	use sp_runtime::traits::{AccountIdConversion, BlockNumber, CheckedAdd, One};
+	use sp_runtime::traits::{AccountIdConversion, BlockNumber, CheckedAdd, Zero, One};
 	use scale_info::prelude::vec::Vec;
 	use scale_info::prelude::vec;
 	use hex::decode;
@@ -47,8 +52,8 @@ pub mod pallet {
 		/// A type representing the weights required by the dispatchables of this pallet.
 		type WeightInfo: crate::weights::WeightInfo;
 
-		/// Block interval (used to determine the next block number)
-		type BlockInterval: Get<u32>;
+		/// The maximum proposed candidates
+		type MaxProposedCandidates: Get<u32>;
 
 		/// Xaver nodes that will be always present: vec!["",""]
 		type XaverNodes: Get<&'static [&'static str]>;
@@ -69,9 +74,9 @@ pub mod pallet {
 		pub last_updated: BlockNumber,
 	}
 		
-	/// Candidates 
+	/// Proposed candidates 
 	#[pallet::storage]
-	pub type Candidates<T: Config> = StorageValue<
+	pub type ProposedCandidates<T: Config> = StorageValue<
 		_,
 		BoundedVec<CandidateInfo<T::AccountId, BalanceOf<T>, BlockNumberFor<T>>, T::MaxCandidates>,
 		ValueQuery,
@@ -98,6 +103,8 @@ pub mod pallet {
 		DesiredCandidateAdded { _desired_candidate: T::AccountId, },
 
 		TreasuryAccountRetrieved { _treasury: T::AccountId, _data: T::AccountData, },
+
+		ProposedCandidateAdded  { _proposed_candidate: T::AccountId, },
 	}
 
 	/// ======
@@ -110,6 +117,12 @@ pub mod pallet {
 
 		DesiredCandidateAlreadyExist,
 		DesiredCandidateMaxExceeded,
+
+		CandidateAlreadyExist,
+		CandidateMaxExceeded,
+
+		ProposedCandidateAlreadyExist,
+		ProposedCandidateMaxExceeded,
 	}
 
 	/// =====
@@ -148,6 +161,30 @@ pub mod pallet {
 		 	let account_data = account_info.data;	
 		 	Self::deposit_event(Event::TreasuryAccountRetrieved { _treasury: treasury, _data: account_data, });
 		 	Ok(().into())
+		}
+
+		/// Register a new candidate
+		#[pallet::call_index(1)]
+		#[pallet::weight(Weight::from_parts(10_000, 0) + T::DbWeight::get().writes(1))]
+		pub fn register_candidate(origin: OriginFor<T>) -> DispatchResultWithPostInfo {
+			let who = ensure_signed(origin)?;
+            ensure!(!ProposedCandidates::<T>::get().iter().any(|c| c.who == who), Error::<T>::ProposedCandidateAlreadyExist);
+            ensure!(
+                ProposedCandidates::<T>::get().len() < T::MaxProposedCandidates::get() as usize,
+                Error::<T>::ProposedCandidateMaxExceeded
+            );
+            let candidate_info = CandidateInfo {
+                who: who.clone(),
+                bond: Zero::zero(),
+                total_stake: Zero::zero(),
+                last_updated: frame_system::Pallet::<T>::block_number(),
+            };
+            ProposedCandidates::<T>::try_mutate(|candidates| -> Result<(), DispatchError> {
+                candidates.try_push(candidate_info).map_err(|_| Error::<T>::ProposedCandidateMaxExceeded)?;
+                Ok(())
+            })?;
+			Self::deposit_event(Event::ProposedCandidateAdded { _proposed_candidate: who });
+			Ok(().into())
 		}
 
 	}

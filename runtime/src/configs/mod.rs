@@ -643,14 +643,16 @@ impl pallet_membership::Config<TreasuryCouncilInstance> for Runtime {
 parameter_types! {
 	pub const Nodes: &'static [&'static str] = &[
 		"0x306721211d5404bd9da88e0204360a1a9ab8b87c66c1bc2fcdd37f3c2222cc20",  	// Charlie (Use for development)
-		"0x90b5ab205c6974c9ea841be688864633dc9ca8a357843eeacf2314649965fe22" 	// Dave (Use for development)
+		"0x90b5ab205c6974c9ea841be688864633dc9ca8a357843eeacf2314649965fe22", 	// Dave (Use for development)
+		"0xe659a7a1628cdd93febc04a4e0646ea20e9f5f0ce097d9a05290d4a9e054df4e",   // Eve (Use for development)
 	];
 }
 
 impl pallet_xode_staking::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type WeightInfo = pallet_xode_staking::weights::SubstrateWeight<Runtime>;
-	type BlockInterval = ConstU32<5>;  // In production this must accomodate all authorities
+	// Total number collator candidate - Total number of Xaver Nodes = Remaining slot for the proposed candidates
+	type MaxProposedCandidates = ConstU32<200>;  
 	type XaverNodes = Nodes;
 	type Currency = Balances;
 }
