@@ -1,0 +1,1 @@
+DEBUG=zombie* ./bin/zombienet-macos-x64 spawn zombienet-local.toml -p native
