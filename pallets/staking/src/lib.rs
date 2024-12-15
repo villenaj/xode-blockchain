@@ -27,7 +27,8 @@ mod benchmarking;
 
 #[frame_support::pallet]
 pub mod pallet {
-	use frame_support::{dispatch::DispatchResultWithPostInfo, pallet_prelude::*, DefaultNoBound, };
+	use frame_support::dispatch::DispatchResult;
+use frame_support::{dispatch::DispatchResultWithPostInfo, pallet_prelude::*, DefaultNoBound, };
 	use frame_system::pallet_prelude::*;
 	use sp_runtime::traits::{AccountIdConversion, BlockNumber, CheckedAdd, Zero, One};
 	use sp_runtime::Saturating;
@@ -117,6 +118,10 @@ pub mod pallet {
 		WaitingCandidateAdded { _waiting_candidate: T::AccountId, },
 
 		ProposedCandidateLeft  { _proposed_candidate: T::AccountId, },
+
+		WaitingCandidateRemoved { _waiting_candidate: T::AccountId, },
+
+		ProposedCandidateRemoved { _proposed_candidate: T::AccountId, },
 	}
 
 	/// ======
@@ -126,6 +131,7 @@ pub mod pallet {
 	pub enum Error<T> {
 		InvulnerableAlreadyExist,
 		InvulnerableMaxExceeded,
+		InvulernableMember,
 
 		DesiredCandidateAlreadyExist,
 		DesiredCandidateMaxExceeded,
@@ -139,6 +145,8 @@ pub mod pallet {
 
 		WaitingCandidateAlreadyExist,
 		WaitingCandidateMaxExceeded,
+		WaitingCandidateNotFound,
+		WaitingCandidateMember,
 		WaitingCandidatesEmpty,
 	}
 
@@ -219,6 +227,11 @@ pub mod pallet {
 			for i in 0..proposed_candidates.len() {
 				if proposed_candidates[i].who == who {
 					if proposed_candidates[i].bond > new_bond {
+						// If bond is set to 0, ensure that the candidate is not in waiting list and currently authoring blocks
+						if new_bond == Zero::zero() {
+							ensure!(!WaitingCandidates::<T>::get().contains(&who), Error::<T>::WaitingCandidateMember);
+							ensure!(!pallet_collator_selection::Invulnerables::<T>::get().contains(&who), Error::<T>::InvulernableMember);
+						} 
 						let bond_diff = proposed_candidates[i].bond.saturating_sub(new_bond);
 						proposed_candidates[i].bond = new_bond;
 						if bond_diff > Zero::zero() {
@@ -226,9 +239,6 @@ pub mod pallet {
 						}
 					} else {
 						let bond_diff = new_bond.saturating_sub(proposed_candidates[i].bond);
-						// Todo check if the bond_diff is zero, it is, check the waiting candidates, if not present
-						// check the current session authors.  The candidate cannot set the bond to zero if it
-						// still existing in the waiting candidates and current session authors
 						proposed_candidates[i].bond = new_bond;
 						if bond_diff > Zero::zero() {
 							T::StakingCurrency::reserve(&who, bond_diff)?;
@@ -257,7 +267,8 @@ pub mod pallet {
 				if proposed_candidates[i].who == who {
 					proposed_candidates[i].leaving = true;
 					proposed_candidates[i].last_updated = frame_system::Pallet::<T>::block_number();
-					// Todo - update the waiting candidate
+					// Remove the candidate from the waiting list
+					let _ = Self::remove_waiting_candidate(who.clone());
 					found = true;
 				}
 			}
@@ -304,6 +315,17 @@ pub mod pallet {
 			})
 		}
 
+		/// Remove a proposed candidate
+		/// This is called upon cleaning of the proposed candidate storage for a candidate who is leaving 
+		/// regardless if he/she has still a bond.
+		pub fn remove_proposed_candidate(proposed_candidate: T::AccountId) -> DispatchResult {
+            ProposedCandidates::<T>::try_mutate(|proposed_candidates| -> DispatchResult {
+                proposed_candidates.retain(|c| c.who != proposed_candidate); 
+                Self::deposit_event(Event::ProposedCandidateRemoved { _proposed_candidate: proposed_candidate });
+                Ok(())
+            })
+		}
+
 		/// Add a waiting candidate
 		/// At runtime instantiation the waiting candidates are the xaver nodes, prior sessions will now 
 		/// include the proposed candidates. 
@@ -317,8 +339,31 @@ pub mod pallet {
 		}
 
 		/// Remove a waiting candidate
-		/// Todo helper function
-		/// pub fn remove_waiting_candidate(waiting_candidate: T::AccountId) -> DispatchResult 
+		/// This is called when the candidate wants to leave.
+		pub fn remove_waiting_candidate(waiting_candidate: T::AccountId) -> DispatchResult {
+			WaitingCandidates::<T>::try_mutate(|waiting_candidates| -> DispatchResult {
+				ensure!(waiting_candidates.contains(&waiting_candidate), Error::<T>::WaitingCandidateNotFound);
+				if let Some(pos) = waiting_candidates.iter().position(|x| x == &waiting_candidate) {
+					waiting_candidates.remove(pos);
+				} else {
+					return Err(Error::<T>::WaitingCandidateNotFound.into());
+				}
+				Self::deposit_event(Event::WaitingCandidateRemoved { _waiting_candidate: waiting_candidate });
+				Ok(())
+			})
+		}
+
+		/// Sort proposed candidates:
+		/// Prioritize total_stake first, then bond, then oldest last_updated
+		pub fn sort_proposed_candidates() {
+            let mut proposed_candidates = ProposedCandidates::<T>::get();
+            proposed_candidates.sort_by(|a, b| {
+                b.total_stake.cmp(&a.total_stake)
+                    .then_with(|| b.bond.cmp(&a.bond))
+                    .then_with(|| a.last_updated.cmp(&b.last_updated)) 
+            });
+            ProposedCandidates::<T>::put(proposed_candidates);
+        }
 
 		/// Add Xaver Nodes to the desired candidates at genesis
 		pub fn add_xaver_nodes() {
@@ -341,26 +386,49 @@ pub mod pallet {
 			let desired_candidates = DesiredCandidates::<T>::get();
 			let proposed_candidates = ProposedCandidates::<T>::get();
 			let mut waiting_candidates: BoundedVec<T::AccountId, T::MaxCandidates> = BoundedVec::default();
-
 			// First, add all desired candidates
 			for candidate in desired_candidates.iter() {
 				if waiting_candidates.len() < T::MaxCandidates::get() as usize {
 					waiting_candidates.try_push(candidate.clone()).map_err(|_| Error::<T>::WaitingCandidateAlreadyExist)?;
 				}
 			}
-
-			// Next, add proposed candidates if there's still space
+			// Next, add proposed candidates if there's still space, bond is not zero and not leaving
 			for proposed_candidate in proposed_candidates.iter() {
 				if waiting_candidates.len() < T::MaxCandidates::get() as usize {
 					if !waiting_candidates.contains(&proposed_candidate.who) && 
-					   !proposed_candidate.bond.is_zero() {
+					   !proposed_candidate.bond.is_zero() && 
+					   !proposed_candidate.leaving {
 						waiting_candidates.try_push(proposed_candidate.who.clone()).map_err(|_| Error::<T>::WaitingCandidateAlreadyExist)?;
 					}
 				}
 			}
-
 			WaitingCandidates::<T>::put(waiting_candidates);
+			Ok(())
+		}
 
+		/// Clean proposed candidate storage from leaving or zero bonded candidates
+		/// We need to execute this helper function to make sure that we have space for others to join
+		pub fn clean_proposed_candidates() -> DispatchResult {
+			let proposed_candidates = ProposedCandidates::<T>::get();
+
+			for proposed_candidate in proposed_candidates.iter() {
+				if proposed_candidate.leaving {
+					if !WaitingCandidates::<T>::get().contains(&proposed_candidate.who) &&
+					   !pallet_collator_selection::Invulnerables::<T>::get().contains(&proposed_candidate.who) {
+						if proposed_candidate.bond > Zero::zero() {
+							T::StakingCurrency::unreserve(&proposed_candidate.who, proposed_candidate.bond);
+						}
+						let _ = Self::remove_proposed_candidate(proposed_candidate.who.clone());
+					}
+				} else {
+					if proposed_candidate.bond == Zero::zero() {
+						if !WaitingCandidates::<T>::get().contains(&proposed_candidate.who) &&
+						   !pallet_collator_selection::Invulnerables::<T>::get().contains(&proposed_candidate.who) {
+						 	let _ = Self::remove_proposed_candidate(proposed_candidate.who.clone());
+						}
+					}
+				}
+			}
 			Ok(())
 		}
 
@@ -369,39 +437,28 @@ pub mod pallet {
 		/// Todo: If an existing invulnerable is not in the desired candidate list, the invulnerable
 		///       must be delete from the current invulnerable.
 		pub fn assemble_collators() -> DispatchResult {
-			// Ensure the waiting candidates is not empty
+			// Ensure the waiting candidates storage is not empty
 			let waiting_candidates = WaitingCandidates::<T>::get();
 			ensure!(!waiting_candidates.is_empty(), Error::<T>::WaitingCandidatesEmpty);
 
 			// Remove the invulnerables not in the waiting candidates to save space
 			let mut invulnerables = pallet_collator_selection::Invulnerables::<T>::get();
 			invulnerables.retain(|account| waiting_candidates.contains(account));
+			pallet_collator_selection::Invulnerables::<T>::put(invulnerables);
 
 			// Start inserting the waiting candidates to invulnerables
 			for waiting_candidate in waiting_candidates.clone() {
 				let _ = Self::add_invulnerable(waiting_candidate);
 			}
 
-			// Remove proposed candidates with zero bond
-
+			// Clean proposed candidate storage from leaving candidates and zero bond
+			let _ = Self::clean_proposed_candidates();
 
 			// Prepare the new waiting candidates for the next session
 			let _ = Self::prepare_waiting_candidates();
 
 			Ok(())
 		}
-
-		/// Sort proposed candidates:
-		/// Prioritize total_stake first, then bond, then oldest last_updated
-		pub fn sort_proposed_candidates() {
-            let mut proposed_candidates = ProposedCandidates::<T>::get();
-            proposed_candidates.sort_by(|a, b| {
-                b.total_stake.cmp(&a.total_stake)
-                    .then_with(|| b.bond.cmp(&a.bond))
-                    .then_with(|| a.last_updated.cmp(&b.last_updated)) 
-            });
-            ProposedCandidates::<T>::put(proposed_candidates);
-        }
 	}
 
 	/// ===============
