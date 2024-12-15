@@ -57,6 +57,9 @@ use frame_support::{dispatch::DispatchResultWithPostInfo, pallet_prelude::*, Def
 		/// The maximum proposed candidates
 		type MaxProposedCandidates: Get<u32>;
 
+		/// The maximum proposed candidate delegates
+		type MaxProposedCandidateDelegates: Get<u32>;
+
 		/// Xaver nodes that will be always present: vec!["",""]
 		type XaverNodes: Get<&'static [&'static str]>;
 
@@ -93,6 +96,23 @@ use frame_support::{dispatch::DispatchResultWithPostInfo, pallet_prelude::*, Def
 	#[pallet::storage]
 	pub type WaitingCandidates<T: Config> = StorageValue<_, BoundedVec<T::AccountId, T::MaxCandidates>, ValueQuery>;
 
+	/// Delegator info (Delegation)
+	#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, scale_info::TypeInfo, MaxEncodedLen,)]
+	pub struct Delegation<AccountId, Balance> {
+		pub delegator: AccountId,
+		pub stake: Balance,
+	}
+
+	/// Delegations
+	#[pallet::storage]
+	pub type Delegations<T: Config> = StorageMap<
+		_, 
+		Twox64Concat, 
+		T::AccountId, 
+		BoundedVec<Delegation<T::AccountId, BalanceOf<T>>, T::MaxProposedCandidateDelegates>, 
+		OptionQuery
+	>;
+
 	/// Next block number storage
 	#[pallet::storage]
     #[pallet::getter(fn next_block_number)]
@@ -112,16 +132,14 @@ use frame_support::{dispatch::DispatchResultWithPostInfo, pallet_prelude::*, Def
 		TreasuryAccountRetrieved { _treasury: T::AccountId, _data: T::AccountData, },
 
 		ProposedCandidateAdded  { _proposed_candidate: T::AccountId, },
-
 		ProposedCandidateBonded  { _proposed_candidate: T::AccountId, },
+		ProposedCandidateLeft  { _proposed_candidate: T::AccountId, },
+		ProposedCandidateRemoved { _proposed_candidate: T::AccountId, },
 
 		WaitingCandidateAdded { _waiting_candidate: T::AccountId, },
-
-		ProposedCandidateLeft  { _proposed_candidate: T::AccountId, },
-
 		WaitingCandidateRemoved { _waiting_candidate: T::AccountId, },
 
-		ProposedCandidateRemoved { _proposed_candidate: T::AccountId, },
+		DelegationAdded { _delegator: T::AccountId, },
 	}
 
 	/// ======
@@ -148,6 +166,11 @@ use frame_support::{dispatch::DispatchResultWithPostInfo, pallet_prelude::*, Def
 		WaitingCandidateNotFound,
 		WaitingCandidateMember,
 		WaitingCandidatesEmpty,
+
+		DelegationToSelfNotAllowed,
+		DelegationInsufficientAmount,
+		DelegationCandidateDoesNotExist,
+		DelegationsMaxExceeded,
 	}
 
 	/// =====
@@ -177,6 +200,8 @@ use frame_support::{dispatch::DispatchResultWithPostInfo, pallet_prelude::*, Def
 	impl<T: Config> Pallet<T> {
 
 		/// Retrieve the treasury account
+		/// Note:
+		/// 	Temporary extrinsic to monitor fees.
 		#[pallet::call_index(0)]
 		#[pallet::weight(Weight::from_parts(10_000, 0) + T::DbWeight::get().writes(1))]
 		pub fn retrieve_treasury_account(_origin: OriginFor<T>) -> DispatchResultWithPostInfo {
@@ -188,7 +213,7 @@ use frame_support::{dispatch::DispatchResultWithPostInfo, pallet_prelude::*, Def
 		 	Ok(().into())
 		}
 
-		/// Register a new proposed candidate
+		/// Register a new candidate in the Proposed Candidate list
 		#[pallet::call_index(1)]
 		#[pallet::weight(Weight::from_parts(10_000, 0) + T::DbWeight::get().writes(1))]
 		pub fn register_proposed_candidate(origin: OriginFor<T>) -> DispatchResultWithPostInfo {
@@ -213,11 +238,13 @@ use frame_support::{dispatch::DispatchResultWithPostInfo, pallet_prelude::*, Def
 			Ok(().into())
 		}
 
-		/// Bond proposed candidate
-		/// Get the difference of the existing bond then effect the result: zero no change;
-		/// if greater than zero, reserve the difference; otherwise unreserve.  Once the bond of 
-		/// a candidate is updated, sort immediately the proposed candidates.
-		/// Todo: How do we deal with the reserve and unreserve for some reason fails?
+		/// Bond Proposed Candidate
+		/// Note:
+		/// 	Get the difference of the existing bond then effect the result: zero no change;
+		/// 	if greater than zero, reserve the difference; otherwise unreserve.  Once the bond of 
+		/// 	a candidate is updated, sort immediately the proposed candidates.
+		/// Todo: 
+		/// 	How do we deal with the reserve and unreserve for some reason fails?
 		#[pallet::call_index(2)]
 		#[pallet::weight(Weight::from_parts(10_000, 0) + T::DbWeight::get().writes(1))]
 		pub fn bond_proposed_candidate(origin: OriginFor<T>, new_bond: BalanceOf<T>,) -> DispatchResultWithPostInfo {
@@ -257,6 +284,9 @@ use frame_support::{dispatch::DispatchResultWithPostInfo, pallet_prelude::*, Def
 		}
 
 		/// Leave Proposed Candidate
+		/// Note:
+		/// 	Once the leaving flag is set to true, immediately remove the account in the
+		/// 	Waiting Candidate list.
 		#[pallet::call_index(3)]
 		#[pallet::weight(Weight::from_parts(10_000, 0) + T::DbWeight::get().writes(1))]
 		pub fn leave_proposed_candidate(origin: OriginFor<T>,) -> DispatchResultWithPostInfo {
@@ -275,6 +305,32 @@ use frame_support::{dispatch::DispatchResultWithPostInfo, pallet_prelude::*, Def
 			ensure!(found, Error::<T>::ProposedCandidateNotFound);
 			ProposedCandidates::<T>::put(proposed_candidates);
 			Self::deposit_event(Event::ProposedCandidateLeft { _proposed_candidate: who });
+			Ok(().into())
+		}
+
+		/// Stake Proposed Candidate
+		/// Note:
+		/// 	To stake a proposed candidate means to delegate a balance for the candidate.
+		/// 	The balance is reserved.
+		/// Todo:
+		/// 	How to handle the reservation if there is a failure in adding the delegation
+		#[pallet::call_index(4)]
+		#[pallet::weight(Weight::from_parts(10_000, 0) + T::DbWeight::get().writes(1))]
+		pub fn stake_proposed_candidate(origin: OriginFor<T>, candidate: T::AccountId, amount: BalanceOf<T>) -> DispatchResultWithPostInfo {
+			let who = ensure_signed(origin)?;
+			ensure!(who != candidate, Error::<T>::DelegationToSelfNotAllowed);
+			ensure!(ProposedCandidates::<T>::get().iter().any(|c| c.who == candidate), Error::<T>::DelegationCandidateDoesNotExist); 
+			ensure!(T::StakingCurrency::free_balance(&who) >= amount, Error::<T>::DelegationInsufficientAmount);
+			T::StakingCurrency::reserve(&who, amount)?;
+			// Update delegations
+			let mut delegations = Delegations::<T>::get(&candidate).unwrap_or_default();
+			if let Some(delegation) = delegations.iter_mut().find(|d| d.delegator == who) {
+				delegation.stake += amount;
+			} else {
+				let _ = delegations.try_push(Delegation { delegator: who.clone(), stake: amount }).map_err(|_| Error::<T>::DelegationsMaxExceeded)?;
+			}
+			Delegations::<T>::insert(&candidate, delegations);
+			Self::deposit_event(Event::DelegationAdded { _delegator: who });
 			Ok(().into())
 		}
 	}
@@ -434,8 +490,6 @@ use frame_support::{dispatch::DispatchResultWithPostInfo, pallet_prelude::*, Def
 
 		/// Assemble the final collator nodes by updating the pallet_collator_selection invulnerables.
 		/// This helper function is called every new session.
-		/// Todo: If an existing invulnerable is not in the desired candidate list, the invulnerable
-		///       must be delete from the current invulnerable.
 		pub fn assemble_collators() -> DispatchResult {
 			// Ensure the waiting candidates storage is not empty
 			let waiting_candidates = WaitingCandidates::<T>::get();
