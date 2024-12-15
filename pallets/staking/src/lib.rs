@@ -195,6 +195,7 @@ pub mod pallet {
 		/// Get the difference of the existing bond then effect the result: zero no change;
 		/// if greater than zero, reserved the difference; otherwise unreserved.  Once the bond is 
 		/// updated sort the proposed candidates.
+		/// Todo: How do we deal with the reserve and unreserve for some reason fails?
 		#[pallet::call_index(2)]
 		#[pallet::weight(Weight::from_parts(10_000, 0) + T::DbWeight::get().writes(1))]
 		pub fn bond_proposed_candidate(origin: OriginFor<T>, new_bond: BalanceOf<T>,) -> DispatchResultWithPostInfo {
@@ -203,16 +204,19 @@ pub mod pallet {
 			let mut found = false;
 			for i in 0..proposed_candidates.len() {
 				if proposed_candidates[i].who == who {
-					let bond_diff = new_bond.saturating_sub(proposed_candidates[i].bond);
-                    if bond_diff.is_zero() {
-						// No change
-                    } else if bond_diff > Zero::zero() {
-                        T::StakingCurrency::reserve(&who, bond_diff)?;
-                        proposed_candidates[i].bond = new_bond;
-                    } else {
-                        T::StakingCurrency::unreserve(&who, bond_diff);
-                        proposed_candidates[i].bond = new_bond;
-                    }
+					if proposed_candidates[i].bond > new_bond {
+						let bond_diff = proposed_candidates[i].bond.saturating_sub(new_bond);
+						proposed_candidates[i].bond = new_bond;
+						if bond_diff > Zero::zero() {
+							T::StakingCurrency::unreserve(&who, bond_diff);
+						}
+					} else {
+						let bond_diff = new_bond.saturating_sub(proposed_candidates[i].bond);
+						proposed_candidates[i].bond = new_bond;
+						if bond_diff > Zero::zero() {
+							T::StakingCurrency::reserve(&who, bond_diff)?;
+						}
+					}
                     proposed_candidates[i].last_updated = frame_system::Pallet::<T>::block_number();
                     found = true;
                     break;
