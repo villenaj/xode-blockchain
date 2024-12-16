@@ -324,11 +324,13 @@ use frame_support::{dispatch::DispatchResultWithPostInfo, pallet_prelude::*, };
 		#[pallet::weight(Weight::from_parts(10_000, 0) + T::DbWeight::get().writes(1))]
 		pub fn stake_candidate(origin: OriginFor<T>, candidate: T::AccountId, amount: BalanceOf<T>) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
+			// Provide some controls
 			ensure!(who != candidate, Error::<T>::DelegationToSelfNotAllowed);
 			ensure!(ProposedCandidates::<T>::get().iter().any(|c| c.who == candidate), Error::<T>::DelegationCandidateDoesNotExist); 
 			ensure!(T::StakingCurrency::free_balance(&who) >= amount, Error::<T>::DelegationInsufficientAmount);
+			// Reserve the balance before updating the stake amount of the delegator
 			T::StakingCurrency::reserve(&who, amount)?;
-			// Update delegations
+			// Update delegation stake amount
 			let mut delegations = Delegations::<T>::get(&candidate).unwrap_or_default();
 			if let Some(delegation) = delegations.iter_mut().find(|d| d.delegator == who) {
 				delegation.stake += amount;
@@ -336,6 +338,7 @@ use frame_support::{dispatch::DispatchResultWithPostInfo, pallet_prelude::*, };
 				let _ = delegations.try_push(Delegation { delegator: who.clone(), stake: amount }).map_err(|_| Error::<T>::DelegationsMaxExceeded)?;
 			}
 			Delegations::<T>::insert(&candidate, delegations);
+			// Update the proposed candidate total stake amount
 			let _ = Self::total_stake_proposed_candidate(candidate);
 			Self::deposit_event(Event::DelegationAdded { _delegator: who });
 			Ok(().into())
@@ -343,19 +346,28 @@ use frame_support::{dispatch::DispatchResultWithPostInfo, pallet_prelude::*, };
 
 		/// Unstake Proposed Candidate
 		/// Note:
+		/// 	Remove first the delagation (stake amount) before unreserving
 		#[pallet::call_index(5)]
 		#[pallet::weight(Weight::from_parts(10_000, 0) + T::DbWeight::get().writes(1))]
 		pub fn unstake_candidate(origin: OriginFor<T>, candidate: T::AccountId) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
+			// Extract the delegations of a candidate
 			let mut delegations = Delegations::<T>::get(&candidate).ok_or(Error::<T>::DelegationsDoesNotExist)?;
 			let len_before_removal = delegations.len();
 			delegations.retain(|c| c.delegator != who);
 			ensure!(delegations.len() < len_before_removal, Error::<T>::DelegationDelegatorDoesNotExist);
+			// Get the stake amount
+			let position = delegations.iter().position(|c| c.delegator == who).ok_or(Error::<T>::DelegationDelegatorDoesNotExist)?;
+			let stake_amount = delegations[position].stake;
+			// Remove in the delegations
 			if delegations.is_empty() {
 				Delegations::<T>::remove(&candidate);
 			} else {
 				Delegations::<T>::insert(&candidate, delegations);
 			}
+			// Unreserve the balance
+			T::StakingCurrency::unreserve(&who, stake_amount);
+			// Update the proposed candidate total stake amount
 			let _ = Self::total_stake_proposed_candidate(candidate);
 			Self::deposit_event(Event::DelegationRevoked { _delegator: who });
 			Ok(().into())
