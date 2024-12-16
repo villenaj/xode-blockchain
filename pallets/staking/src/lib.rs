@@ -27,7 +27,7 @@ mod benchmarking;
 
 #[frame_support::pallet]
 pub mod pallet {
-	use frame_support::dispatch::{DispatchResult};
+	use frame_support::dispatch::DispatchResult;
 use frame_support::{dispatch::DispatchResultWithPostInfo, pallet_prelude::*, };
 	use frame_system::pallet_prelude::*;
 	use sp_runtime::traits::{AccountIdConversion, Zero,};
@@ -78,6 +78,7 @@ use frame_support::{dispatch::DispatchResultWithPostInfo, pallet_prelude::*, };
 		pub total_stake: Balance,
 		pub last_updated: BlockNumber,
 		pub leaving: bool,
+		pub commission: u8,
 	}
 		
 	/// Proposed candidates 
@@ -136,6 +137,7 @@ use frame_support::{dispatch::DispatchResultWithPostInfo, pallet_prelude::*, };
 		ProposedCandidateLeft  { _proposed_candidate: T::AccountId, },
 		ProposedCandidateRemoved { _proposed_candidate: T::AccountId, },
 		ProposedCandidateTotalStake { _proposed_candidate: T::AccountId, },
+		ProposedCandidateCommissionSet { _proposed_candidate: T::AccountId, },
 
 		WaitingCandidateAdded { _waiting_candidate: T::AccountId, },
 		WaitingCandidateRemoved { _waiting_candidate: T::AccountId, },
@@ -162,6 +164,7 @@ use frame_support::{dispatch::DispatchResultWithPostInfo, pallet_prelude::*, };
 		ProposedCandidateAlreadyExist,
 		ProposedCandidateMaxExceeded,
 		ProposedCandidateNotFound,
+		ProposedCandidateInvalidCommission,
 
 		WaitingCandidateAlreadyExist,
 		WaitingCandidateMaxExceeded,
@@ -233,6 +236,7 @@ use frame_support::{dispatch::DispatchResultWithPostInfo, pallet_prelude::*, };
                 total_stake: Zero::zero(),
                 last_updated: frame_system::Pallet::<T>::block_number(),
 				leaving: false,
+				commission: 0,
             };
             ProposedCandidates::<T>::try_mutate(|candidates| -> Result<(), DispatchError> {
                 candidates.try_push(candidate_info).map_err(|_| Error::<T>::ProposedCandidateMaxExceeded)?;
@@ -287,11 +291,36 @@ use frame_support::{dispatch::DispatchResultWithPostInfo, pallet_prelude::*, };
 			Ok(().into())
 		}
 
+		/// Set commission
+		/// Note:
+		/// 	Numbers accepted are from 1 to 100 and no irrational numbers
+		#[pallet::call_index(3)]
+		#[pallet::weight(Weight::from_parts(10_000, 0) + T::DbWeight::get().writes(1))]
+		pub fn set_commission_of_candidate(origin: OriginFor<T>, commission: u8) -> DispatchResultWithPostInfo {
+			let who = ensure_signed(origin)?;
+			// Commission control (1-100 percent only)
+			ensure!(commission >= 1 && commission <= 100, Error::<T>::ProposedCandidateInvalidCommission);
+			// Set commission
+			let mut proposed_candidates = ProposedCandidates::<T>::get();
+			let mut found = false;
+			for i in 0..proposed_candidates.len() {
+				if proposed_candidates[i].who == who {
+					proposed_candidates[i].commission = commission;
+					proposed_candidates[i].last_updated = frame_system::Pallet::<T>::block_number();
+					found = true;
+				}
+			}
+			ensure!(found, Error::<T>::ProposedCandidateNotFound);
+			ProposedCandidates::<T>::put(proposed_candidates);
+			Self::deposit_event(Event::ProposedCandidateCommissionSet { _proposed_candidate: who });
+			Ok(().into())
+		}
+
 		/// Leave Proposed Candidate
 		/// Note:
 		/// 	Once the leaving flag is set to true, immediately remove the account in the
 		/// 	Waiting Candidate list.
-		#[pallet::call_index(3)]
+		#[pallet::call_index(4)]
 		#[pallet::weight(Weight::from_parts(10_000, 0) + T::DbWeight::get().writes(1))]
 		pub fn leave_candidate(origin: OriginFor<T>,) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
@@ -320,7 +349,7 @@ use frame_support::{dispatch::DispatchResultWithPostInfo, pallet_prelude::*, };
 		/// Todo:
 		/// 	How to handle the reservation if there is a failure in adding the delegation.
 		/// 	Clean delegations when a candidate leaves to save space.
-		#[pallet::call_index(4)]
+		#[pallet::call_index(5)]
 		#[pallet::weight(Weight::from_parts(10_000, 0) + T::DbWeight::get().writes(1))]
 		pub fn stake_candidate(origin: OriginFor<T>, candidate: T::AccountId, amount: BalanceOf<T>) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
@@ -347,7 +376,7 @@ use frame_support::{dispatch::DispatchResultWithPostInfo, pallet_prelude::*, };
 		/// Unstake Proposed Candidate
 		/// Note:
 		/// 	Remove first the delagation (stake amount) before unreserving
-		#[pallet::call_index(5)]
+		#[pallet::call_index(6)]
 		#[pallet::weight(Weight::from_parts(10_000, 0) + T::DbWeight::get().writes(1))]
 		pub fn unstake_candidate(origin: OriginFor<T>, candidate: T::AccountId) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
