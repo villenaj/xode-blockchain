@@ -74,7 +74,7 @@ use super::{
 	System, WeightToFee, XcmpQueue, AVERAGE_ON_INITIALIZE_RATIO, EXISTENTIAL_DEPOSIT, DAYS, HOURS, MINUTES,
 	MAXIMUM_BLOCK_WEIGHT, MICRO_UNIT, NORMAL_DISPATCH_RATIO, SLOT_DURATION, VERSION,
 	// Governance
-	TechnicalCouncil, TreasuryCouncil,
+	TechnicalCommittee, TreasuryCouncil,
 };
 use xcm_config::{RelayLocation, XcmOriginToTransactDispatchOrigin};
 
@@ -585,7 +585,7 @@ pub type EnsureAllTreasuryCouncil = EnsureProportionAtLeast<AccountId, TreasuryC
 
 parameter_types! {
     // pub const TecnicalCouncilMotionDuration: BlockNumber = 5 * DAYS;
-	pub const TecnicalCouncilMotionDuration: BlockNumber = 5 * MINUTES; // For testing purpose only
+	pub const TecnicalCouncilMotionDuration: BlockNumber = 1 * MINUTES; // For testing purpose only
     pub const TecnicalCouncilMaxProposals: u32 = 100;
     pub const TecnicalCouncilMaxMembers: u32 = 100;
 	pub TechnicalMaxProposalWeight: Weight = Perbill::from_percent(50) * RuntimeBlockWeights::get().max_block;
@@ -615,15 +615,15 @@ impl pallet_membership::Config<TechnicalCouncilInstance> for Runtime {
 	type SwapOrigin = EnsureAllTechnicalCouncil;
 	type ResetOrigin = EnsureAllTechnicalCouncil;
 	type PrimeOrigin = EnsureAllTechnicalCouncil;
-	type MembershipInitialized = TechnicalCouncil;
-	type MembershipChanged = TechnicalCouncil;
+	type MembershipInitialized = TechnicalCommittee;
+	type MembershipChanged = TechnicalCommittee;
 	type MaxMembers = TechnicalMembershipMaxMembers;
 	type WeightInfo = pallet_membership::weights::SubstrateWeight<Runtime>;
 }
 
 parameter_types! {
     // pub const TreasuryCouncilMotionDuration: BlockNumber = 5 * DAYS;
-	pub const TreasuryCouncilMotionDuration: BlockNumber = 5 * MINUTES; // For testing purpose only
+	pub const TreasuryCouncilMotionDuration: BlockNumber = 1 * MINUTES; // For testing purpose only
     pub const TreasuryCouncilMaxProposals: u32 = 100;
     pub const TreasuryCouncilMaxMembers: u32 = 100;
 	pub TreasuryMaxProposalWeight: Weight = Perbill::from_percent(50) * RuntimeBlockWeights::get().max_block;

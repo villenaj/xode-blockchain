@@ -323,9 +323,9 @@ mod runtime {
 	#[runtime::pallet_index(44)]
 	pub type Treasury = pallet_treasury;
 	#[runtime::pallet_index(45)]
-	pub type TechnicalCouncil = pallet_collective::Pallet<Runtime, Instance1>;
+	pub type TechnicalCommittee = pallet_collective::Pallet<Runtime, Instance1>;
 	#[runtime::pallet_index(46)]
-	pub type TechnicalCouncilMembership = pallet_membership::Pallet<Runtime, Instance1>;
+	pub type TechnicalCommitteeMembership = pallet_membership::Pallet<Runtime, Instance1>;
 	#[runtime::pallet_index(47)]
 	pub type TreasuryCouncil = pallet_collective::Pallet<Runtime, Instance2>;
 	#[runtime::pallet_index(48)]

@@ -4,8 +4,8 @@ use crate::{
 	AccountId, BalancesConfig, CollatorSelectionConfig, ParachainInfoConfig, PolkadotXcmConfig,
 	RuntimeGenesisConfig, SessionConfig, SessionKeys, EXISTENTIAL_DEPOSIT,
 	// Membership - Technical council (sudo replacement) and Treasury council
-	TechnicalCouncilConfig, TechnicalCouncilMembershipConfig,configs::TechnicalMembershipMaxMembers,
-	TreasuryCouncilConfig, TreasuryCouncilMembershipConfig,configs::TreasuryMembershipMaxMembers,
+	TechnicalCommitteeMembershipConfig,configs::TechnicalMembershipMaxMembers,
+	TreasuryCouncilMembershipConfig,configs::TreasuryMembershipMaxMembers,
 };
 use alloc::{vec, vec::Vec};
 use parachains_common::{genesis_config_helpers::*, AuraId};
@@ -27,15 +27,15 @@ pub fn template_session_keys(keys: AuraId) -> SessionKeys {
 fn testnet_genesis(
 	invulnerables: Vec<(AccountId, AuraId)>,
 	endowed_accounts: Vec<AccountId>,
-	technical_council_members: Vec<AccountId>,
+	technical_committee_members: Vec<AccountId>,
 	treasury_council_members: Vec<AccountId>,
 	id: ParaId,
 ) -> Value {
 
 	// Technical council
-	let technical_council_members: Vec<AccountId32> = technical_council_members.clone();
-    let bounded_technical_council_members = BoundedVec::<_, TechnicalMembershipMaxMembers>::try_from(
-        technical_council_members.clone(),
+	let technical_committee_members: Vec<AccountId32> = technical_committee_members.clone();
+    let bounded_technical_committee_members = BoundedVec::<_, TechnicalMembershipMaxMembers>::try_from(
+        technical_committee_members.clone(),
     ).expect("Technical council members exceed the allowed limit");
 
 	// Treasury council
@@ -75,8 +75,8 @@ fn testnet_genesis(
 			safe_xcm_version: Some(SAFE_XCM_VERSION),
 			..Default::default()
 		},
-		technical_council_membership: TechnicalCouncilMembershipConfig {
-            members: bounded_technical_council_members,
+		technical_committee_membership: TechnicalCommitteeMembershipConfig {
+            members: bounded_technical_committee_members,
             phantom: Default::default(),
         },
 		treasury_council_membership: TreasuryCouncilMembershipConfig {
