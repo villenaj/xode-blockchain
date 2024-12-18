@@ -26,7 +26,7 @@
 mod xcm_config;
 
 // Substrate and Polkadot dependencies
-use crate::{ Timestamp,};
+use crate::Timestamp;
 use cumulus_pallet_parachain_system::RelayNumberMonotonicallyIncreases;
 use cumulus_primitives_core::{AggregateMessageOrigin, ParaId};
 use frame_support::{
@@ -57,10 +57,12 @@ use polkadot_runtime_common::{
 };
 use sp_consensus_aura::sr25519::AuthorityId as AuraId;
 use sp_runtime::Perbill;
+use sp_runtime::Percent;
 use sp_runtime::traits::AccountIdConversion;
 use sp_version::RuntimeVersion;
 use xcm::latest::prelude::BodyId;
-
+use sp_runtime::Saturating;
+use sp_runtime::traits::Zero;
 
 
 // Local module imports
@@ -187,7 +189,7 @@ impl pallet_balances::Config for Runtime {
 pub struct ToAuthor<R>(core::marker::PhantomData<R>);
 impl<R> OnUnbalanced<Credit<R::AccountId, pallet_balances::Pallet<R>>> for ToAuthor<R>
 where
-    R: pallet_balances::Config + pallet_authorship::Config,
+    R: pallet_balances::Config + pallet_authorship::Config + pallet_xode_staking::Config,
     <R as frame_system::Config>::AccountId: From<AccountId>,
     <R as frame_system::Config>::AccountId: Into<AccountId>,
 {
@@ -195,7 +197,27 @@ where
         amount: Credit<<R as frame_system::Config>::AccountId, pallet_balances::Pallet<R>>,
     ) {
         if let Some(author) = <pallet_authorship::Pallet<R>>::author() {
-            let _ = <pallet_balances::Pallet<R>>::resolve(&author, amount);
+			if let Some(candidate) = pallet_xode_staking::ProposedCandidates::<R>::get().iter().find(|c| c.who == author) {
+				if let Some(delegations) = pallet_xode_staking::Delegations::<R>::get(&author) {
+					let commission = Percent::from_percent(candidate.commission.into());
+					let share = amount.peek();
+					let mut remaining_imbalance = amount;
+					for (_index, delegation) in delegations.iter().enumerate() {
+						if delegation.stake > Zero::zero() {
+							let ratio = Percent::from_rational(delegation.stake, candidate.total_stake);
+							let delegator_share = share.saturating_mul(ratio.deconstruct().into()).saturating_mul(commission.deconstruct().into());
+							let (imbalance_share, leftover) = remaining_imbalance.split(delegator_share.into());
+							remaining_imbalance = leftover; 
+							// For the delegator
+							let _ = <pallet_balances::Pallet<R>>::resolve(&delegation.delegator,imbalance_share,);
+						}
+					}
+					// For the Author
+					if remaining_imbalance.peek() > Zero::zero() {
+						let _ = <pallet_balances::Pallet<R>>::resolve(&author, remaining_imbalance);
+					}
+				} 
+			}
         }
     }
 }
@@ -206,7 +228,7 @@ pub const AUTHOR_SHARE: u32 = 80;
 pub struct DealWithFees<R>(core::marker::PhantomData<R>);
 impl<R> OnUnbalanced<Credit<R::AccountId, pallet_balances::Pallet<R>>> for DealWithFees<R>
 where
-	R: pallet_balances::Config + pallet_authorship::Config + pallet_treasury::Config,
+	R: pallet_balances::Config + pallet_authorship::Config + pallet_treasury::Config + pallet_xode_staking::Config,
     <R as frame_system::Config>::AccountId: From<AccountId>,
     <R as frame_system::Config>::AccountId: Into<AccountId>,
 {
