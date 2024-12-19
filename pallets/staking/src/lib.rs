@@ -305,17 +305,15 @@ use frame_support::{dispatch::DispatchResultWithPostInfo, pallet_prelude::*, };
 			// Commission control (1-100 percent only)
 			ensure!(commission >= 1 && commission <= 100, Error::<T>::ProposedCandidateInvalidCommission);
 			// Set commission
-			let mut proposed_candidates = ProposedCandidates::<T>::get();
-			let mut found = false;
-			for i in 0..proposed_candidates.len() {
-				if proposed_candidates[i].who == who {
-					proposed_candidates[i].commission = commission;
-					proposed_candidates[i].last_updated = frame_system::Pallet::<T>::block_number();
-					found = true;
+			ProposedCandidates::<T>::mutate(|candidates| {
+				if let Some(candidate) = candidates.iter_mut().find(|c| c.who == who) {
+					candidate.commission = commission;
+					candidate.last_updated = frame_system::Pallet::<T>::block_number();
+
+					let _ = Self::remove_waiting_candidate(who.clone());
 				}
-			}
-			ensure!(found, Error::<T>::ProposedCandidateNotFound);
-			ProposedCandidates::<T>::put(proposed_candidates);
+			});
+
 			Self::deposit_event(Event::ProposedCandidateCommissionSet { _proposed_candidate: who });
 			Ok(().into())
 		}
@@ -328,19 +326,14 @@ use frame_support::{dispatch::DispatchResultWithPostInfo, pallet_prelude::*, };
 		#[pallet::weight(Weight::from_parts(10_000, 0) + T::DbWeight::get().writes(1))]
 		pub fn leave_candidate(origin: OriginFor<T>,) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
-			let mut proposed_candidates = ProposedCandidates::<T>::get();
-			let mut found = false;
-			for i in 0..proposed_candidates.len() {
-				if proposed_candidates[i].who == who {
-					proposed_candidates[i].leaving = true;
-					proposed_candidates[i].last_updated = frame_system::Pallet::<T>::block_number();
-					// Remove the candidate from the waiting list
+			ProposedCandidates::<T>::mutate(|candidates| {
+				if let Some(candidate) = candidates.iter_mut().find(|c| c.who == who) {
+					candidate.leaving = true;
+					candidate.last_updated = frame_system::Pallet::<T>::block_number();
+
 					let _ = Self::remove_waiting_candidate(who.clone());
-					found = true;
 				}
-			}
-			ensure!(found, Error::<T>::ProposedCandidateNotFound);
-			ProposedCandidates::<T>::put(proposed_candidates);
+			});
 			Self::deposit_event(Event::ProposedCandidateLeft { _proposed_candidate: who });
 			Ok(().into())
 		}
