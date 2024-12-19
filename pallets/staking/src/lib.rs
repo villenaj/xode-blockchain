@@ -78,6 +78,7 @@ use frame_support::{dispatch::DispatchResultWithPostInfo, pallet_prelude::*, };
 		pub total_stake: Balance,
 		pub last_updated: BlockNumber,
 		pub leaving: bool,
+		pub offline: bool,
 		pub commission: u8,
 	}
 		
@@ -138,6 +139,8 @@ use frame_support::{dispatch::DispatchResultWithPostInfo, pallet_prelude::*, };
 		ProposedCandidateRemoved { _proposed_candidate: T::AccountId, },
 		ProposedCandidateTotalStake { _proposed_candidate: T::AccountId, },
 		ProposedCandidateCommissionSet { _proposed_candidate: T::AccountId, },
+		ProposedCandidateOffline { _proposed_candidate: T::AccountId, },
+		ProposedCandidateOnline { _proposed_candidate: T::AccountId, },
 
 		WaitingCandidateAdded { _waiting_candidate: T::AccountId, },
 		WaitingCandidateRemoved { _waiting_candidate: T::AccountId, },
@@ -236,6 +239,7 @@ use frame_support::{dispatch::DispatchResultWithPostInfo, pallet_prelude::*, };
                 total_stake: Zero::zero(),
                 last_updated: frame_system::Pallet::<T>::block_number(),
 				leaving: false,
+				offline: false,
 				commission: 0,
             };
             ProposedCandidates::<T>::try_mutate(|candidates| -> Result<(), DispatchError> {
@@ -401,6 +405,40 @@ use frame_support::{dispatch::DispatchResultWithPostInfo, pallet_prelude::*, };
 			Self::deposit_event(Event::DelegationRevoked { _delegator: who });
 			Ok(().into())
 		}
+
+		/// Offline Proposed Candidate 
+		/// Note:
+		///		Temporarily leave the candidacy without having to unbond and unstake
+		#[pallet::call_index(7)]
+		#[pallet::weight(Weight::from_parts(10_000, 0) + T::DbWeight::get().writes(1))]
+		pub fn offline_candidate(origin: OriginFor<T>,) -> DispatchResultWithPostInfo {
+			let who = ensure_signed(origin)?;
+			ProposedCandidates::<T>::mutate(|candidates| {
+				if let Some(candidate) = candidates.iter_mut().find(|c| c.who == who) {
+					candidate.offline = true;
+					candidate.last_updated = frame_system::Pallet::<T>::block_number();
+				}
+			});
+			Self::deposit_event(Event::ProposedCandidateOffline { _proposed_candidate: who });
+			Ok(().into())
+		}
+
+		/// Online Proposed Candidate 
+		/// Note:
+		///		Make the candidate online again
+		#[pallet::call_index(8)]
+		#[pallet::weight(Weight::from_parts(10_000, 0) + T::DbWeight::get().writes(1))]
+		pub fn online_candidate(origin: OriginFor<T>,) -> DispatchResultWithPostInfo {
+			let who = ensure_signed(origin)?;
+			ProposedCandidates::<T>::mutate(|candidates| {
+				if let Some(candidate) = candidates.iter_mut().find(|c| c.who == who) {
+					candidate.offline = false;
+					candidate.last_updated = frame_system::Pallet::<T>::block_number();
+				}
+			});
+			Self::deposit_event(Event::ProposedCandidateOnline { _proposed_candidate: who });
+			Ok(().into())
+		}
 	}
 
 	/// =======
@@ -530,7 +568,8 @@ use frame_support::{dispatch::DispatchResultWithPostInfo, pallet_prelude::*, };
 				if waiting_candidates.len() < T::MaxCandidates::get() as usize {
 					if !waiting_candidates.contains(&proposed_candidate.who) && 
 					   !proposed_candidate.bond.is_zero() && 
-					   !proposed_candidate.leaving {
+					   !proposed_candidate.leaving && 
+					   !proposed_candidate.offline {
 						waiting_candidates.try_push(proposed_candidate.who.clone()).map_err(|_| Error::<T>::WaitingCandidateAlreadyExist)?;
 					}
 				}
