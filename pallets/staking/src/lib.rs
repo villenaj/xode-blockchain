@@ -261,35 +261,37 @@ use frame_support::{dispatch::DispatchResultWithPostInfo, pallet_prelude::*, };
 		#[pallet::weight(Weight::from_parts(10_000, 0) + T::DbWeight::get().writes(1))]
 		pub fn bond_candidate(origin: OriginFor<T>, new_bond: BalanceOf<T>,) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
-			let mut proposed_candidates = ProposedCandidates::<T>::get();
-			let mut found = false;
-			for i in 0..proposed_candidates.len() {
-				if proposed_candidates[i].who == who {
-					if proposed_candidates[i].bond > new_bond {
-						// If bond is set to 0, ensure that the candidate is not in waiting list and currently authoring blocks
-						if new_bond == Zero::zero() {
-							ensure!(!WaitingCandidates::<T>::get().contains(&who), Error::<T>::WaitingCandidateMember);
-							ensure!(!pallet_collator_selection::Invulnerables::<T>::get().contains(&who), Error::<T>::InvulernableMember);
-						} 
-						let bond_diff = proposed_candidates[i].bond.saturating_sub(new_bond);
-						proposed_candidates[i].bond = new_bond;
+
+			// When we set the new bond to zero we assume that the candidate is leaving
+			if new_bond == Zero::zero() {
+				ensure!(!WaitingCandidates::<T>::get().contains(&who), Error::<T>::WaitingCandidateMember);
+				ensure!(!pallet_collator_selection::Invulnerables::<T>::get().contains(&who), Error::<T>::InvulernableMember);
+			} 
+
+			ProposedCandidates::<T>::mutate(|candidates| {
+				if let Some(candidate) = candidates.iter_mut().find(|c| c.who == who) {
+					if candidate.bond > new_bond {
+						// Decrease the bond and reserve or might leave (new bond == 0)
+						// Unreserve the difference, of the new bond is 0, unreserve the whole bond because the bond difference
+						// is equal to the exisiting bond because any number substracted by 0 would remain the same.
+						let bond_diff = candidate.bond.saturating_sub(new_bond);
+						candidate.bond = new_bond;
 						if bond_diff > Zero::zero() {
 							T::StakingCurrency::unreserve(&who, bond_diff);
 						}
 					} else {
-						let bond_diff = new_bond.saturating_sub(proposed_candidates[i].bond);
-						proposed_candidates[i].bond = new_bond;
+						// Increase the bond and reserve.  If the new bond is greater than the existing bond then just replace
+						// the current bond with the new one and get the difference to increase the reserve.
+						let bond_diff = new_bond.saturating_sub(candidate.bond);
+						candidate.bond = new_bond;
 						if bond_diff > Zero::zero() {
-							T::StakingCurrency::reserve(&who, bond_diff)?;
+							let _ = T::StakingCurrency::reserve(&who, bond_diff);
 						}
 					}
-                    proposed_candidates[i].last_updated = frame_system::Pallet::<T>::block_number();
-                    found = true;
-                    break;
+					candidate.last_updated = frame_system::Pallet::<T>::block_number();
 				}
-			}
-			ensure!(found, Error::<T>::ProposedCandidateNotFound);
-			ProposedCandidates::<T>::put(proposed_candidates);
+			});
+
 			Self::sort_proposed_candidates();
 			Self::deposit_event(Event::ProposedCandidateBonded { _proposed_candidate: who });
 			Ok(().into())
@@ -350,12 +352,15 @@ use frame_support::{dispatch::DispatchResultWithPostInfo, pallet_prelude::*, };
 		#[pallet::weight(Weight::from_parts(10_000, 0) + T::DbWeight::get().writes(1))]
 		pub fn stake_candidate(origin: OriginFor<T>, candidate: T::AccountId, amount: BalanceOf<T>) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
+			
 			// Provide some controls
 			ensure!(who != candidate, Error::<T>::DelegationToSelfNotAllowed);
 			ensure!(ProposedCandidates::<T>::get().iter().any(|c| c.who == candidate), Error::<T>::DelegationCandidateDoesNotExist); 
 			ensure!(T::StakingCurrency::free_balance(&who) >= amount, Error::<T>::DelegationInsufficientAmount);
+
 			// Reserve the balance before updating the stake amount of the delegator
-			T::StakingCurrency::reserve(&who, amount)?;
+			let _ = T::StakingCurrency::reserve(&who, amount);
+
 			// Update delegation stake amount
 			let mut delegations = Delegations::<T>::get(&candidate).unwrap_or_default();
 			if let Some(delegation) = delegations.iter_mut().find(|d| d.delegator == who) {
@@ -363,7 +368,10 @@ use frame_support::{dispatch::DispatchResultWithPostInfo, pallet_prelude::*, };
 			} else {
 				let _ = delegations.try_push(Delegation { delegator: who.clone(), stake: amount }).map_err(|_| Error::<T>::DelegationsMaxExceeded)?;
 			}
+
+			// Finaly, update the storage
 			Delegations::<T>::insert(&candidate, delegations);
+			
 			// Update the proposed candidate total stake amount
 			let _ = Self::total_stake_proposed_candidate(candidate);
 			Self::deposit_event(Event::DelegationAdded { _delegator: who });
@@ -372,27 +380,34 @@ use frame_support::{dispatch::DispatchResultWithPostInfo, pallet_prelude::*, };
 
 		/// Unstake Proposed Candidate
 		/// Note:
-		/// 	Remove first the delagation (stake amount) before unreserving
+		/// 	Remove first the delegation (stake amount) before unreserving
 		#[pallet::call_index(6)]
 		#[pallet::weight(Weight::from_parts(10_000, 0) + T::DbWeight::get().writes(1))]
 		pub fn unstake_candidate(origin: OriginFor<T>, candidate: T::AccountId) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
-			// Extract the delegations of a candidate
+			
+			// Extract the delegations for that candidate
 			let mut delegations = Delegations::<T>::get(&candidate).ok_or(Error::<T>::DelegationsDoesNotExist)?;
-			let len_before_removal = delegations.len();
-			delegations.retain(|c| c.delegator != who);
-			ensure!(delegations.len() < len_before_removal, Error::<T>::DelegationDelegatorDoesNotExist);
-			// Get the stake amount
+			
+			// Extract the current stake of that delegator who wants to unstake
 			let position = delegations.iter().position(|c| c.delegator == who).ok_or(Error::<T>::DelegationDelegatorDoesNotExist)?;
 			let stake_amount = delegations[position].stake;
-			// Remove in the delegations
+
+			// New list of delegations without the delegator who unstake
+			delegations.retain(|c| c.delegator != who);
+
+			// Update the delegation storage
 			if delegations.is_empty() {
+				// If there are no more delegators, remove the delegation for that candidate
 				Delegations::<T>::remove(&candidate);
 			} else {
+				// Insert the new delegations without the delegator who unstake
 				Delegations::<T>::insert(&candidate, delegations);
 			}
-			// Unreserve the balance
+
+			// Finaly, unreserve the balance
 			T::StakingCurrency::unreserve(&who, stake_amount);
+
 			// Update the proposed candidate total stake amount
 			let _ = Self::total_stake_proposed_candidate(candidate);
 			Self::deposit_event(Event::DelegationRevoked { _delegator: who });
