@@ -33,21 +33,19 @@ use frame_support::{
 	derive_impl,
 	dispatch::DispatchClass,
 	parameter_types,
-	ord_parameter_types,
 	traits::{
 		ConstBool, ConstU32, ConstU64, ConstU8, EitherOfDiverse, TransformOrigin, VariantCountOf,
 		AsEnsureOriginWithArg,Randomness,
 		fungible::{Balanced, Credit},
 		OnUnbalanced,Imbalance,
 		tokens::imbalance::ResolveTo,
-		EnsureOrigin
 	},
 	weights::{ConstantMultiplier, Weight},
 	PalletId,
 };
 use frame_system::{
 	limits::{BlockLength, BlockWeights},
-	EnsureRoot,EnsureSigned,pallet_prelude::BlockNumberFor,
+	EnsureSigned,pallet_prelude::BlockNumberFor,
 	EnsureWithSuccess,
 };
 use pallet_xcm::{EnsureXcm, IsVoiceOfBody};
@@ -56,13 +54,13 @@ use polkadot_runtime_common::{
 	xcm_sender::NoPriceForMessageDelivery, BlockHashCount, SlowAdjustingFeeUpdate,
 };
 use sp_consensus_aura::sr25519::AuthorityId as AuraId;
-use sp_runtime::Perbill;
-use sp_runtime::Percent;
-use sp_runtime::traits::AccountIdConversion;
+use sp_runtime:: {
+	Perbill, Percent, Saturating,
+	traits::{ AccountIdConversion, Zero },
+};
 use sp_version::RuntimeVersion;
 use xcm::latest::prelude::BodyId;
-use sp_runtime::Saturating;
-use sp_runtime::traits::Zero;
+
 
 
 // Local module imports
@@ -197,6 +195,10 @@ where
         amount: Credit<<R as frame_system::Config>::AccountId, pallet_balances::Pallet<R>>,
     ) {
         if let Some(author) = <pallet_authorship::Pallet<R>>::author() {
+			// Reward calculation for author and delegator
+			// Todo: Transfer the reward calculation to the staking pallet and just call the helper function
+			//       for example:
+			//                  let _ = pallet_xode_staking::Pallet::<R>::add_author(author.clone());
 			if let Some(candidate) = pallet_xode_staking::ProposedCandidates::<R>::get().iter().find(|c| c.who == author) {
 				if let Some(delegations) = pallet_xode_staking::Delegations::<R>::get(&author) {
 					let commission = Percent::from_percent(candidate.commission.into());

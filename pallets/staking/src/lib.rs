@@ -47,7 +47,12 @@ use frame_support::{dispatch::DispatchResultWithPostInfo, pallet_prelude::*, };
 
 	/// Runtime configuration
 	#[pallet::config]
-	pub trait Config: pallet_balances::Config + pallet_collator_selection::Config + pallet_aura::Config + frame_system::Config {
+	pub trait Config: pallet_balances::Config + 
+		pallet_collator_selection::Config + 
+		pallet_aura::Config + 
+		pallet_authorship::Config + 
+		frame_system::Config 
+	{
 		/// Because this pallet emits events, it depends on the runtime's definition of an event.
 		type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
 
@@ -115,6 +120,10 @@ use frame_support::{dispatch::DispatchResultWithPostInfo, pallet_prelude::*, };
 		OptionQuery
 	>;
 
+	/// Actual Authors are restarted every session
+	#[pallet::storage]
+	pub type ActualAuthors<T: Config> = StorageValue<_, BoundedVec<T::AccountId, T::MaxCandidates>, ValueQuery>;
+		
 	/// Next block number storage
 	#[pallet::storage]
     #[pallet::getter(fn next_block_number)]
@@ -181,6 +190,9 @@ use frame_support::{dispatch::DispatchResultWithPostInfo, pallet_prelude::*, };
 		DelegationDelegatorDoesNotExist,
 		DelegationsDoesNotExist,
 		DelegationsMaxExceeded,
+
+		ActualAuthorsAlreadyExist,
+		ActualAuthorsMaxExceeded,
 	}
 
 	/// =====
@@ -189,6 +201,12 @@ use frame_support::{dispatch::DispatchResultWithPostInfo, pallet_prelude::*, };
 	#[pallet::hooks]
 	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
 		fn on_initialize(_current_block: BlockNumberFor<T>) -> Weight {
+			// Get the author
+			if let Some(author) = pallet_authorship::Pallet::<T>::author() {
+				let _ = Self::add_author(author.clone());
+			}
+
+			// Get the block number
 			match NextBlockNumber::<T>::get() {
 				Some(_next_block) => {
 					// Todo, since this is replaced by session
@@ -640,6 +658,17 @@ use frame_support::{dispatch::DispatchResultWithPostInfo, pallet_prelude::*, };
 			Ok(())
 		}
 
+		/// Add author
+		/// Note:
+		/// 	This helper function is called through DealWithFee implementation
+		pub fn add_author(author: T::AccountId) -> DispatchResult {
+			ActualAuthors::<T>::try_mutate(|authors| {
+				if !authors.contains(&author) {
+					let _ = authors.try_push(author.clone());
+				} 
+				Ok(())
+			})
+		}
 
 		/// Assemble the final collator nodes by updating the pallet_collator_selection invulnerables.
 		/// Note:
@@ -674,6 +703,10 @@ use frame_support::{dispatch::DispatchResultWithPostInfo, pallet_prelude::*, };
 	/// ===============
 	impl<T: Config> SessionManager<T::AccountId> for Pallet<T> {
 		fn new_session(_index: SessionIndex) -> Option<Vec<T::AccountId>> {
+			// Restart actual authors
+			ActualAuthors::<T>::put(BoundedVec::default());
+			
+			// Set new collators
 			let _ = Self::assemble_collators();
 			let  collators = pallet_collator_selection::Invulnerables::<T>::get().to_vec();
 			Some(collators)
