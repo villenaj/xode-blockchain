@@ -30,6 +30,10 @@ pallet-balances.workspace = true
 pallet-authorship.workspace = true
 sp-staking.workspace = true
 hex.workspace = true
+# Mock
+sp-consensus-aura.workspace = true
+pallet-timestamp.workspace = true
+xcm.workspace = true
 
 [dev-dependencies]
 sp-core = { default-features = true, workspace = true }

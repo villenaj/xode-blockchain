@@ -7606,12 +7606,15 @@ dependencies = [
  "pallet-balances",
  "pallet-collator-selection",
  "pallet-session",
+ "pallet-timestamp",
  "parity-scale-codec",
  "scale-info",
+ "sp-consensus-aura",
  "sp-core",
  "sp-io",
  "sp-runtime",
  "sp-staking 36.0.0",
+ "staging-xcm",
 ]
 
 [[package]]
