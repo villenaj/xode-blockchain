@@ -6,7 +6,7 @@
 [![Facebook URL](https://img.shields.io/badge/Facebook-gray?logo=facebook)](https://web.facebook.com/xodenet)
 [![Discord](https://img.shields.io/badge/Discord-gray?logo=discord)](https://discord.gg/V6DETUY7Cy)
 
-> Open, Inclusive, and Evolving Blockchain.
+> Xode is a blockchain platform with its own on-chain governance that aims to bring game development and businesses to Web3 and Polkadot.
 
 </div>
 
