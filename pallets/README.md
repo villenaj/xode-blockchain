@@ -12,3 +12,16 @@ https://github.com/paritytech/polkadot-sdk/blob/stable2409/cumulus/pallets/colla
 
 ### OnUnbalanced
 https://github.com/paritytech/substrate/blob/master/bin/node/runtime/src/lib.rs
+
+### Generate Weights
+`cargo run --release \
+           --features runtime-benchmarks \
+           --benchmark pallet \
+           --execution=wasm --wasm-execution=compiled \
+           --heap-pages=4096 \
+           --pallet pallet-xode-staking \
+           --extrinsic "*" \
+           --steps 50 \
+           --repeat 20 \
+           --output ./pallets/staking/src/weights.rs \
+           --template ./pallets/staking/src/weight-template.hbs`
