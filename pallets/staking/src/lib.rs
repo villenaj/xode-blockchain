@@ -439,13 +439,7 @@ use frame_support::{dispatch::DispatchResultWithPostInfo, pallet_prelude::*, };
 		#[pallet::weight(Weight::from_parts(10_000, 0) + T::DbWeight::get().writes(1))]
 		pub fn offline_candidate(origin: OriginFor<T>,) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
-			ProposedCandidates::<T>::mutate(|candidates| {
-				if let Some(candidate) = candidates.iter_mut().find(|c| c.who == who) {
-					candidate.offline = true;
-					candidate.last_updated = frame_system::Pallet::<T>::block_number();
-				}
-			});
-			Self::deposit_event(Event::ProposedCandidateOffline { _proposed_candidate: who });
+			let _ = Self::offline_proposed_candidate(who,true);
 			Ok(().into())
 		}
 
@@ -456,13 +450,7 @@ use frame_support::{dispatch::DispatchResultWithPostInfo, pallet_prelude::*, };
 		#[pallet::weight(Weight::from_parts(10_000, 0) + T::DbWeight::get().writes(1))]
 		pub fn online_candidate(origin: OriginFor<T>,) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
-			ProposedCandidates::<T>::mutate(|candidates| {
-				if let Some(candidate) = candidates.iter_mut().find(|c| c.who == who) {
-					candidate.offline = false;
-					candidate.last_updated = frame_system::Pallet::<T>::block_number();
-				}
-			});
-			Self::deposit_event(Event::ProposedCandidateOnline { _proposed_candidate: who });
+			let _ = Self::offline_proposed_candidate(who,false);
 			Ok(().into())
 		}
 	}
@@ -631,6 +619,23 @@ use frame_support::{dispatch::DispatchResultWithPostInfo, pallet_prelude::*, };
 			Ok(())
 		}
 
+		/// Go offline/online proposed candidates
+		/// Note:
+		pub fn offline_proposed_candidate(proposed_candidate: T::AccountId, offline: bool) -> DispatchResult {
+			ProposedCandidates::<T>::mutate(|candidates| {
+				if let Some(candidate) = candidates.iter_mut().find(|c| c.who == proposed_candidate) {
+					candidate.offline = offline;
+					candidate.last_updated = frame_system::Pallet::<T>::block_number();
+				}
+			});
+			if offline {
+				Self::deposit_event(Event::ProposedCandidateOffline { _proposed_candidate: proposed_candidate });
+			} else {
+				Self::deposit_event(Event::ProposedCandidateOnline { _proposed_candidate: proposed_candidate });
+			}
+			Ok(().into())
+		}
+
 		/// Compute total_stake in the candidate information
 		/// Note:
 		/// 	Re-compute the total stake and called every staking extrinsics.
@@ -670,6 +675,38 @@ use frame_support::{dispatch::DispatchResultWithPostInfo, pallet_prelude::*, };
 			})
 		}
 
+		/// Slashed misbehaving authors
+		/// Note:
+		/// 	Assumes that Aura will give all author the opportunity to author blocks in round robbin fashion.
+		/// 	Once we can guarantee a round robbin authorship in Aura we will add the slash amount, as of the
+		///     moment we will just set the author offline.
+		pub fn slashed_authors() -> DispatchResult {
+			// Todo: Get the authors that did author a block for this session.  Make the author is not a desired
+			//       candidate.
+			let invulnerables = pallet_collator_selection::Invulnerables::<T>::get();
+			let authors = ActualAuthors::<T>::get();
+			let desired_candidates = DesiredCandidates::<T>::get();
+			let non_authors: Vec<T::AccountId> = invulnerables
+				.into_iter()
+				.filter(|invulnerable| !authors.contains(invulnerable))
+				.collect();
+			let filtered_non_authors: Vec<T::AccountId> = non_authors
+				.into_iter()
+				.filter(|non_author| !desired_candidates.contains(non_author))
+				.collect();
+			
+			for filtered_non_author in filtered_non_authors.iter() {
+				// Todo: Slashed the author and make it offline, prerequisit Aura Round Robbin
+				let _ = Self::offline_proposed_candidate(filtered_non_author.clone(),true);
+
+				// Todo: Slashed the delegator for that author, Prerequisit Aura Round Robbin
+			}
+			
+			// Clear the new set of actual authors
+			ActualAuthors::<T>::put(BoundedVec::default());
+			Ok(())
+		}
+
 		/// Assemble the final collator nodes by updating the pallet_collator_selection invulnerables.
 		/// Note:
 		/// 	This helper function is called every new session.
@@ -704,7 +741,7 @@ use frame_support::{dispatch::DispatchResultWithPostInfo, pallet_prelude::*, };
 	impl<T: Config> SessionManager<T::AccountId> for Pallet<T> {
 		fn new_session(_index: SessionIndex) -> Option<Vec<T::AccountId>> {
 			// Restart actual authors
-			ActualAuthors::<T>::put(BoundedVec::default());
+			let _ = Self::slashed_authors();
 			
 			// Set new collators
 			let _ = Self::assemble_collators();

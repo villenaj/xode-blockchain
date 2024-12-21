@@ -60,7 +60,7 @@ use sp_runtime:: {
 };
 use sp_version::RuntimeVersion;
 use xcm::latest::prelude::BodyId;
-
+use pallet_collective::{EnsureProportionAtLeast, EnsureProportionMoreThan};
 
 
 // Local module imports
@@ -69,7 +69,7 @@ use super::{
 	AccountId, Aura, Balance, Balances, Block, BlockNumber, CollatorSelection, ConsensusHook, Hash,
 	MessageQueue, Nonce, PalletInfo, ParachainSystem, Runtime, RuntimeCall, RuntimeEvent,
 	RuntimeFreezeReason, RuntimeHoldReason, RuntimeOrigin, RuntimeTask, Session, SessionKeys,
-	System, WeightToFee, XcmpQueue, AVERAGE_ON_INITIALIZE_RATIO, EXISTENTIAL_DEPOSIT, DAYS, HOURS, MINUTES,
+	System, WeightToFee, XcmpQueue, AVERAGE_ON_INITIALIZE_RATIO, EXISTENTIAL_DEPOSIT, MINUTES,
 	MAXIMUM_BLOCK_WEIGHT, MICRO_UNIT, NORMAL_DISPATCH_RATIO, SLOT_DURATION, VERSION,
 	// Governance
 	TechnicalCommittee, TreasuryCouncil,
@@ -196,8 +196,8 @@ where
     ) {
         if let Some(author) = <pallet_authorship::Pallet<R>>::author() {
 			// Reward calculation for author and delegator
-			// Todo: Transfer the reward calculation to the staking pallet and just call the helper function
-			//       for example:
+			// Todo: Transfer the reward calculation to the staking pallet and just call the helper function.
+			//       for example: (Before transfering perform actual test)
 			//                  let _ = pallet_xode_staking::Pallet::<R>::add_author(author.clone());
 			if let Some(candidate) = pallet_xode_staking::ProposedCandidates::<R>::get().iter().find(|c| c.who == author) {
 				if let Some(delegations) = pallet_xode_staking::Delegations::<R>::get(&author) {
@@ -322,7 +322,7 @@ impl cumulus_pallet_xcmp_queue::Config for Runtime {
 	type MaxInboundSuspended = sp_core::ConstU32<1_000>;
 	type MaxActiveOutboundChannels = ConstU32<128>;
 	type MaxPageSize = ConstU32<{ 1 << 16 }>;
-	type ControllerOrigin = EnsureTwoThirdsTechnicalCouncil;
+	type ControllerOrigin = EnsureTwoThirdsTechnicalCommittee;
 	type ControllerOriginConverter = XcmOriginToTransactDispatchOrigin;
 	type WeightInfo = ();
 	type PriceForSiblingDelivery = NoPriceForMessageDelivery<ParaId>;
@@ -366,9 +366,10 @@ parameter_types! {
 	pub const StakingAdminBodyId: BodyId = BodyId::Defense;
 }
 
-/// We allow root and the StakingAdmin to execute privileged collator selection operations.  It needs now technical council approval (sudo removed)
+/// We allow root and the StakingAdmin to execute privileged collator selection operations.  
+/// It needs now technical committee approval (sudo removed)
 pub type CollatorSelectionUpdateOrigin = EitherOfDiverse<
-	EnsureTwoThirdsTechnicalCouncil,
+	EnsureTwoThirdsTechnicalCommittee,
 	EnsureXcm<IsVoiceOfBody<RelayLocation, StakingAdminBodyId>>,
 >;
 
@@ -572,36 +573,31 @@ impl pallet_treasury::Config for Runtime {
 	type PayoutPeriod = SpendPayoutPeriod;
 }
 
-/// ==========
-/// Governance
-/// ==========
-use pallet_collective::{EnsureMember, EnsureProportionAtLeast, EnsureProportionMoreThan};
+/// ======================
+/// Governance - Technical
+/// ======================
+pub type TechnicalCommitteeInstance = pallet_collective::Instance1;
 
-pub type TechnicalCouncilInstance = pallet_collective::Instance1;
-pub type TreasuryCouncilInstance = pallet_collective::Instance2;
-
-pub type EnsureTwoThirdsTechnicalCouncil = EnsureProportionMoreThan<AccountId, TechnicalCouncilInstance, 2, 3>;
-pub type EnsureAllTechnicalCouncil = EnsureProportionAtLeast<AccountId, TechnicalCouncilInstance, 1, 1>; // Adding members everyone must agree
-pub type EnsureTwoThirdsTreasuryCouncil = EnsureProportionMoreThan<AccountId, TreasuryCouncilInstance, 2, 3>;
-pub type EnsureAllTreasuryCouncil = EnsureProportionAtLeast<AccountId, TreasuryCouncilInstance, 1, 1>; // Adding members everyone must agree
+pub type EnsureTwoThirdsTechnicalCommittee = EnsureProportionMoreThan<AccountId, TechnicalCommitteeInstance, 2, 3>;
+pub type EnsureAllTechnicalCommittee = EnsureProportionAtLeast<AccountId, TechnicalCommitteeInstance, 1, 1>; 
 
 parameter_types! {
-    // pub const TecnicalCouncilMotionDuration: BlockNumber = 5 * DAYS;
-	pub const TecnicalCouncilMotionDuration: BlockNumber = 1 * MINUTES; // For testing purpose only
-    pub const TecnicalCouncilMaxProposals: u32 = 100;
-    pub const TecnicalCouncilMaxMembers: u32 = 100;
+    // pub const TecnicalCommitteeMotionDuration: BlockNumber = 5 * DAYS;
+	pub const TecnicalCommitteeMotionDuration: BlockNumber = 1 * MINUTES; // For testing purpose only
+    pub const TecnicalCommitteeMaxProposals: u32 = 100;
+    pub const TecnicalCommitteeMaxMembers: u32 = 100;
 	pub TechnicalMaxProposalWeight: Weight = Perbill::from_percent(50) * RuntimeBlockWeights::get().max_block;
 }
 
-impl pallet_collective::Config<TechnicalCouncilInstance> for Runtime {
+impl pallet_collective::Config<TechnicalCommitteeInstance> for Runtime {
 	type RuntimeOrigin = RuntimeOrigin;
 	type Proposal = RuntimeCall;
 	type RuntimeEvent = RuntimeEvent;
-	type MotionDuration = TecnicalCouncilMotionDuration;
-	type MaxProposals = TecnicalCouncilMaxProposals;
-	type MaxMembers = TecnicalCouncilMaxMembers;
+	type MotionDuration = TecnicalCommitteeMotionDuration;
+	type MaxProposals = TecnicalCommitteeMaxProposals;
+	type MaxMembers = TecnicalCommitteeMaxMembers;
 	type DefaultVote = pallet_collective::PrimeDefaultVote;
-	type SetMembersOrigin = EnsureAllTechnicalCouncil;
+	type SetMembersOrigin = EnsureAllTechnicalCommittee;
 	type WeightInfo = pallet_collective::weights::SubstrateWeight<Runtime>;
 	type MaxProposalWeight = TechnicalMaxProposalWeight;
 }
@@ -610,18 +606,26 @@ parameter_types! {
 	pub const TechnicalMembershipMaxMembers: u32 = 100;
 }
 
-impl pallet_membership::Config<TechnicalCouncilInstance> for Runtime {
+impl pallet_membership::Config<TechnicalCommitteeInstance> for Runtime {
 	type RuntimeEvent = RuntimeEvent;
-	type AddOrigin = EnsureTwoThirdsTechnicalCouncil;
-	type RemoveOrigin = EnsureAllTechnicalCouncil;
-	type SwapOrigin = EnsureAllTechnicalCouncil;
-	type ResetOrigin = EnsureAllTechnicalCouncil;
-	type PrimeOrigin = EnsureAllTechnicalCouncil;
+	type AddOrigin = EnsureTwoThirdsTechnicalCommittee;
+	type RemoveOrigin = EnsureAllTechnicalCommittee;
+	type SwapOrigin = EnsureAllTechnicalCommittee;
+	type ResetOrigin = EnsureAllTechnicalCommittee;
+	type PrimeOrigin = EnsureAllTechnicalCommittee;
 	type MembershipInitialized = TechnicalCommittee;
 	type MembershipChanged = TechnicalCommittee;
 	type MaxMembers = TechnicalMembershipMaxMembers;
 	type WeightInfo = pallet_membership::weights::SubstrateWeight<Runtime>;
 }
+
+/// =====================
+/// Governance - Treasury
+/// =====================
+pub type TreasuryCouncilInstance = pallet_collective::Instance2;
+
+pub type EnsureTwoThirdsTreasuryCouncil = EnsureProportionMoreThan<AccountId, TreasuryCouncilInstance, 2, 3>;
+pub type EnsureAllTreasuryCouncil = EnsureProportionAtLeast<AccountId, TreasuryCouncilInstance, 1, 1>; 
 
 parameter_types! {
     // pub const TreasuryCouncilMotionDuration: BlockNumber = 5 * DAYS;
@@ -661,9 +665,9 @@ impl pallet_membership::Config<TreasuryCouncilInstance> for Runtime {
 	type WeightInfo = pallet_membership::weights::SubstrateWeight<Runtime>;
 }
 
-/// ==============
-/// Staking (Xode)
-/// ==============
+/// ============
+/// Staking Xode
+/// ============
 parameter_types! {
 	pub const Nodes: &'static [&'static str] = &[
 		"0x306721211d5404bd9da88e0204360a1a9ab8b87c66c1bc2fcdd37f3c2222cc20",  	// Charlie (Use for development)
