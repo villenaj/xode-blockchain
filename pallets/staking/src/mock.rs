@@ -164,6 +164,11 @@ impl pallet_balances::Config for Test {
 parameter_types! {
 	pub const MaxProposedCandidates: u32 = 200;
 	pub const MaxProposedCandidateDelegates: u32 = 200;
+	pub const Nodes: &'static [&'static str] = &[
+		"0x306721211d5404bd9da88e0204360a1a9ab8b87c66c1bc2fcdd37f3c2222cc20",  	// Charlie
+		"0x90b5ab205c6974c9ea841be688864633dc9ca8a357843eeacf2314649965fe22", 	// Dave 
+		"0xe659a7a1628cdd93febc04a4e0646ea20e9f5f0ce097d9a05290d4a9e054df4e",   // Eve 
+	];
 }
 
 impl crate::Config for Test {
@@ -171,7 +176,7 @@ impl crate::Config for Test {
 	type WeightInfo = ();
 	type MaxProposedCandidates = MaxProposedCandidates;
 	type MaxProposedCandidateDelegates = MaxProposedCandidateDelegates;
-	type XaverNodes = ();
+	type XaverNodes = Nodes;
 	type StakingCurrency = Balances;
 }
 

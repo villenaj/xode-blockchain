@@ -22,6 +22,7 @@
 // OTHER DEALINGS IN THE SOFTWARE.
 //
 // For more information, please refer to <http://unlicense.org>
+#![allow(unused_doc_comments)]
 
 mod xcm_config;
 
@@ -683,7 +684,6 @@ parameter_types! {
 impl pallet_xode_staking::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type WeightInfo = pallet_xode_staking::weights::SubstrateWeight<Runtime>;
-	// Total number collator candidate - Total number of Xaver Nodes = Remaining slot for the proposed candidates
 	type MaxProposedCandidates = ConstU32<200>;  
 	type MaxProposedCandidateDelegates = ConstU32<200>;  
 	type XaverNodes = Nodes;
