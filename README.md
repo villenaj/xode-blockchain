@@ -1,4 +1,4 @@
-<img src="https://lh3.google.com/u/0/d/1i88iInwVlXMoX2L8P2kLwFzGNuFVRra5"></img>
+<img src="https://drive.google.com/uc?export=view&id=1i88iInwVlXMoX2L8P2kLwFzGNuFVRra5"></img>
 
 <div align="center">
 
