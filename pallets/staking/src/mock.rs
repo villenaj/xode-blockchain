@@ -180,7 +180,6 @@ impl crate::Config for Test {
 	type StakingCurrency = Balances;
 }
 
-// Build genesis storage according to the mock runtime.
 pub fn new_test_ext() -> sp_io::TestExternalities {
 	GenesisConfig::<Test>::default().build_storage().unwrap().into()
 }

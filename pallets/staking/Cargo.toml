@@ -56,6 +56,15 @@ std = [
 	"frame-system/std",
 
 	"sp-runtime/std",
+
+	"pallet-aura/std",
+	"pallet-authorship/std",
+	"pallet-balances/std",
+	"pallet-collator-selection/std",
+	"pallet-session/std",
+	"pallet-timestamp/std",
+	"sp-consensus-aura/std",
+	"xcm/std",
 ]
 try-runtime = [
 	"frame-support/try-runtime",
