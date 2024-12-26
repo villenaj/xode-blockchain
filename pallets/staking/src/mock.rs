@@ -143,7 +143,7 @@ impl pallet_authorship::Config for Test {
 }
 
 parameter_types! {
-	pub const ExistentialDeposit: u128 = 0;
+	pub const ExistentialDeposit: u128 = 1;
 }
 impl pallet_balances::Config for Test {
 	type MaxReserves = ();
@@ -180,6 +180,6 @@ impl crate::Config for Test {
 	type StakingCurrency = Balances;
 }
 
-pub fn new_test_ext() -> sp_io::TestExternalities {
+pub fn test1_ext() -> sp_io::TestExternalities {
 	GenesisConfig::<Test>::default().build_storage().unwrap().into()
 }

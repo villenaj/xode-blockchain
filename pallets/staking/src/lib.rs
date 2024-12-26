@@ -307,7 +307,7 @@ pub mod pallet {
 					if candidate.bond > new_bond {
 						// Decrease the bond and reserve or might leave (new bond == 0)
 						// Unreserve the difference, of the new bond is 0, unreserve the whole bond because the bond difference
-						// is equal to the exisiting bond because any number substracted by 0 would remain the same.
+						// is equal to the existing bond because any number subtracted by 0 would remain the same.
 						let bond_diff = candidate.bond.saturating_sub(new_bond);
 						candidate.bond = new_bond;
 						if bond_diff > Zero::zero() {
@@ -403,7 +403,7 @@ pub mod pallet {
 				let _ = delegations.try_push(Delegation { delegator: who.clone(), stake: amount }).map_err(|_| Error::<T>::DelegationsMaxExceeded)?;
 			}
 
-			// Finaly, update the storage
+			// Finally, update the storage
 			Delegations::<T>::insert(&candidate, delegations);
 			
 			// Update the proposed candidate total stake amount
@@ -412,9 +412,9 @@ pub mod pallet {
 			Ok(().into())
 		}
 
-		/// Unstake Proposed Candidate
+		/// Un-stake Proposed Candidate
 		/// Note:
-		/// 	Remove first the delegation (stake amount) before unreserving
+		/// 	Remove first the delegation (stake amount) before un-reserving
 		#[pallet::call_index(6)]
 		#[pallet::weight(<weights::SubstrateWeight<T> as WeightInfo>::unstake_candidate())]
 		pub fn unstake_candidate(origin: OriginFor<T>, candidate: T::AccountId) -> DispatchResultWithPostInfo {
@@ -423,11 +423,11 @@ pub mod pallet {
 			// Extract the delegations for that candidate
 			let mut delegations = Delegations::<T>::get(&candidate).ok_or(Error::<T>::DelegationsDoesNotExist)?;
 			
-			// Extract the current stake of that delegator who wants to unstake
+			// Extract the current stake of that delegator who wants to un-stake
 			let position = delegations.iter().position(|c| c.delegator == who).ok_or(Error::<T>::DelegationDelegatorDoesNotExist)?;
 			let stake_amount = delegations[position].stake;
 
-			// New list of delegations without the delegator who unstake
+			// New list of delegations without the delegator who un-stake
 			delegations.retain(|c| c.delegator != who);
 
 			// Update the delegation storage
@@ -435,11 +435,11 @@ pub mod pallet {
 				// If there are no more delegators, remove the delegation for that candidate
 				Delegations::<T>::remove(&candidate);
 			} else {
-				// Insert the new delegations without the delegator who unstake
+				// Insert the new delegations without the delegator who un-stake
 				Delegations::<T>::insert(&candidate, delegations);
 			}
 
-			// Finaly, unreserve the balance
+			// Finally, unreserve the balance
 			T::StakingCurrency::unreserve(&who, stake_amount);
 
 			// Update the proposed candidate total stake amount
@@ -450,7 +450,7 @@ pub mod pallet {
 
 		/// Offline Proposed Candidate 
 		/// Note:
-		///		Temporarily leave the candidacy without having to unbond and unstake
+		///		Temporarily leave the candidacy without having to un-bond and un-stake
 		#[pallet::call_index(7)]
 		#[pallet::weight(<weights::SubstrateWeight<T> as WeightInfo>::offline_candidate())]
 		pub fn offline_candidate(origin: OriginFor<T>,) -> DispatchResultWithPostInfo {
@@ -486,7 +486,7 @@ pub mod pallet {
 			account
 		}
 
-		/// Add an account to pallet_collator_selection invulnerables
+		/// Add an account to pallet_collator_selection invulnerable
 		/// Substrate Reference:
 		/// 	https://github.com/paritytech/polkadot-sdk/blob/stable2409/cumulus/pallets/collator-selection/src/lib.rs#L841
 		pub fn add_invulnerable (invulnerable: T::AccountId) -> DispatchResult {
@@ -581,7 +581,7 @@ pub mod pallet {
 
 		/// Prepare waiting candidates
 		/// Note:
-		/// 	This function is trigerred every new session.  Waiting candidates is just a storage that
+		/// 	This function is triggered every new session.  Waiting candidates is just a storage that
 		/// 	merge the desired candidates and the proposed candidates.
 		pub fn prepare_waiting_candidates() -> DispatchResult {
 			let desired_candidates = DesiredCandidates::<T>::get();
@@ -654,7 +654,7 @@ pub mod pallet {
 
 		/// Compute total_stake in the candidate information
 		/// Note:
-		/// 	Re-compute the total stake and called every staking extrinsics.
+		/// 	Re-compute the total stake and called every staking extrinsic.
 		/// 	Once the total is completed immediately sort the proposed candidates.
 		pub fn total_stake_proposed_candidate(proposed_candidate: T::AccountId) -> DispatchResult {
 			let mut proposed_candidates = ProposedCandidates::<T>::get();
@@ -712,10 +712,10 @@ pub mod pallet {
 				.collect();
 			
 			for filtered_non_author in filtered_non_authors.iter() {
-				// Todo: Slashed the author and make it offline, prerequisit Aura Round Robbin
+				// Todo: Slashed the author and make it offline, prerequisite Aura Round Robbin
 				let _ = Self::offline_proposed_candidate(filtered_non_author.clone(),true);
 
-				// Todo: Slashed the delegator for that author, Prerequisit Aura Round Robbin
+				// Todo: Slashed the delegator for that author, Prerequisite Aura Round Robbin
 			}
 			
 			// Clear the new set of actual authors
@@ -723,7 +723,7 @@ pub mod pallet {
 			Ok(())
 		}
 
-		/// Assemble the final collator nodes by updating the pallet_collator_selection invulnerables.
+		/// Assemble the final collator nodes by updating the pallet_collator_selection invulnerable.
 		/// Note:
 		/// 	This helper function is called every new session.
 		pub fn assemble_collators() -> DispatchResult {
@@ -731,7 +731,7 @@ pub mod pallet {
 			let waiting_candidates = WaitingCandidates::<T>::get();
 			ensure!(!waiting_candidates.is_empty(), Error::<T>::WaitingCandidatesEmpty);
 
-			// Remove the invulnerables not in the waiting candidates to save space
+			// Remove the invulnerable not in the waiting candidates to save space
 			let mut invulnerables = pallet_collator_selection::Invulnerables::<T>::get();
 			invulnerables.retain(|account| waiting_candidates.contains(account));
 			pallet_collator_selection::Invulnerables::<T>::put(invulnerables);
