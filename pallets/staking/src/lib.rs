@@ -705,23 +705,23 @@ pub mod pallet {
 		/// 	Once we can guarantee a round robbin authorship in Aura we will add the slash amount, as of the
 		///     moment we will just set the author offline.
 		pub fn slashed_authors() -> DispatchResult {
-			// Todo: Get the authors that did author a block for this session.  Make the author is not a desired
-			//       candidate.
-			let invulnerables = pallet_collator_selection::Invulnerables::<T>::get();
+			// Todo: Get the authors that did author a block for this session.  Make sure that the author is not 
+			//       a desired candidate.
+			let authorities = pallet_aura::Authorities::<T>::get();
 			let authors = ActualAuthors::<T>::get();
 			let desired_candidates = DesiredCandidates::<T>::get();
-			let non_authors: Vec<T::AccountId> = invulnerables
-				.into_iter()
-				.filter(|invulnerable| !authors.contains(invulnerable))
-				.collect();
-			let filtered_non_authors: Vec<T::AccountId> = non_authors
-				.into_iter()
-				.filter(|non_author| !desired_candidates.contains(non_author))
-				.collect();
+
+			let mut non_authors = Vec::new();
+			for authority in authorities {
+				let account_id = Self::authority_to_account(authority);
+				if !authors.contains(&account_id) && !desired_candidates.contains(&account_id) {
+					non_authors.push(account_id.clone());
+				}	
+			}
 			
-			for filtered_non_author in filtered_non_authors.iter() {
+			for non_author in non_authors.iter() {
 				// Todo: Slashed the author and make it offline, prerequisite Aura Round Robbin
-				let _ = Self::offline_proposed_candidate(filtered_non_author.clone(),true);
+				let _ = Self::offline_proposed_candidate(non_author.clone(),true);
 
 				// Todo: Slashed the delegator for that author, Prerequisite Aura Round Robbin
 			}

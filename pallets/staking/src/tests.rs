@@ -10,11 +10,19 @@ use sp_core::sr25519;
 #[test]
 fn test_pallet_xode_staking() {
 	test1_ext().execute_with(|| {
-		// Scenario 1 (SESSION 1): Check the desired candidates from runtime config
-		// Note:
-		//		1. Must provide balances before setting keys
+		// ========================================================================
+		// SCENE 1: At Block 0 and Session 1 initialization
+		// ------------------------------------------------------------------------
+		// 1. There are three (3) desired candidates as set in the mock runtime.
+		// 2. Provide balances for the three (3) desired candidates.
+		// 3. We expect them to author so we provide session keys.
+		// 4. Then advance the block and session so that these desired candidates 
+		//    will be sent to invulnerable in the collator selection at the same 
+		//	  time queued keys and authorities are updated.
+		// 5. The authorities is still 0 at Session 1 
 		// ========================================================================
 		System::set_block_number(0);
+
 		XodeStaking::on_initialize(System::block_number());
 		
 		let desired_candidates = DesiredCandidates::<Test>::get();
@@ -40,41 +48,40 @@ fn test_pallet_xode_staking() {
 		assert!(result.is_ok(), "Failed to set session keys: {:?}", result);
 
 		System::set_block_number((1 * MINUTES).into());
+
 		XodeStaking::on_initialize(System::block_number());
 		XodeStaking::new_session(1);
 		
-		let invulnerables = pallet_collator_selection::Invulnerables::<Test>::get();
-		println!("Invulnerables {:?}",invulnerables);
-		assert_eq!(invulnerables.len(), 3, "Invulerables after new session must have 3 entries, equal to desired candidates");
-
-		// Scenario 2: Check the invulnerabilities (current authors)
-		// Note:
-		//		1. Must call session on initialize hook to consume the queued keys of the
-		//		   previous session
-		// =======================================================================
-		System::set_block_number((2 * MINUTES).into());
-		XodeStaking::on_initialize(System::block_number());
-		XodeStaking::new_session(2);
-
-		pallet_session::Pallet::<Test>::on_initialize(System::block_number()); 
-
-		let invulnerables = pallet_collator_selection::Invulnerables::<Test>::get();
-		println!("Invulnerables {:?}",invulnerables);
-		//assert_eq!(invulnerables.len(), 3, "Invulerables after new session must have 3 entries, equal to desired candidates");
+		Session::on_initialize(System::block_number()); 
 
 		let authorities = pallet_aura::Authorities::<Test>::get();
 		println!("Authorities {:?}",authorities);
-		//assert_eq!(authorities.len(), 3, "Authorities are exactly equal to invulnerables.");
+		assert_eq!(authorities.len(), 0, "There are no authorities yet (Taken from the last session).");
+
+		let invulnerables = pallet_collator_selection::Invulnerables::<Test>::get();
+		println!("Invulnerables {:?}",invulnerables);
+		assert_eq!(invulnerables.len(), 3, "Invulerables after new session must have 3 entries, equal to desired candidates");
 
 		let queued_keys = pallet_session::QueuedKeys::<Test>::get();
 		println!("Keys {:?}",queued_keys);
 		assert_eq!(queued_keys.len(), 3, "Keys are exactly equal to invulnerables.");
 
+		let proposed_candidates = ProposedCandidates::<Test>::get();
+		println!("Proposed Candidates {:?}",proposed_candidates);
+		assert_eq!(proposed_candidates.len(), 0, "No proposed candidates yet.");
 
-		// Scenario 3: Add candidates (at least 2 candidates) [Candidate-1, Candidate-2]
-		// Note:
-		//		1. Added a balance of the two registered candidates
-		//		2. Added also keys for the registered candidates
+		let waiting_candidates = WaitingCandidates::<Test>::get();
+		println!("Waiting Candidates {:?}",waiting_candidates);
+		assert_eq!(desired_candidates, waiting_candidates, "The waiting candidates is equal to the desired candidates");
+
+		// =======================================================================
+		// SCENE 2: Within Session 1 and Session 2 initialization
+		// -----------------------------------------------------------------------
+		// 1. Register two proposed candidates (Candidate-1 and Candidate-2).
+		// 2. Bond these candidates and check the free balance. 
+		// 3. Check also the sorting of proposed candidates.
+		// 4. At Session 2 initialization, we have 3 authorities which is taken 
+		//    from Session 1.
 		// =======================================================================
 		let _ = XodeStaking::register_candidate(RuntimeOrigin::signed(1));
 		let _ = XodeStaking::register_candidate(RuntimeOrigin::signed(2));
@@ -96,6 +103,7 @@ fn test_pallet_xode_staking() {
 			offline: false,
 			commission: 0,
 		};
+
 		let proposed_candidates = ProposedCandidates::<Test>::get();
 		assert_eq!(proposed_candidates.len(), 2, "The number of proposed candidates should be 2");
 		assert_eq!(proposed_candidates[0], candidate_1, "The first candidate data does not match");
@@ -106,17 +114,13 @@ fn test_pallet_xode_staking() {
 		let session_keys = SessionKeys { aura: key.into(),};
 		let result = Session::set_keys(RuntimeOrigin::signed(1), session_keys.clone(), Vec::new());
 		assert!(result.is_ok(), "Failed to set session keys: {:?}", result);
+
 		let _ = Balances::deposit_creating(&2, 1000);
 		let key = sr25519::Public::from_raw([12u8; 32]);
 		let session_keys = SessionKeys { aura: key.into(),};
 		let result = Session::set_keys(RuntimeOrigin::signed(2), session_keys.clone(), Vec::new());
 		assert!(result.is_ok(), "Failed to set session keys: {:?}", result);
 
-		// Scenario 4: Bond the candidate
-		// Note:
-		//      1. Sorted proposed candidates
-		//      2. Last updated block number
-		// =======================================================================
 		let _ = XodeStaking::bond_candidate(RuntimeOrigin::signed(1), 100);
 		let _ = XodeStaking::bond_candidate(RuntimeOrigin::signed(2), 200);
 
@@ -131,27 +135,55 @@ fn test_pallet_xode_staking() {
 		assert_eq!(proposed_candidates[0], candidate_2, "The first candidate data does not match");
 		assert_eq!(proposed_candidates[1], candidate_1, "The second candidate data does not match");
 
-		// Scenario 5: Increase the bond of a candidate
-		// Note:
-		//      1. Sorted proposed candidates
-		//      2. Check if the bond amount is correct
+		System::set_block_number((2 * MINUTES).into());
+
+		XodeStaking::on_initialize(System::block_number());
+		XodeStaking::new_session(2);
+		
+		Session::on_initialize(System::block_number()); 
+
+		let authorities = pallet_aura::Authorities::<Test>::get();
+		println!("Authorities {:?}",authorities);
+		assert_eq!(authorities.len(), 3, "Authorities are exactly equal to the previous invulnerables.");
+
+		let invulnerables = pallet_collator_selection::Invulnerables::<Test>::get();
+		println!("Invulnerables {:?}",invulnerables);
+		assert_eq!(invulnerables.len(), 5, "Invulerables after new session must have 5 entries, equal to desired candidates plus 2 proposed candidates");
+
+		let queued_keys = pallet_session::QueuedKeys::<Test>::get();
+		println!("Keys {:?}",queued_keys);
+		assert_eq!(queued_keys.len(), 5, "Keys are exactly equal to invulnerables.");
+
+		let proposed_candidates = ProposedCandidates::<Test>::get();
+		println!("Proposed Candidates {:?}",proposed_candidates);
+		assert_eq!(proposed_candidates.len(), 2, "Two (2) proposed candidates.");
+
+		let waiting_candidates = WaitingCandidates::<Test>::get();
+		println!("Waiting Candidates {:?}",waiting_candidates);
+		assert_eq!(waiting_candidates.len(), 5, "The waiting candidates is equal to the desired candidates and proposed candidates");
+
+		// =======================================================================
+		// SCENE 3: Within Session 2 and Session 3 initialization
+		// -----------------------------------------------------------------------
+		// 1. Increase and decrease bonds of the proposed candidates.
+		// 2. While decreasing the bond try incrementing the block number
+		// 3. Take note of the actual authors on this session.  The proposed 
+		//    candidates must author a block within Session 2 or it will be set to
+		//    offline.  Todo: Slashed if not authoring.
 		// =======================================================================
 		let _ = XodeStaking::bond_candidate(RuntimeOrigin::signed(1), 400);
 
 		assert_eq!(Balances::free_balance(&1), 600);
 
 		candidate_1.bond = 400;
+		candidate_1.last_updated = System::block_number();
 		let proposed_candidates = ProposedCandidates::<Test>::get();
 		assert_eq!(proposed_candidates[0], candidate_1, "The first candidate data does not match");
 		assert_eq!(proposed_candidates[1], candidate_2, "The second candidate data does not match");
 
-		// Scenario 6: Decrease the bond of a candidate
-		// Note:
-		//      1. Sorted proposed candidates (using last updated since bond amount is equal)
-		//      2. Check if the bond amount is correct
-		// =======================================================================
 		System::set_block_number(System::block_number() + 1);
-		XodeStaking::on_initialize(System::block_number() + 1);
+
+		XodeStaking::on_initialize(System::block_number());
 
 		let _ = XodeStaking::bond_candidate(RuntimeOrigin::signed(1), 200);
 
@@ -163,53 +195,40 @@ fn test_pallet_xode_staking() {
 		assert_eq!(proposed_candidates[0], candidate_2, "The first candidate data does not match");
 		assert_eq!(proposed_candidates[1], candidate_1, "The second candidate data does not match");
 
-		// Scenario 7 (SESSION 3-4): Move to the next session
-		// Note:
-		//		1. Move two (2) sessions so that the waiting candidates are added to the invulnerable
-		// =======================================================================
 		System::set_block_number((3 * MINUTES).into());
+
 		XodeStaking::on_initialize(System::block_number());
 		XodeStaking::new_session(3);
-
-		let waiting_candidates = WaitingCandidates::<Test>::get();
-		assert_eq!(waiting_candidates.len(), 5, "There should be exactly five waiting candidates");
-
-		let xaver1 = 13620103657161844528u64;
-		let xaver2 = 14516343343327982992u64;
-		let xaver3 = 10654826648675244518u64;
 		
-		assert_eq!(waiting_candidates[0], xaver1);
-		assert_eq!(waiting_candidates[1], xaver2);
-		assert_eq!(waiting_candidates[2], xaver3);
-		assert_eq!(waiting_candidates[3], candidate_2.who);
-		assert_eq!(waiting_candidates[4], candidate_1.who);
+		Session::on_initialize(System::block_number()); 
 
-		let invulnerables = Invulnerables::<Test>::get();
-		assert_eq!(invulnerables.len(), 3, "There should be exactly still 3");
+		let authorities = pallet_aura::Authorities::<Test>::get();
+		println!("Authorities {:?}",authorities);
+		assert_eq!(authorities.len(), 5, "Authorities are exactly equal to the previous invulnerables.");
 
-		assert_eq!(invulnerables[0], xaver1);
-		assert_eq!(invulnerables[1], xaver2);
-		assert_eq!(invulnerables[2], xaver3);
+		let invulnerables = pallet_collator_selection::Invulnerables::<Test>::get();
+		println!("Invulnerables {:?}",invulnerables);
+		assert_eq!(invulnerables.len(), 5, "Invulerables after new session must have 5 entries, equal to desired candidates plus 2 proposed candidates");
 
-		System::set_block_number((4 * MINUTES).into());
-		XodeStaking::on_initialize(System::block_number());
-		XodeStaking::new_session(4);
+		let queued_keys = pallet_session::QueuedKeys::<Test>::get();
+		println!("Keys {:?}",queued_keys);
+		assert_eq!(queued_keys.len(), 5, "Keys are exactly equal to invulnerables.");
 
-		let invulnerables = Invulnerables::<Test>::get();
-		assert_eq!(invulnerables.len(), 5, "There should be exactly now 5");	
-
-		assert_eq!(invulnerables[0], xaver1);
-		assert_eq!(invulnerables[1], xaver2);
-		assert_eq!(invulnerables[2], xaver3);
-		assert_eq!(invulnerables[3], candidate_2.who);
-		assert_eq!(invulnerables[4], candidate_1.who);
+		let proposed_candidates = ProposedCandidates::<Test>::get();
+		println!("Proposed Candidates {:?}",proposed_candidates);
+		assert_eq!(proposed_candidates.len(), 2, "Two (2) proposed candidates.");
 
 		let waiting_candidates = WaitingCandidates::<Test>::get();
-		assert_eq!(waiting_candidates.len(), 5, "There should be exactly now 5");
+		println!("Waiting Candidates {:?}",waiting_candidates);
+		assert_eq!(waiting_candidates.len(), 5, "The waiting candidates is equal to the desired candidates and proposed candidates");
 
-		// Scenario 8: Add stakes (at least 3 stakes per candidate)
-		// Note:
-		//		1. Check the proposed candidate values
+		// =======================================================================
+		// SCENE 4: Within Session 3 and Session 4 initialization
+		// ----------------------------------------------------------------------- 
+		// 1. Add stakes on the proposed candidates
+		// 2. Try to increase the block and execute un-stake
+		// 3. Todo: We need to check if one of the proposed candidates did not
+		//          author a block, we cannot assume!
 		// =======================================================================
 		let _ = Balances::deposit_creating(&11, 1000);
 		let _ = Balances::deposit_creating(&12, 1000);
@@ -239,48 +258,94 @@ fn test_pallet_xode_staking() {
 		assert_eq!(proposed_candidates[0], candidate_1);
 		assert_eq!(proposed_candidates[1], candidate_2);	
 
-		// Scenario 9: Un-stake 1 delegator per candidate
-		// Note:
-		//		1. Checked the proposed candidate info and sort
-		System::set_block_number(6);
+		System::set_block_number(System::block_number() + 1);
+
+		XodeStaking::on_initialize(System::block_number());
+
 		let _ = XodeStaking::unstake_candidate(RuntimeOrigin::signed(13), 1);
 		
 		candidate_1.total_stake = 30;
-		candidate_1.last_updated = 6;
+		candidate_1.last_updated = System::block_number();
 
 		let proposed_candidates = ProposedCandidates::<Test>::get();
 		assert_eq!(proposed_candidates[0], candidate_2);
 		assert_eq!(proposed_candidates[1], candidate_1);
 
-		// Scenario 10 (SESSION 4): Make one candidate to go offline [Candidate-2]
-		// Note:
-		//		1. Check sort, offline candidates are pushed at the bottom
-		//		2. Change the session.  Take note if the candidate did not author a block it will be set offline.
-		System::set_block_number(7);
+		System::set_block_number((4 * MINUTES).into());
+
+		XodeStaking::on_initialize(System::block_number());
+		XodeStaking::new_session(4);
+		
+		Session::on_initialize(System::block_number()); 
+
+		let authorities = pallet_aura::Authorities::<Test>::get();
+		println!("Authorities {:?}",authorities);
+		assert_eq!(authorities.len(), 5, "Authorities are exactly equal to the previous invulnerables.");
+
+		let invulnerables = pallet_collator_selection::Invulnerables::<Test>::get();
+		println!("Invulnerables {:?}",invulnerables);
+		assert_eq!(invulnerables.len(), 5, "Invulerables after new session must have 5 entries, equal to desired candidates plus 2 proposed candidates");
+
+		let queued_keys = pallet_session::QueuedKeys::<Test>::get();
+		println!("Keys {:?}",queued_keys);
+		assert_eq!(queued_keys.len(), 5, "Keys are exactly equal to invulnerables.");
+
+		let proposed_candidates = ProposedCandidates::<Test>::get();
+		println!("Proposed Candidates {:?}",proposed_candidates);
+		assert_eq!(proposed_candidates.len(), 2, "Two (2) proposed candidates.");
+
+		let waiting_candidates = WaitingCandidates::<Test>::get();
+		println!("Waiting Candidates {:?}",waiting_candidates);
+		assert_eq!(waiting_candidates.len(), 5, "The waiting candidates is equal to the desired candidates and proposed candidates");
+
+		// =======================================================================
+		// SCENE 4: Within Session 4 and Session 5 initialization
+		// ----------------------------------------------------------------------- 
+		// 1. Make one proposed candidate go offline
+		// 2. Todo: Take note that even you go offline, you are still in the authorities
+		//          therefore the candidate has to wait for the next session to be able
+		//	        to leave. 
+		// =======================================================================
+		System::set_block_number(System::block_number() + 1);
+		XodeStaking::on_initialize(System::block_number());
 
 		let _ = XodeStaking::offline_candidate(RuntimeOrigin::signed(2));
 
 		candidate_2.offline = true;
-		candidate_2.last_updated = 7;
+		candidate_2.last_updated = System::block_number();
 
 		let proposed_candidates = ProposedCandidates::<Test>::get();
 		assert_eq!(proposed_candidates[0], candidate_1);
 		assert_eq!(proposed_candidates[1], candidate_2);		
 
+		System::set_block_number((5 * MINUTES).into());
 
-		// XodeStaking::new_session(4);
-
-		//let _ = XodeStaking::prepare_waiting_candidates();
-		//let waiting_candidates = WaitingCandidates::<Test>::get();
-		//assert_eq!(waiting_candidates.len(), 4, "There should be exactly four (4) waiting candidate");
+		XodeStaking::on_initialize(System::block_number());
+		XodeStaking::new_session(5);
 		
-		//assert_eq!(waiting_candidates[0], xaver1);
-		//assert_eq!(waiting_candidates[1], xaver2);
-		//assert_eq!(waiting_candidates[2], xaver3);
-		//assert_eq!(waiting_candidates[3], candidate_1.who);
+		Session::on_initialize(System::block_number()); 
+
+		let authorities = pallet_aura::Authorities::<Test>::get();
+		println!("Authorities {:?}",authorities);
+		assert_eq!(authorities.len(), 5, "Authorities are exactly equal to the previous invulnerables.");
+
+		let invulnerables = pallet_collator_selection::Invulnerables::<Test>::get();
+		println!("Invulnerables {:?}",invulnerables);
+		assert_eq!(invulnerables.len(), 4, "Invulerables after new session must have 5 entries, equal to desired candidates plus 2 proposed candidates");
+
+		let queued_keys = pallet_session::QueuedKeys::<Test>::get();
+		println!("Keys {:?}",queued_keys);
+		assert_eq!(queued_keys.len(), 4, "Keys are exactly equal to invulnerables.");
+
+		let proposed_candidates = ProposedCandidates::<Test>::get();
+		println!("Proposed Candidates {:?}",proposed_candidates);
+		assert_eq!(proposed_candidates.len(), 2, "Two (2) proposed candidates.");
+
+		let waiting_candidates = WaitingCandidates::<Test>::get();
+		println!("Waiting Candidates {:?}",waiting_candidates);
+		assert_eq!(waiting_candidates.len(), 4, "The waiting candidates is equal to the desired candidates and online proposed candidates");
 
 		// Todo: Make the offline candidate to go online [Candidate-B]
-
 
 		// Todo: Add another candidate (do not bond) [Candidate-D]
 
