@@ -3,7 +3,7 @@ use frame_support::{derive_impl,
 	PalletId,
 };
 use frame_system::{mocking::MockBlock, EnsureRoot, GenesisConfig};
-use sp_runtime::{traits::ConstU64, BuildStorage, impl_opaque_keys};
+use sp_runtime::{impl_opaque_keys, traits::ConstU64, BuildStorage, };
 use frame_support::parameter_types;
 use sp_consensus_aura::sr25519::AuthorityId as AuraId;
 use xcm::latest::prelude::BodyId;
@@ -15,7 +15,6 @@ pub type BlockNumber = u32;
 
 pub const MILLI_SECS_PER_BLOCK: u32 = 6000;
 pub const MINUTES: BlockNumber = 60_000 / (MILLI_SECS_PER_BLOCK as BlockNumber);
-pub const HOURS: BlockNumber = MINUTES * 60;
 
 impl_opaque_keys! {
 	pub struct SessionKeys {
@@ -98,7 +97,7 @@ impl pallet_aura::Config for Test {
 
 parameter_types! {
 	pub const PotId: PalletId = PalletId(*b"PotStake");
-	pub const SessionLength: BlockNumber = 6 * HOURS;
+	pub const SessionLength: BlockNumber = MINUTES;
 	pub const StakingAdminBodyId: BodyId = BodyId::Defense;
 	pub const MaxCandidates: u32 = 100;
 	pub const MinEligibleCollators: u32 = 4;
@@ -114,7 +113,7 @@ impl pallet_collator_selection::Config for Test {
 	type MinEligibleCollators = MinEligibleCollators;
 	type MaxInvulnerables = MaxInvulnerables;
 	type KickThreshold = Period;
-	type ValidatorId = <Self as frame_system::Config>::AccountId;
+	type ValidatorId = AccountId;
 	type ValidatorIdOf = pallet_collator_selection::IdentityCollator;
 	type ValidatorRegistration = Session;
 	type WeightInfo = ();
@@ -127,7 +126,7 @@ parameter_types! {
 
 impl pallet_session::Config for Test {
 	type RuntimeEvent = RuntimeEvent;
-	type ValidatorId = <Self as frame_system::Config>::AccountId;
+	type ValidatorId = AccountId;
 	type ValidatorIdOf = pallet_collator_selection::IdentityCollator;
 	type ShouldEndSession = pallet_session::PeriodicSessions<Period, Offset>;
 	type NextSessionRotation = pallet_session::PeriodicSessions<Period, Offset>;

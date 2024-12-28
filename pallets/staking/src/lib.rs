@@ -193,6 +193,7 @@ pub mod pallet {
 		ProposedCandidateMaxExceeded,
 		ProposedCandidateNotFound,
 		ProposedCandidateInvalidCommission,
+		ProposedCandidateInsufficientBalance,
 
 		WaitingCandidateAlreadyExist,
 		WaitingCandidateMaxExceeded,
@@ -201,7 +202,7 @@ pub mod pallet {
 		WaitingCandidatesEmpty,
 
 		DelegationToSelfNotAllowed,
-		DelegationInsufficientAmount,
+		DelegationInsufficientBalance,
 		DelegationCandidateDoesNotExist,
 		DelegationDelegatorDoesNotExist,
 		DelegationsDoesNotExist,
@@ -300,7 +301,9 @@ pub mod pallet {
 			if new_bond == Zero::zero() {
 				ensure!(!WaitingCandidates::<T>::get().contains(&who), Error::<T>::WaitingCandidateMember);
 				ensure!(!pallet_collator_selection::Invulnerables::<T>::get().contains(&who), Error::<T>::InvulernableMember);
-			} 
+			} else {
+				ensure!(T::StakingCurrency::free_balance(&who) >= new_bond, Error::<T>::ProposedCandidateInsufficientBalance);
+			}
 
 			ProposedCandidates::<T>::mutate(|candidates| {
 				if let Some(candidate) = candidates.iter_mut().find(|c| c.who == who) {
@@ -390,7 +393,7 @@ pub mod pallet {
 			// Provide some controls
 			ensure!(who != candidate, Error::<T>::DelegationToSelfNotAllowed);
 			ensure!(ProposedCandidates::<T>::get().iter().any(|c| c.who == candidate), Error::<T>::DelegationCandidateDoesNotExist); 
-			ensure!(T::StakingCurrency::free_balance(&who) >= amount, Error::<T>::DelegationInsufficientAmount);
+			ensure!(T::StakingCurrency::free_balance(&who) >= amount, Error::<T>::DelegationInsufficientBalance);
 
 			// Reserve the balance before updating the stake amount of the delegator
 			let _ = T::StakingCurrency::reserve(&who, amount);
@@ -456,6 +459,7 @@ pub mod pallet {
 		pub fn offline_candidate(origin: OriginFor<T>,) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
 			let _ = Self::offline_proposed_candidate(who,true);
+			Self::sort_proposed_candidates();
 			Ok(().into())
 		}
 
@@ -467,6 +471,7 @@ pub mod pallet {
 		pub fn online_candidate(origin: OriginFor<T>,) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
 			let _ = Self::offline_proposed_candidate(who,false);
+			Self::sort_proposed_candidates();
 			Ok(().into())
 		}
 	}
@@ -555,11 +560,13 @@ pub mod pallet {
 		/// Sort proposed candidates:
 		/// Note:	
 		/// 	Prioritize total_stake first, then bond, then oldest last_updated
+		/// 	True = -1, False = 0
 		pub fn sort_proposed_candidates() {
             let mut proposed_candidates = ProposedCandidates::<T>::get();
             proposed_candidates.sort_by(|a, b| {
-                b.total_stake.cmp(&a.total_stake)
-                    .then_with(|| b.bond.cmp(&a.bond))
+                a.offline.cmp(&b.offline)
+					.then_with(|| b.bond.cmp(&a.bond))
+					.then_with(|| b.total_stake.cmp(&a.total_stake))
                     .then_with(|| a.last_updated.cmp(&b.last_updated)) 
             });
             ProposedCandidates::<T>::put(proposed_candidates);
@@ -681,7 +688,8 @@ pub mod pallet {
 
 		/// Add author
 		/// Note:
-		/// 	This helper function is called through DealWithFee implementation
+		/// 	This helper function is called through hook on block initialization so as to include blocks with no
+		/// 	transactions.
 		pub fn add_author(author: T::AccountId) -> DispatchResult {
 			ActualAuthors::<T>::try_mutate(|authors| {
 				if !authors.contains(&author) {

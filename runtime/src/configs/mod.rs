@@ -199,7 +199,10 @@ where
 			// Reward calculation for author and delegator
 			// Todo: Transfer the reward calculation to the staking pallet and just call the helper function.
 			//       for example: (Before transfering perform actual test)
-			//                  let _ = pallet_xode_staking::Pallet::<R>::add_author(author.clone());
+			//		
+			//		 We transferred the recording of the author from here to on block initialization so as to include
+			//		 blocks with no transaction fees or vacant to be recorded as authored blocks.
+			//        * let _ = pallet_xode_staking::Pallet::<R>::add_author(author.clone());
 			if let Some(candidate) = pallet_xode_staking::ProposedCandidates::<R>::get().iter().find(|c| c.who == author) {
 				if let Some(delegations) = pallet_xode_staking::Delegations::<R>::get(&author) {
 					let commission = Percent::from_percent(candidate.commission.into());

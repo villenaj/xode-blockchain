@@ -34,6 +34,7 @@ hex.workspace = true
 sp-consensus-aura.workspace = true
 pallet-timestamp.workspace = true
 xcm.workspace = true
+parachains-common.workspace = true
 
 [dev-dependencies]
 sp-core = { default-features = true, workspace = true }
@@ -65,6 +66,7 @@ std = [
 	"pallet-timestamp/std",
 	"sp-consensus-aura/std",
 	"xcm/std",
+	"parachains-common/std",
 ]
 try-runtime = [
 	"frame-support/try-runtime",

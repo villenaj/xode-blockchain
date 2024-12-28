@@ -7607,6 +7607,7 @@ dependencies = [
  "pallet-collator-selection",
  "pallet-session",
  "pallet-timestamp",
+ "parachains-common",
  "parity-scale-codec",
  "scale-info",
  "sp-consensus-aura",
