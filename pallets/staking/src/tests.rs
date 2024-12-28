@@ -299,10 +299,13 @@ fn test_pallet_xode_staking() {
 		assert_eq!(waiting_candidates.len(), 5, "The waiting candidates is equal to the desired candidates and proposed candidates");
 
 		// =======================================================================
-		// SCENE 4: Within Session 4 and Session 5 initialization
+		// SCENE 5: Within Session 4 and Session 5 initialization
 		// ----------------------------------------------------------------------- 
 		// 1. Make one proposed candidate go offline
-		// 2. Todo: Take note that even you go offline, you are still in the authorities
+		// 2. When you offline the proposed candidate it will be removed from the 
+		//    invulnerable and with it, it's session keys, so if you online it 
+		//    online it again you must set the keys back.
+		// 3. Todo: Take note that even you go offline, you are still in the authorities
 		//          therefore the candidate has to wait for the next session to be able
 		//	        to leave. 
 		// =======================================================================
