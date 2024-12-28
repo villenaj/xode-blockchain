@@ -194,6 +194,7 @@ pub mod pallet {
 		ProposedCandidateNotFound,
 		ProposedCandidateInvalidCommission,
 		ProposedCandidateInsufficientBalance,
+		ProposedCandidateNoSessionKeys,
 
 		WaitingCandidateAlreadyExist,
 		WaitingCandidateMaxExceeded,
@@ -210,6 +211,8 @@ pub mod pallet {
 
 		ActualAuthorsAlreadyExist,
 		ActualAuthorsMaxExceeded,
+
+		AuraAuthorityMember,
 	}
 
 	/// =====
@@ -301,6 +304,7 @@ pub mod pallet {
 			if new_bond == Zero::zero() {
 				ensure!(!WaitingCandidates::<T>::get().contains(&who), Error::<T>::WaitingCandidateMember);
 				ensure!(!pallet_collator_selection::Invulnerables::<T>::get().contains(&who), Error::<T>::InvulernableMember);
+				ensure!(!Self::still_authoring(who.clone()), Error::<T>::AuraAuthorityMember);
 			} else {
 				ensure!(T::StakingCurrency::free_balance(&who) >= new_bond, Error::<T>::ProposedCandidateInsufficientBalance);
 			}
@@ -348,8 +352,6 @@ pub mod pallet {
 				if let Some(candidate) = candidates.iter_mut().find(|c| c.who == who) {
 					candidate.commission = commission;
 					candidate.last_updated = frame_system::Pallet::<T>::block_number();
-
-					let _ = Self::remove_waiting_candidate(who.clone());
 				}
 			});
 
@@ -453,7 +455,9 @@ pub mod pallet {
 
 		/// Offline Proposed Candidate 
 		/// Note:
-		///		Temporarily leave the candidacy without having to un-bond and un-stake
+		///		Temporarily leave the candidacy without having to un-bond and un-stake.
+		/// 	The offline status will be reflected only in the next session if the 
+		/// 	candidate is already in the waiting list.
 		#[pallet::call_index(7)]
 		#[pallet::weight(<weights::SubstrateWeight<T> as WeightInfo>::offline_candidate())]
 		pub fn offline_candidate(origin: OriginFor<T>,) -> DispatchResultWithPostInfo {
@@ -465,7 +469,7 @@ pub mod pallet {
 
 		/// Online Proposed Candidate 
 		/// Note:
-		///		Make the candidate online again
+		///		Make the candidate online again.
 		#[pallet::call_index(8)]
 		#[pallet::weight(<weights::SubstrateWeight<T> as WeightInfo>::online_candidate())]
 		pub fn online_candidate(origin: OriginFor<T>,) -> DispatchResultWithPostInfo {
@@ -699,6 +703,23 @@ pub mod pallet {
 			})
 		}
 
+		/// Still authoring
+		/// Note:
+		/// 	This helper function is called in un-bonding (bond=zero) for leaving candidates.  The candidate
+		/// 	must wait for the next session.
+		pub fn still_authoring(who: T::AccountId) -> bool {
+			let authorities = pallet_aura::Authorities::<T>::get();
+			let mut authoring = false;
+			for authority in authorities {
+				let account_id = Self::authority_to_account(authority);
+				if who == account_id {
+					authoring = true;
+					break;
+				}
+			}
+			authoring
+		}
+
 		/// Slashed misbehaving authors
 		/// Note:
 		/// 	Assumes that Aura will give all author the opportunity to author blocks in round robbin fashion.
@@ -740,6 +761,8 @@ pub mod pallet {
 			ensure!(!waiting_candidates.is_empty(), Error::<T>::WaitingCandidatesEmpty);
 
 			// Remove the invulnerable not in the waiting candidates to save space
+			// Todo: Removing from invulnerables will remove the keys.  Make sure that it is not authoring when
+			//       we remove it from invulnerables.
 			let mut invulnerables = pallet_collator_selection::Invulnerables::<T>::get();
 			invulnerables.retain(|account| waiting_candidates.contains(account));
 			pallet_collator_selection::Invulnerables::<T>::put(invulnerables);
@@ -764,11 +787,7 @@ pub mod pallet {
 	/// ===============
 	impl<T: Config> SessionManager<T::AccountId> for Pallet<T> {
 		fn new_session(_index: SessionIndex) -> Option<Vec<T::AccountId>> {
-			// Restart actual authors
-			let _ = Self::slashed_authors();
-			
 			// Set new collators
-			let _ = Self::assemble_collators();
 			let  collators = pallet_collator_selection::Invulnerables::<T>::get().to_vec();
 			Some(collators)
 		}
@@ -776,7 +795,8 @@ pub mod pallet {
 			// Todo, may not do anything
 		}
 		fn end_session(_: SessionIndex) {
-			// Todo, may not do anything
+			let _ = Self::slashed_authors();
+			let _ = Self::assemble_collators();
 		}
 	}
 
