@@ -195,6 +195,7 @@ pub mod pallet {
 		ProposedCandidateInvalidCommission,
 		ProposedCandidateInsufficientBalance,
 		ProposedCandidateNoSessionKeys,
+		ProposedCandidateStillOnline,
 
 		WaitingCandidateAlreadyExist,
 		WaitingCandidateMaxExceeded,
@@ -367,14 +368,16 @@ pub mod pallet {
 		#[pallet::weight(<weights::SubstrateWeight<T> as WeightInfo>::leave_candidate())]
 		pub fn leave_candidate(origin: OriginFor<T>,) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
-			ProposedCandidates::<T>::mutate(|candidates| {
+
+			let _ = ProposedCandidates::<T>::mutate(|candidates| {
 				if let Some(candidate) = candidates.iter_mut().find(|c| c.who == who) {
+					ensure!(candidate.offline, Error::<T>::ProposedCandidateStillOnline);
 					candidate.leaving = true;
 					candidate.last_updated = frame_system::Pallet::<T>::block_number();
-
-					let _ = Self::remove_waiting_candidate(who.clone());
 				}
+				Ok::<(), Error<T>>(())
 			});
+			
 			Self::deposit_event(Event::ProposedCandidateLeft { _proposed_candidate: who });
 			Ok(().into())
 		}

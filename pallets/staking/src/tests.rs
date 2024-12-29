@@ -10,7 +10,7 @@ use sp_core::sr25519;
 fn test_pallet_xode_staking() {
 	test1_ext().execute_with(|| {
 		// ========================================================================
-		// SCENE 1: At Block 0 and Session 1 initialization
+		// SCENE 1 (Initialization): At Block 0 and Session 1 initialization
 		// ------------------------------------------------------------------------
 		// 1. There are three (3) desired candidates as set in the mock runtime.
 		// 2. Provide balances for the three (3) desired candidates.
@@ -74,7 +74,7 @@ fn test_pallet_xode_staking() {
 		assert_eq!(desired_candidates, waiting_candidates, "The waiting candidates is equal to the desired candidates");
 
 		// =======================================================================
-		// SCENE 2: Within Session 1 and Session 2 initialization
+		// SCENE 2 (Registering): Within Session 1 and Session 2 initialization
 		// -----------------------------------------------------------------------
 		// 1. Register two proposed candidates (Candidate-1 and Candidate-2).
 		// 2. Bond these candidates and check the free balance. 
@@ -162,7 +162,7 @@ fn test_pallet_xode_staking() {
 		assert_eq!(waiting_candidates.len(), 5, "The waiting candidates is equal to the desired candidates and proposed candidates");
 
 		// =======================================================================
-		// SCENE 3: Within Session 2 and Session 3 initialization
+		// SCENE 3 (Bonding): Within Session 2 and Session 3 initialization
 		// -----------------------------------------------------------------------
 		// 1. Increase and decrease bonds of the proposed candidates.
 		// 2. While decreasing the bond try incrementing the block number
@@ -222,12 +222,17 @@ fn test_pallet_xode_staking() {
 		assert_eq!(waiting_candidates.len(), 5, "The waiting candidates is equal to the desired candidates and proposed candidates");
 
 		// =======================================================================
-		// SCENE 4: Within Session 3 and Session 4 initialization
+		// SCENE 4 (Staking): Within Session 3 and Session 4 initialization
 		// ----------------------------------------------------------------------- 
 		// 1. Add stakes on the proposed candidates
 		// 2. Try to increase the block and execute un-stake
 		// 3. Todo: We need to check if one of the proposed candidates did not
 		//          author a block, we cannot assume!
+		// 4. Todo: After un-staking (Separate Test)
+		//			test_pallet_xode_staking_unstaked()
+		//		4.1. Unreserved the balance
+		//		4.2. If the stake is zero, remove the delegation
+		//		4.3. Stake the same candidate again
 		// =======================================================================
 		let _ = Balances::deposit_creating(&11, 1000);
 		let _ = Balances::deposit_creating(&12, 1000);
@@ -298,15 +303,20 @@ fn test_pallet_xode_staking() {
 		assert_eq!(waiting_candidates.len(), 5, "The waiting candidates is equal to the desired candidates and proposed candidates");
 
 		// =======================================================================
-		// SCENE 5: Within Session 4, 5 and Session 6 initialization
+		// SCENE 5 (Offline): Within Session 4, 5, 6 and Session 7 initialization
 		// ----------------------------------------------------------------------- 
 		// 1. Make one proposed candidate go offline then go online again
-		// 2. When you offline the proposed candidate it will be removed from the 
-		//    invulnerable and with it, it's session keys, so if you online it 
-		//    again you must set the keys back.
-		// 3. Todo: Take note that even you go offline, you are still in the authorities
-		//          therefore the candidate has to wait for the next session to be able
-		//	        to leave. 
+		// 2. Session 4: Set to Offline, Session 5: Waiting, Session 6: Invulnerable,
+		//    Session 7: Offline
+		// 3. Session 5: Set to Online, Session 6: Waiting, Session 7: Invulnerable,
+		//    Session 8: Online
+		// 4. Can online anytime!
+		// 5. Todo: If the candidate is offline or in the process of offline. (Separate
+		//          Test).
+		//          test_pallet_xode_staking_offline()
+		//		5.1. Cannot bond
+		//		5.2. Cannot stake
+		//		5.3. Can un-stake
 		// =======================================================================
 		System::set_block_number(System::block_number() + 1);
 		XodeStaking::on_initialize(System::block_number());
@@ -413,18 +423,164 @@ fn test_pallet_xode_staking() {
 		println!("Waiting Candidates {:?}",waiting_candidates);
 		assert_eq!(waiting_candidates.len(), 5, "The waiting candidates is equal to the desired candidates and online proposed candidates");	
 
+		// =======================================================================
+		// SCENE 6 (Leaving): Within Session 7 and Session 9 initialization
+		// ----------------------------------------------------------------------- 
+		// 1. Add a new candidate (Candidate-3), bond then leave
+		// 2. Make sure to first offline the proposed candidate before leaving
+		// 3. Todo: Control, if on the process of leaving: (Separate Test)
+		//          test_pallet_xode_staking_leaving()
+		//		3.1. Cannot online/offline
+		//		3.2. Cannot register
+		//		3.3. Cannot bond
+		//		3.4. Cannot stake
+		//		3.5. Can still un-stake
+		// 4. Todo: Once the candidate has been removed in the authorities: (Separate
+		//		    Test)
+		//          test_pallet_xode_staking_left()
+		//		4.1. Unreserve the bond
+		//		4.2. Unreserve the stakes
+		//		4.3. Remove all the delegation
+		//		4.4. Remove the proposed candidate
+		//		4.5. Test adding the same candidate again
+		// =======================================================================
+		System::set_block_number(System::block_number() + 1);
+		XodeStaking::on_initialize(System::block_number());
 
-		// Todo: Add another candidate (do not bond) [Candidate-D]
+		let _ = XodeStaking::register_candidate(RuntimeOrigin::signed(3));
+		let mut candidate_3 = CandidateInfo {
+			who: 3,
+			bond: 0,
+			total_stake: 0,
+			last_updated: System::block_number(),
+			leaving: false,
+			offline: false,
+			commission: 0,
+		};
 
-		// Todo: Add another candidate then bond [Candidate-E]
+		let proposed_candidates = ProposedCandidates::<Test>::get();
+		assert_eq!(proposed_candidates.len(), 3, "The number of proposed candidates should be 3");
+		assert_eq!(proposed_candidates[2], candidate_3, "Must match with the last proposed candidate");		
 
-		// Todo: Stake the new candidate using the delegator of the first candidate [Candidate-E, Candidate-A(first candidate)]
+		let _ = Balances::deposit_creating(&3, 1000);
+		let key = sr25519::Public::from_raw([13u8; 32]);
+		let session_keys = SessionKeys { aura: key.into(),};
+		let result = Session::set_keys(RuntimeOrigin::signed(3), session_keys.clone(), Vec::new());
+		assert!(result.is_ok(), "Failed to set session keys: {:?}", result);
 
-		// Todo: Set the first candidate to leaving [Candidate-A]
+		let _ = XodeStaking::bond_candidate(RuntimeOrigin::signed(3), 300);
+		assert_eq!(Balances::free_balance(&3), 700);
 
-		// Todo: Now that only Candidate-B and Candidate-E are online, let them author a block
+		candidate_3.bond = 300;
+		candidate_3.last_updated = System::block_number();
+		let proposed_candidates = ProposedCandidates::<Test>::get();
+		assert_eq!(proposed_candidates[0], candidate_3, "After bonding it will be the first proposed candidate.");
 
-		// Todo: Candidate-B did not author a block
+		System::set_block_number((8 * MINUTES).into());
+
+		XodeStaking::on_initialize(System::block_number());
+		XodeStaking::new_session(8);
+		
+		Session::on_initialize(System::block_number()); 
+
+		let authorities = pallet_aura::Authorities::<Test>::get();
+		println!("Authorities {:?}",authorities);
+		assert_eq!(authorities.len(), 5, "On first session, un-change!");
+
+		let invulnerables = pallet_collator_selection::Invulnerables::<Test>::get();
+		println!("Invulnerables {:?}",invulnerables);
+		assert_eq!(invulnerables.len(), 5, "On first session, un-change!");
+
+		let queued_keys = pallet_session::QueuedKeys::<Test>::get();
+		println!("Keys {:?}",queued_keys);
+		assert_eq!(queued_keys.len(), 5, "Must be equal to invulnerables always.");
+
+		let proposed_candidates = ProposedCandidates::<Test>::get();
+		println!("Proposed Candidates {:?}",proposed_candidates);
+		assert_eq!(proposed_candidates.len(), 3, "Two (2) proposed candidates.");
+
+		let waiting_candidates = WaitingCandidates::<Test>::get();
+		println!("Waiting Candidates {:?}",waiting_candidates);
+		assert_eq!(waiting_candidates.len(), 6, "On first session, equal to the desired and proposed candidates immediately.");		
+
+		System::set_block_number(System::block_number() + 1);
+		XodeStaking::on_initialize(System::block_number());
+
+		let _ = XodeStaking::offline_candidate(RuntimeOrigin::signed(3));
+
+		System::set_block_number(System::block_number() + 1);
+		XodeStaking::on_initialize(System::block_number());
+
+		let _ = XodeStaking::leave_candidate(RuntimeOrigin::signed(3));
+
+		candidate_3.offline = true;
+		candidate_3.leaving = true;
+		candidate_3.last_updated = System::block_number();
+
+		let proposed_candidates = ProposedCandidates::<Test>::get();
+		assert_eq!(proposed_candidates.len(), 3, "The number of proposed candidates should be 3");
+		assert_eq!(proposed_candidates[2], candidate_3, "Must match with the last proposed candidate, because it is leaving.");	
+
+		System::set_block_number((9 * MINUTES).into());
+
+		XodeStaking::on_initialize(System::block_number());
+		XodeStaking::new_session(9);
+		
+		Session::on_initialize(System::block_number()); 
+
+		// =======================================================================
+		// SCENE 7 (Authoring): 
+		// ----------------------------------------------------------------------- 
+		// Todo
+		// =======================================================================
+		
 	});
 }
 
+#[test]
+fn test_pallet_xode_staking_unstaked() {
+	test1_ext().execute_with(|| {
+		System::set_block_number(0);
+
+		XodeStaking::on_initialize(System::block_number());
+		
+		let desired_candidates = DesiredCandidates::<Test>::get();
+		assert_eq!(desired_candidates.len(), 3, "There should be exactly three desired candidates");
+	});
+}
+
+#[test]
+fn test_pallet_xode_staking_offline() {
+	test1_ext().execute_with(|| {
+		System::set_block_number(0);
+
+		XodeStaking::on_initialize(System::block_number());
+		
+		let desired_candidates = DesiredCandidates::<Test>::get();
+		assert_eq!(desired_candidates.len(), 3, "There should be exactly three desired candidates");
+	});
+}
+
+#[test]
+fn test_pallet_xode_staking_leaving() {
+	test1_ext().execute_with(|| {
+		System::set_block_number(0);
+
+		XodeStaking::on_initialize(System::block_number());
+		
+		let desired_candidates = DesiredCandidates::<Test>::get();
+		assert_eq!(desired_candidates.len(), 3, "There should be exactly three desired candidates");
+	});
+}
+
+#[test]
+fn test_pallet_xode_staking_left() {
+	test1_ext().execute_with(|| {
+		System::set_block_number(0);
+
+		XodeStaking::on_initialize(System::block_number());
+		
+		let desired_candidates = DesiredCandidates::<Test>::get();
+		assert_eq!(desired_candidates.len(), 3, "There should be exactly three desired candidates");
+	});
+}
