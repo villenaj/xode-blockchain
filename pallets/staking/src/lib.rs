@@ -67,6 +67,7 @@ pub mod pallet {
 		pallet_collator_selection::Config + 
 		pallet_aura::Config + 
 		pallet_authorship::Config + 
+		pallet_session::Config + 
 		frame_system::Config 
 	{
 		/// Because this pallet emits events, it depends on the runtime's definition of an event.
@@ -91,6 +92,15 @@ pub mod pallet {
 	#[pallet::pallet]
 	pub struct Pallet<T>(_);
 	
+	#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, scale_info::TypeInfo, MaxEncodedLen, PartialOrd)]
+	pub enum Status {
+		Offline = 0,
+		Online = 1,
+		Waiting = 2,
+		Queuing = 3,
+		Authoring = 4,
+	}
+
 	/// Candidate info
 	#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, scale_info::TypeInfo, MaxEncodedLen,)]
 	pub struct CandidateInfo<AccountId, Balance, BlockNumber> {
@@ -101,6 +111,8 @@ pub mod pallet {
 		pub leaving: bool,
 		pub offline: bool,
 		pub commission: u8,
+		pub status: Status,
+		pub status_level: u8,
 	}
 		
 	/// Proposed candidates 
@@ -196,6 +208,9 @@ pub mod pallet {
 		ProposedCandidateInsufficientBalance,
 		ProposedCandidateNoSessionKeys,
 		ProposedCandidateStillOnline,
+		ProposedCandidateStillAuthoring,
+		ProposedCandidateStillWaiting,
+		ProposedCandidateStillQueuing,
 
 		WaitingCandidateAlreadyExist,
 		WaitingCandidateMaxExceeded,
@@ -280,6 +295,8 @@ pub mod pallet {
 				leaving: false,
 				offline: false,
 				commission: 0,
+				status: Status::Online,	
+				status_level: 0,
             };
             ProposedCandidates::<T>::try_mutate(|candidates| -> Result<(), DispatchError> {
                 candidates.try_push(candidate_info).map_err(|_| Error::<T>::ProposedCandidateMaxExceeded)?;
@@ -360,28 +377,6 @@ pub mod pallet {
 			Ok(().into())
 		}
 
-		/// Leave Proposed Candidate
-		/// Note:
-		/// 	Once the leaving flag is set to true, immediately remove the account in the
-		/// 	Waiting Candidate list.
-		#[pallet::call_index(4)]
-		#[pallet::weight(<weights::SubstrateWeight<T> as WeightInfo>::leave_candidate())]
-		pub fn leave_candidate(origin: OriginFor<T>,) -> DispatchResultWithPostInfo {
-			let who = ensure_signed(origin)?;
-
-			let _ = ProposedCandidates::<T>::mutate(|candidates| {
-				if let Some(candidate) = candidates.iter_mut().find(|c| c.who == who) {
-					ensure!(candidate.offline, Error::<T>::ProposedCandidateStillOnline);
-					candidate.leaving = true;
-					candidate.last_updated = frame_system::Pallet::<T>::block_number();
-				}
-				Ok::<(), Error<T>>(())
-			});
-			
-			Self::deposit_event(Event::ProposedCandidateLeft { _proposed_candidate: who });
-			Ok(().into())
-		}
-
 		/// Stake Proposed Candidate
 		/// Note:
 		/// 	To stake a proposed candidate means to delegate a balance for the candidate.
@@ -390,7 +385,7 @@ pub mod pallet {
 		/// Todo:
 		/// 	How to handle the reservation if there is a failure in adding the delegation.
 		/// 	Clean delegations when a candidate leaves to save space.
-		#[pallet::call_index(5)]
+		#[pallet::call_index(4)]
 		#[pallet::weight(<weights::SubstrateWeight<T> as WeightInfo>::stake_candidate())]
 		pub fn stake_candidate(origin: OriginFor<T>, candidate: T::AccountId, amount: BalanceOf<T>) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
@@ -423,7 +418,7 @@ pub mod pallet {
 		/// Un-stake Proposed Candidate
 		/// Note:
 		/// 	Remove first the delegation (stake amount) before un-reserving
-		#[pallet::call_index(6)]
+		#[pallet::call_index(5)]
 		#[pallet::weight(<weights::SubstrateWeight<T> as WeightInfo>::unstake_candidate())]
 		pub fn unstake_candidate(origin: OriginFor<T>, candidate: T::AccountId) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
@@ -461,7 +456,7 @@ pub mod pallet {
 		///		Temporarily leave the candidacy without having to un-bond and un-stake.
 		/// 	The offline status will be reflected only in the next session if the 
 		/// 	candidate is already in the waiting list.
-		#[pallet::call_index(7)]
+		#[pallet::call_index(6)]
 		#[pallet::weight(<weights::SubstrateWeight<T> as WeightInfo>::offline_candidate())]
 		pub fn offline_candidate(origin: OriginFor<T>,) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
@@ -473,7 +468,7 @@ pub mod pallet {
 		/// Online Proposed Candidate 
 		/// Note:
 		///		Make the candidate online again.
-		#[pallet::call_index(8)]
+		#[pallet::call_index(7)]
 		#[pallet::weight(<weights::SubstrateWeight<T> as WeightInfo>::online_candidate())]
 		pub fn online_candidate(origin: OriginFor<T>,) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
@@ -481,6 +476,35 @@ pub mod pallet {
 			Self::sort_proposed_candidates();
 			Ok(().into())
 		}
+
+		/// Leave Proposed Candidate
+		/// Note:
+		/// 	Once the leaving flag is set to true, immediately remove the account in the
+		/// 	Waiting Candidate list.
+		#[pallet::call_index(8)]
+		#[pallet::weight(<weights::SubstrateWeight<T> as WeightInfo>::leave_candidate())]
+		pub fn leave_candidate(origin: OriginFor<T>,) -> DispatchResultWithPostInfo {
+			let who = ensure_signed(origin)?;
+
+			let _ = ProposedCandidates::<T>::mutate(|candidates| {
+				if let Some(candidate) = candidates.iter_mut().find(|c| c.who == who) {
+					ensure!(candidate.offline, Error::<T>::ProposedCandidateStillOnline);
+					ensure!(!WaitingCandidates::<T>::get().contains(&candidate.who), Error::<T>::ProposedCandidateStillWaiting);
+					ensure!(!pallet_collator_selection::Invulnerables::<T>::get().contains(&candidate.who), Error::<T>::ProposedCandidateStillQueuing);
+					ensure!(!Self::still_authoring(candidate.who.clone()), Error::<T>::ProposedCandidateStillAuthoring);
+					candidate.leaving = true;
+					candidate.last_updated = frame_system::Pallet::<T>::block_number();
+
+					// Remove immediately from the waiting list.
+					let _ = Self::remove_waiting_candidate(who.clone());
+				}
+				Ok::<(), Error<T>>(())
+			});
+
+			Self::deposit_event(Event::ProposedCandidateLeft { _proposed_candidate: who });
+			Ok(().into())
+		}
+
 	}
 
 	/// =======
@@ -513,7 +537,7 @@ pub mod pallet {
 		/// Add a desired candidate
 		/// Note:
 		/// 	Xaver nodes are automatically added to desired candidates (occupies the first priority).  
-		/// 	The remaining slot will be coming from the candidates.
+		/// 	The remaining slot will be coming from the proposed candidates.
 		pub fn add_desired_candidate(desired_candidate: T::AccountId) -> DispatchResult {
 			DesiredCandidates::<T>::try_mutate(|desired_candidates| -> DispatchResult {
 				ensure!(!desired_candidates.contains(&desired_candidate), Error::<T>::DesiredCandidateAlreadyExist);
@@ -523,10 +547,26 @@ pub mod pallet {
 			})
 		}
 
+		/// Add Xaver Nodes to the desired candidates at genesis
+		/// Note:
+		/// 	The Xaver nodes (desired candidates must have a session keys)
+		pub fn add_xaver_nodes() {
+			for xaver_node in T::XaverNodes::get() {
+				let xaver_node = if xaver_node.starts_with("0x") { &xaver_node[2..] } else { xaver_node };
+				// Panic if runtime not properly configured
+				let decoded_bytes = decode(xaver_node).expect("Invalid hex string");
+				// Panic if runtime not properly configured
+				let authority = T::AuthorityId::decode(&mut decoded_bytes.as_slice()).expect("Error in decoding");
+				let account = Self::authority_to_account(authority);
+				let _ = Self::add_desired_candidate(account.clone());
+				let _ = Self::add_waiting_candidate(account);
+			}
+		}
+
 		/// Remove a proposed candidate
 		/// Note:
 		/// 	This is called upon cleaning of the proposed candidate storage for a candidate who is leaving 
-		/// 	regardless if he/she has still a bond.
+		/// 	regardless if it has still a bond.  Also called immediately after leaving.
 		pub fn remove_proposed_candidate(proposed_candidate: T::AccountId) -> DispatchResult {
             ProposedCandidates::<T>::try_mutate(|proposed_candidates| -> DispatchResult {
                 proposed_candidates.retain(|c| c.who != proposed_candidate); 
@@ -535,10 +575,58 @@ pub mod pallet {
             })
 		}
 
+		/// Change status of proposed candidate
+		/// Note:
+		/// 	1. Online - Upon registration and upon online
+		/// 	2. Waiting - Set during a wait listing the author or downgrading through author preparation
+		/// 	3. Queuing - Set during queuing and preparing the authors
+		/// 	4. Authoring - Set during new_session, if the existing status is Authoring and the level
+		///        is still zero, increment it by one.
+		/// 	5. Offline - Manually set or during slashing
+		/// 	6. Leaving is not a status, it is an event triggered by an extrinsic
+		pub fn status_proposed_candidate(proposed_candidate: T::AccountId, status: Status) -> DispatchResult {
+			ProposedCandidates::<T>::mutate(|candidates| {
+				if let Some(candidate) = candidates.iter_mut().find(|c| c.who == proposed_candidate) {
+					if status == Status::Authoring {
+						if candidate.status == Status::Authoring && 
+						   candidate.status_level == 0 {
+							candidate.status_level = candidate.status_level + 1;
+						}
+					} 
+					// Status authoring downgrading
+					if candidate.status == Status::Authoring {
+						if status < Status::Authoring {
+							candidate.status_level = 0;
+						}
+					}
+
+					candidate.status = status;
+				}
+			});
+			Ok(().into())
+		}
+
+		/// Go offline/online proposed candidates
+		/// Note:
+		pub fn offline_proposed_candidate(proposed_candidate: T::AccountId, offline: bool) -> DispatchResult {
+			ProposedCandidates::<T>::mutate(|candidates| {
+				if let Some(candidate) = candidates.iter_mut().find(|c| c.who == proposed_candidate) {
+					candidate.offline = offline;
+					candidate.last_updated = frame_system::Pallet::<T>::block_number();
+				}
+			});
+			if offline {
+				Self::deposit_event(Event::ProposedCandidateOffline { _proposed_candidate: proposed_candidate });
+			} else {
+				Self::deposit_event(Event::ProposedCandidateOnline { _proposed_candidate: proposed_candidate });
+			}
+			Ok(().into())
+		}
+
 		/// Add a waiting candidate
 		/// Note:
 		/// 	At runtime instantiation the waiting candidates are the xaver nodes, prior sessions will now 
-		/// 	include the proposed candidates. 
+		/// 	include the sorted proposed candidates. 
 		pub fn add_waiting_candidate(waiting_candidate: T::AccountId) -> DispatchResult {
 			WaitingCandidates::<T>::try_mutate(|waiting_candidates| -> DispatchResult {
 				ensure!(!waiting_candidates.contains(&waiting_candidate), Error::<T>::WaitingCandidateAlreadyExist);
@@ -578,93 +666,6 @@ pub mod pallet {
             });
             ProposedCandidates::<T>::put(proposed_candidates);
         }
-
-		/// Add Xaver Nodes to the desired candidates at genesis
-		pub fn add_xaver_nodes() {
-			for xaver_node in T::XaverNodes::get() {
-				let xaver_node = if xaver_node.starts_with("0x") { &xaver_node[2..] } else { xaver_node };
-				// Panic if runtime not properly configured
-				let decoded_bytes = decode(xaver_node).expect("Invalid hex string");
-				// Panic if runtime not properly configured
-				let authority = T::AuthorityId::decode(&mut decoded_bytes.as_slice()).expect("Error in decoding");
-				let account = Self::authority_to_account(authority);
-				let _ = Self::add_desired_candidate(account.clone());
-				let _ = Self::add_waiting_candidate(account);
-			}
-		}
-
-		/// Prepare waiting candidates
-		/// Note:
-		/// 	This function is triggered every new session.  Waiting candidates is just a storage that
-		/// 	merge the desired candidates and the proposed candidates.
-		pub fn prepare_waiting_candidates() -> DispatchResult {
-			let desired_candidates = DesiredCandidates::<T>::get();
-			let proposed_candidates = ProposedCandidates::<T>::get();
-			let mut waiting_candidates: BoundedVec<T::AccountId, T::MaxCandidates> = BoundedVec::default();
-			// First, add all desired candidates
-			for candidate in desired_candidates.iter() {
-				if waiting_candidates.len() < T::MaxCandidates::get() as usize {
-					waiting_candidates.try_push(candidate.clone()).map_err(|_| Error::<T>::WaitingCandidateAlreadyExist)?;
-				}
-			}
-			// Next, add proposed candidates if there's still space, bond is not zero and not leaving
-			for proposed_candidate in proposed_candidates.iter() {
-				if waiting_candidates.len() < T::MaxCandidates::get() as usize {
-					if !waiting_candidates.contains(&proposed_candidate.who) && 
-					   !proposed_candidate.bond.is_zero() && 
-					   !proposed_candidate.leaving && 
-					   !proposed_candidate.offline {
-						waiting_candidates.try_push(proposed_candidate.who.clone()).map_err(|_| Error::<T>::WaitingCandidateAlreadyExist)?;
-					}
-				}
-			}
-			WaitingCandidates::<T>::put(waiting_candidates);
-			Ok(())
-		}
-
-		/// Clean proposed candidate storage from leaving or zero bonded candidates
-		/// Note:
-		/// 	We need to execute this helper function to make sure that we have space for others to join
-		pub fn clean_proposed_candidates() -> DispatchResult {
-			let proposed_candidates = ProposedCandidates::<T>::get();
-
-			for proposed_candidate in proposed_candidates.iter() {
-				if proposed_candidate.leaving {
-					if !WaitingCandidates::<T>::get().contains(&proposed_candidate.who) &&
-					   !pallet_collator_selection::Invulnerables::<T>::get().contains(&proposed_candidate.who) {
-						if proposed_candidate.bond > Zero::zero() {
-							T::StakingCurrency::unreserve(&proposed_candidate.who, proposed_candidate.bond);
-						}
-						let _ = Self::remove_proposed_candidate(proposed_candidate.who.clone());
-					}
-				} else {
-					if proposed_candidate.bond == Zero::zero() {
-						if !WaitingCandidates::<T>::get().contains(&proposed_candidate.who) &&
-						   !pallet_collator_selection::Invulnerables::<T>::get().contains(&proposed_candidate.who) {
-						 	let _ = Self::remove_proposed_candidate(proposed_candidate.who.clone());
-						}
-					}
-				}
-			}
-			Ok(())
-		}
-
-		/// Go offline/online proposed candidates
-		/// Note:
-		pub fn offline_proposed_candidate(proposed_candidate: T::AccountId, offline: bool) -> DispatchResult {
-			ProposedCandidates::<T>::mutate(|candidates| {
-				if let Some(candidate) = candidates.iter_mut().find(|c| c.who == proposed_candidate) {
-					candidate.offline = offline;
-					candidate.last_updated = frame_system::Pallet::<T>::block_number();
-				}
-			});
-			if offline {
-				Self::deposit_event(Event::ProposedCandidateOffline { _proposed_candidate: proposed_candidate });
-			} else {
-				Self::deposit_event(Event::ProposedCandidateOnline { _proposed_candidate: proposed_candidate });
-			}
-			Ok(().into())
-		}
 
 		/// Compute total_stake in the candidate information
 		/// Note:
@@ -711,11 +712,12 @@ pub mod pallet {
 		/// 	This helper function is called in un-bonding (bond=zero) for leaving candidates.  The candidate
 		/// 	must wait for the next session.
 		pub fn still_authoring(who: T::AccountId) -> bool {
-			let authorities = pallet_aura::Authorities::<T>::get();
+			let validators = pallet_session::Validators::<T>::get();
 			let mut authoring = false;
-			for authority in authorities {
-				let account_id = Self::authority_to_account(authority);
-				if who == account_id {
+			for validator in validators {
+				let validator_bytes = validator.encode();
+				let account = <T as frame_system::Config>::AccountId::decode(&mut validator_bytes.as_slice()).unwrap();
+				if who == account {
 					authoring = true;
 					break;
 				}
@@ -725,61 +727,148 @@ pub mod pallet {
 
 		/// Slashed misbehaving authors
 		/// Note:
-		/// 	Assumes that Aura will give all author the opportunity to author blocks in round robbin fashion.
-		/// 	Once we can guarantee a round robbin authorship in Aura we will add the slash amount, as of the
-		///     moment we will just set the author offline.
+		/// 	1. Desired candidates are exempted from slashing
+		/// 	2. After slashing all the misbehaving authors, clean the actual authors for the 
+		/// 	   next session.
 		pub fn slashed_authors() -> DispatchResult {
-			// Todo: Get the authors that did author a block for this session.  Make sure that the author is not 
-			//       a desired candidate.
-			let authorities = pallet_aura::Authorities::<T>::get();
+			let validators = pallet_session::Validators::<T>::get();
 			let authors = ActualAuthors::<T>::get();
 			let desired_candidates = DesiredCandidates::<T>::get();
 
 			let mut non_authors = Vec::new();
-			for authority in authorities {
-				let account_id = Self::authority_to_account(authority);
-				if !authors.contains(&account_id) && !desired_candidates.contains(&account_id) {
-					non_authors.push(account_id.clone());
+			for validator in validators {
+				let validator_bytes = validator.encode();
+				let account = <T as frame_system::Config>::AccountId::decode(&mut validator_bytes.as_slice()).unwrap();
+				if !authors.contains(&account) && !desired_candidates.contains(&account) {
+					non_authors.push(account.clone());
 				}	
 			}
 			
 			for non_author in non_authors.iter() {
 				// Todo: Slashed the author and make it offline, prerequisite Aura Round Robbin
-				let _ = Self::offline_proposed_candidate(non_author.clone(),true);
+				// let _ = Self::offline_proposed_candidate(non_author.clone(),true);
+				// Self::sort_proposed_candidates();
 
 				// Todo: Slashed the delegator for that author, Prerequisite Aura Round Robbin
 			}
 			
 			// Clear the new set of actual authors
 			ActualAuthors::<T>::put(BoundedVec::default());
+
 			Ok(())
 		}
 
-		/// Assemble the final collator nodes by updating the pallet_collator_selection invulnerable.
+		/// Wait-list the authors
 		/// Note:
-		/// 	This helper function is called every new session.
-		pub fn assemble_collators() -> DispatchResult {
+		/// 	1. Wait-list first the desired candidates.  Parameter to be wait listed.
+		/// 		1.1. The bond is not zero
+		/// 		1.2. Not leaving
+		/// 		1.3. Not trying to go off-line
+		/// 	2. Next, add the proposed candidates (must be already prepared and sorted)
+		/// 	3. If the status of the proposed candidate is still Online, change it to waiting, otherwise
+		/// 	   retain.
+		pub fn wait_list_authors() -> DispatchResult {
+			let desired_candidates = DesiredCandidates::<T>::get();
+			let proposed_candidates = ProposedCandidates::<T>::get();
+			let mut waiting_candidates: BoundedVec<T::AccountId, T::MaxCandidates> = BoundedVec::default();
+
+			// First, add all desired candidates
+			for candidate in desired_candidates.iter() {
+				if waiting_candidates.len() < T::MaxCandidates::get() as usize {
+					waiting_candidates.try_push(candidate.clone()).map_err(|_| Error::<T>::WaitingCandidateAlreadyExist)?;
+				}
+			}
+			// Next, add proposed candidates if there's still space, bond is not zero and not leaving
+			for proposed_candidate in proposed_candidates.iter() {
+				if waiting_candidates.len() < T::MaxCandidates::get() as usize {
+					if !waiting_candidates.contains(&proposed_candidate.who) && 
+					   !proposed_candidate.bond.is_zero() && 
+					   !proposed_candidate.leaving && 
+					   !proposed_candidate.offline {
+
+						waiting_candidates.try_push(proposed_candidate.who.clone()).map_err(|_| Error::<T>::WaitingCandidateAlreadyExist)?;
+
+						if proposed_candidate.status == Status::Online {
+							let _ = Self::status_proposed_candidate(proposed_candidate.who.clone(),Status::Waiting);
+						}
+					}
+				}
+			}
+			WaitingCandidates::<T>::put(waiting_candidates);
+			Ok(())
+		}
+
+		/// Prepare the authors to be wait listed.
+		/// Note:
+		/// 	1. We need to execute this helper function to make sure that we have space for others to join.
+		/// 	2. Remove only the candidate if it is leaving or the bond is zero.
+		/// 	3. If the candidate status is Online or Offline, remove it immediately from the proposed candidate
+		/// 	4. If the candidate status is Waiting, remove it from the waiting candidate and immediately remove
+		/// 	   from the proposed candidate.
+		/// 	5. For Queuing candidate, just change the status to waiting.
+		/// 	6. For Authoring candidate, just change the status to queuing.
+		pub fn prepare_authors() -> DispatchResult {
+			let proposed_candidates = ProposedCandidates::<T>::get();
+
+			for proposed_candidate in proposed_candidates.iter() {
+				if proposed_candidate.offline || 
+				   proposed_candidate.leaving || 
+				   proposed_candidate.bond == Zero::zero() {
+					if proposed_candidate.status == Status::Online || 
+					   proposed_candidate.status == Status::Offline {
+						// Todo: un-stake the delegates before removing the proposed candidates
+
+						// Remove from the proposed candidates
+						let _ = Self::remove_proposed_candidate(proposed_candidate.who.clone());
+					} else if proposed_candidate.status == Status::Waiting {
+						// Todo: un-stake the delegates before removing the proposed candidates
+
+						// Remove immediately from the waiting and proposed candidates
+						let _ = Self::remove_waiting_candidate(proposed_candidate.who.clone());
+						let _ = Self::remove_proposed_candidate(proposed_candidate.who.clone());
+					} else if proposed_candidate.status == Status::Queuing {
+						// Change status to Waiting (Downgrading the status)
+						let _ = Self::status_proposed_candidate(proposed_candidate.who.clone(),Status::Waiting);
+					} else {
+						// Change status to Queuing (Downgrading the status)
+						let _ = Self::status_proposed_candidate(proposed_candidate.who.clone(),Status::Queuing);
+					}
+				}
+			}
+
+			Ok(())
+		}
+
+		/// Queue authors by updating the pallet_collator_selection invulnerable.
+		/// Note:
+		/// 	1. This helper function is called at the end of each sessions.
+		/// 	2. Queue the authors using the waiting candidates.
+		/// 	3. Change the status of the newly added candidates from waiting
+		/// 	   to queuing.
+		pub fn queue_authors() -> DispatchResult {
 			// Ensure the waiting candidates storage is not empty
 			let waiting_candidates = WaitingCandidates::<T>::get();
 			ensure!(!waiting_candidates.is_empty(), Error::<T>::WaitingCandidatesEmpty);
 
 			// Remove the invulnerable not in the waiting candidates to save space
-			// Todo: Removing from invulnerables will remove the keys.  Make sure that it is not authoring when
-			//       we remove it from invulnerables.
 			let mut invulnerables = pallet_collator_selection::Invulnerables::<T>::get();
 			invulnerables.retain(|account| waiting_candidates.contains(account));
 			pallet_collator_selection::Invulnerables::<T>::put(invulnerables);
 
 			// Start inserting the waiting candidates to invulnerables
 			for waiting_candidate in waiting_candidates.clone() {
-				let _ = Self::add_invulnerable(waiting_candidate);
+				let _ = Self::add_invulnerable(waiting_candidate.clone());
+
+				// Change status to Queuing if the status is waiting, otherwise
+				// retain current status.
+				ProposedCandidates::<T>::mutate(|candidates| {
+					if let Some(candidate) = candidates.iter_mut().find(|c| c.who == waiting_candidate) {
+						if candidate.status == Status::Waiting {
+							let _ = candidate.status == Status::Queuing;
+						}
+					}
+				});
 			}
-
-			// Clean proposed candidate storage from leaving candidates and zero bond
-			let _ = Self::clean_proposed_candidates();
-
-			// Prepare the new waiting candidates for the next session
-			let _ = Self::prepare_waiting_candidates();
 
 			Ok(())
 		}
@@ -790,16 +879,31 @@ pub mod pallet {
 	/// ===============
 	impl<T: Config> SessionManager<T::AccountId> for Pallet<T> {
 		fn new_session(_index: SessionIndex) -> Option<Vec<T::AccountId>> {
-			// Set new collators
-			let  collators = pallet_collator_selection::Invulnerables::<T>::get().to_vec();
-			Some(collators)
+			let  authors = pallet_collator_selection::Invulnerables::<T>::get().to_vec();
+			for author in authors.clone() {
+				// Change status to Authoring (The top status)
+				let _ = Self::status_proposed_candidate(author.clone(),Status::Authoring);
+			}			
+			// Set the authors
+			Some(authors)
 		}
+		
 		fn start_session(_: SessionIndex) {
-			// Todo, may not do anything
+			// Todo or may not do anything
 		}
+
 		fn end_session(_: SessionIndex) {
+			// Queue the authors from the waiting list
+			let _ = Self::queue_authors();
+
+			// Slashed the authors of the current session
 			let _ = Self::slashed_authors();
-			let _ = Self::assemble_collators();
+
+			// Prepare the authors for the next waiting list
+			let _ = Self::prepare_authors();
+
+			// Wait list the authors
+			let _ = Self::wait_list_authors();
 		}
 	}
 

@@ -1,4 +1,4 @@
-use crate::{mock::*, CandidateInfo, 
+use crate::{mock::*, CandidateInfo, Status, ActualAuthors,
 	DesiredCandidates, ProposedCandidates, WaitingCandidates,
 };
 use frame_support::traits::Hooks;
@@ -92,6 +92,8 @@ fn test_pallet_xode_staking() {
 			leaving: false,
 			offline: false,
 			commission: 0,
+			status: Status::Online,
+			status_level: 0,
 		};
 		let mut candidate_2 = CandidateInfo {
 			who: 2,
@@ -101,6 +103,8 @@ fn test_pallet_xode_staking() {
 			leaving: false,
 			offline: false,
 			commission: 0,
+			status: Status::Online,
+			status_level: 0,
 		};
 
 		let proposed_candidates = ProposedCandidates::<Test>::get();
@@ -161,6 +165,9 @@ fn test_pallet_xode_staking() {
 		println!("Waiting Candidates {:?}",waiting_candidates);
 		assert_eq!(waiting_candidates.len(), 5, "The waiting candidates is equal to the desired candidates and proposed candidates");
 
+		candidate_1.status = Status::Waiting;
+		candidate_2.status = Status::Waiting;
+
 		// =======================================================================
 		// SCENE 3 (Bonding): Within Session 2 and Session 3 initialization
 		// -----------------------------------------------------------------------
@@ -176,6 +183,7 @@ fn test_pallet_xode_staking() {
 
 		candidate_1.bond = 400;
 		candidate_1.last_updated = System::block_number();
+		
 		let proposed_candidates = ProposedCandidates::<Test>::get();
 		assert_eq!(proposed_candidates[0], candidate_1, "The first candidate data does not match");
 		assert_eq!(proposed_candidates[1], candidate_2, "The second candidate data does not match");
@@ -220,6 +228,13 @@ fn test_pallet_xode_staking() {
 		let waiting_candidates = WaitingCandidates::<Test>::get();
 		println!("Waiting Candidates {:?}",waiting_candidates);
 		assert_eq!(waiting_candidates.len(), 5, "The waiting candidates is equal to the desired candidates and proposed candidates");
+
+		// No more queuing, immediately sent to authoring at level 0
+		candidate_1.status = Status::Authoring;
+		candidate_2.status = Status::Authoring;
+		let proposed_candidates = ProposedCandidates::<Test>::get();
+		assert_eq!(proposed_candidates[0], candidate_2, "The first candidate data does not match");
+		assert_eq!(proposed_candidates[1], candidate_1, "The second candidate data does not match");
 
 		// =======================================================================
 		// SCENE 4 (Staking): Within Session 3 and Session 4 initialization
@@ -302,21 +317,26 @@ fn test_pallet_xode_staking() {
 		println!("Waiting Candidates {:?}",waiting_candidates);
 		assert_eq!(waiting_candidates.len(), 5, "The waiting candidates is equal to the desired candidates and proposed candidates");
 
+		candidate_1.status = Status::Authoring;
+		candidate_1.status_level = 1;
+		candidate_2.status = Status::Authoring;
+		candidate_2.status_level = 1;
+		let proposed_candidates = ProposedCandidates::<Test>::get();
+		assert_eq!(proposed_candidates[0], candidate_2, "The first candidate data does not match");
+		assert_eq!(proposed_candidates[1], candidate_1, "The second candidate data does not match");
+
 		// =======================================================================
-		// SCENE 5 (Offline): Within Session 4, 5, 6 and Session 7 initialization
+		// SCENE 5 (Offline): Within Session 4, 5 and Session 6 initialization
 		// ----------------------------------------------------------------------- 
-		// 1. Make one proposed candidate go offline then go online again
-		// 2. Session 4: Set to Offline, Session 5: Waiting, Session 6: Invulnerable,
-		//    Session 7: Offline
-		// 3. Session 5: Set to Online, Session 6: Waiting, Session 7: Invulnerable,
-		//    Session 8: Online
-		// 4. Can online anytime!
-		// 5. Todo: If the candidate is offline or in the process of offline. (Separate
+		// 1. Make one proposed candidate go offline
+		// 2. Downgraded after set to offline after two sessions.
+		// 3. Todo: Test to online if the status is not yet downgraded
+		// 4. Todo: If the candidate is offline or in the process of offline. (Separate
 		//          Test).
 		//          test_pallet_xode_staking_offline()
-		//		5.1. Cannot bond
-		//		5.2. Cannot stake
-		//		5.3. Can un-stake
+		//		4.1. Cannot bond
+		//		4.2. Cannot stake
+		//		4.3. Can un-stake
 		// =======================================================================
 		System::set_block_number(System::block_number() + 1);
 		XodeStaking::on_initialize(System::block_number());
@@ -355,19 +375,7 @@ fn test_pallet_xode_staking() {
 
 		let waiting_candidates = WaitingCandidates::<Test>::get();
 		println!("Waiting Candidates {:?}",waiting_candidates);
-		assert_eq!(waiting_candidates.len(), 4, "The waiting candidates is equal to the desired candidates and online proposed candidates");
-
-		System::set_block_number(System::block_number() + 1);
-		XodeStaking::on_initialize(System::block_number());
-
-		let _ = XodeStaking::online_candidate(RuntimeOrigin::signed(2));
-
-		candidate_2.offline = false;
-		candidate_2.last_updated = System::block_number();
-
-		let proposed_candidates = ProposedCandidates::<Test>::get();
-		assert_eq!(proposed_candidates[0], candidate_2);
-		assert_eq!(proposed_candidates[1], candidate_1);	
+		assert_eq!(waiting_candidates.len(), 4, "The waiting candidates is equal to the desired candidates and online proposed candidates");	
 
 		System::set_block_number((6 * MINUTES).into());
 
@@ -394,12 +402,68 @@ fn test_pallet_xode_staking() {
 
 		let waiting_candidates = WaitingCandidates::<Test>::get();
 		println!("Waiting Candidates {:?}",waiting_candidates);
-		assert_eq!(waiting_candidates.len(), 5, "The waiting candidates is equal to the desired candidates and online proposed candidates");		
+		assert_eq!(waiting_candidates.len(), 4, "The waiting candidates is equal to the desired candidates and online proposed candidates");	
+
+		candidate_2.status = Status::Queuing;
+		candidate_2.status_level = 0;
+		let proposed_candidates = ProposedCandidates::<Test>::get();
+		assert_eq!(proposed_candidates[0], candidate_1);
+		assert_eq!(proposed_candidates[1], candidate_2);
+		
+		// =======================================================================
+		// SCENE 6 (Online): Within Session 6, 7, 8 and Session 9 initialization 
+		// ----------------------------------------------------------------------- 
+		// 1. Make one proposed candidate go online after being offline
+		// 2. Again it takes two session to be authoring even if
+		// =======================================================================
+		System::set_block_number(System::block_number() + 1);
+		XodeStaking::on_initialize(System::block_number());
+
+		let _ = XodeStaking::online_candidate(RuntimeOrigin::signed(2));
+
+		candidate_2.offline = false;
+		candidate_2.last_updated = System::block_number();
+
+		let proposed_candidates = ProposedCandidates::<Test>::get();
+		assert_eq!(proposed_candidates[0], candidate_2);
+		assert_eq!(proposed_candidates[1], candidate_1);	
 
 		System::set_block_number((7 * MINUTES).into());
 
 		XodeStaking::on_initialize(System::block_number());
 		XodeStaking::new_session(7);
+		
+		Session::on_initialize(System::block_number()); 
+
+		let authorities = pallet_aura::Authorities::<Test>::get();
+		println!("Authorities {:?}",authorities);
+		assert_eq!(authorities.len(), 4, "Authorities are exactly equal to the previous invulnerables.");
+
+		let invulnerables = pallet_collator_selection::Invulnerables::<Test>::get();
+		println!("Invulnerables {:?}",invulnerables);
+		assert_eq!(invulnerables.len(), 4, "Invulerables after new session must have 5 entries, equal to desired candidates plus 2 proposed candidates");
+
+		let queued_keys = pallet_session::QueuedKeys::<Test>::get();
+		println!("Keys {:?}",queued_keys);
+		assert_eq!(queued_keys.len(), 4, "Keys are exactly equal to invulnerables.");
+
+		let proposed_candidates = ProposedCandidates::<Test>::get();
+		println!("Proposed Candidates {:?}",proposed_candidates);
+		assert_eq!(proposed_candidates.len(), 2, "Two (2) proposed candidates.");
+
+		let waiting_candidates = WaitingCandidates::<Test>::get();
+		println!("Waiting Candidates {:?}",waiting_candidates);
+		assert_eq!(waiting_candidates.len(), 5, "The waiting candidates is equal to the desired candidates and online proposed candidates");		
+
+		candidate_2.status = Status::Queuing;
+		let proposed_candidates = ProposedCandidates::<Test>::get();
+		assert_eq!(proposed_candidates[0], candidate_2);
+		assert_eq!(proposed_candidates[1], candidate_1);
+
+		System::set_block_number((8 * MINUTES).into());
+
+		XodeStaking::on_initialize(System::block_number());
+		XodeStaking::new_session(8);
 		
 		Session::on_initialize(System::block_number()); 
 
@@ -423,8 +487,45 @@ fn test_pallet_xode_staking() {
 		println!("Waiting Candidates {:?}",waiting_candidates);
 		assert_eq!(waiting_candidates.len(), 5, "The waiting candidates is equal to the desired candidates and online proposed candidates");	
 
+		candidate_2.status = Status::Authoring;
+		let proposed_candidates = ProposedCandidates::<Test>::get();
+		assert_eq!(proposed_candidates[0], candidate_2);
+		assert_eq!(proposed_candidates[1], candidate_1);
+
+		System::set_block_number((9 * MINUTES).into());
+
+		XodeStaking::on_initialize(System::block_number());
+		XodeStaking::new_session(9);
+		
+		Session::on_initialize(System::block_number()); 
+
+		let authorities = pallet_aura::Authorities::<Test>::get();
+		println!("Authorities {:?}",authorities);
+		assert_eq!(authorities.len(), 5, "Authorities are exactly equal to the previous invulnerables.");
+
+		let invulnerables = pallet_collator_selection::Invulnerables::<Test>::get();
+		println!("Invulnerables {:?}",invulnerables);
+		assert_eq!(invulnerables.len(), 5, "Invulerables after new session must have 5 entries, equal to desired candidates plus 2 proposed candidates");
+
+		let queued_keys = pallet_session::QueuedKeys::<Test>::get();
+		println!("Keys {:?}",queued_keys);
+		assert_eq!(queued_keys.len(), 5, "Keys are exactly equal to invulnerables.");
+
+		let proposed_candidates = ProposedCandidates::<Test>::get();
+		println!("Proposed Candidates {:?}",proposed_candidates);
+		assert_eq!(proposed_candidates.len(), 2, "Two (2) proposed candidates.");
+
+		let waiting_candidates = WaitingCandidates::<Test>::get();
+		println!("Waiting Candidates {:?}",waiting_candidates);
+		assert_eq!(waiting_candidates.len(), 5, "The waiting candidates is equal to the desired candidates and online proposed candidates");	
+
+		candidate_2.status_level = 1;
+		let proposed_candidates = ProposedCandidates::<Test>::get();
+		assert_eq!(proposed_candidates[0], candidate_2);
+		assert_eq!(proposed_candidates[1], candidate_1);
+
 		// =======================================================================
-		// SCENE 6 (Leaving): Within Session 7 and Session 9 initialization
+		// SCENE 7 (Leaving): Within Session 9 and Session 10 initialization
 		// ----------------------------------------------------------------------- 
 		// 1. Add a new candidate (Candidate-3), bond then leave
 		// 2. Make sure to first offline the proposed candidate before leaving
@@ -456,6 +557,8 @@ fn test_pallet_xode_staking() {
 			leaving: false,
 			offline: false,
 			commission: 0,
+			status: Status::Online,
+			status_level: 0,
 		};
 
 		let proposed_candidates = ProposedCandidates::<Test>::get();
@@ -476,16 +579,16 @@ fn test_pallet_xode_staking() {
 		let proposed_candidates = ProposedCandidates::<Test>::get();
 		assert_eq!(proposed_candidates[0], candidate_3, "After bonding it will be the first proposed candidate.");
 
-		System::set_block_number((8 * MINUTES).into());
+		System::set_block_number((10 * MINUTES).into());
 
 		XodeStaking::on_initialize(System::block_number());
-		XodeStaking::new_session(8);
+		XodeStaking::new_session(10);
 		
 		Session::on_initialize(System::block_number()); 
 
-		let authorities = pallet_aura::Authorities::<Test>::get();
-		println!("Authorities {:?}",authorities);
-		assert_eq!(authorities.len(), 5, "On first session, un-change!");
+		let validators = pallet_session::Validators::<Test>::get();
+		println!("Validators {:?}",validators);
+		assert_eq!(validators.len(), 5, "First session, still unchanged");
 
 		let invulnerables = pallet_collator_selection::Invulnerables::<Test>::get();
 		println!("Invulnerables {:?}",invulnerables);
@@ -497,23 +600,156 @@ fn test_pallet_xode_staking() {
 
 		let proposed_candidates = ProposedCandidates::<Test>::get();
 		println!("Proposed Candidates {:?}",proposed_candidates);
-		assert_eq!(proposed_candidates.len(), 3, "Two (2) proposed candidates.");
+		assert_eq!(proposed_candidates.len(), 3, "Three (3) proposed candidates.");
 
 		let waiting_candidates = WaitingCandidates::<Test>::get();
 		println!("Waiting Candidates {:?}",waiting_candidates);
 		assert_eq!(waiting_candidates.len(), 6, "On first session, equal to the desired and proposed candidates immediately.");		
+
+		candidate_3.status = Status::Waiting;
+		let proposed_candidates = ProposedCandidates::<Test>::get();
+		assert_eq!(proposed_candidates[0], candidate_3, "Still waiting, do not leave");
+
+		System::set_block_number((10 * MINUTES).into());
+
+		XodeStaking::on_initialize(System::block_number());
+		XodeStaking::new_session(10);
+		
+		Session::on_initialize(System::block_number()); 
+
+		let validators = pallet_session::Validators::<Test>::get();
+		println!("Validators {:?}",validators);
+		assert_eq!(validators.len(), 5, "First session, still unchanged");
+
+		let invulnerables = pallet_collator_selection::Invulnerables::<Test>::get();
+		println!("Invulnerables {:?}",invulnerables);
+		assert_eq!(invulnerables.len(), 6, "On first session, un-change!");
+
+		let queued_keys = pallet_session::QueuedKeys::<Test>::get();
+		println!("Keys {:?}",queued_keys);
+		assert_eq!(queued_keys.len(), 6, "Must be equal to invulnerables always.");
+
+		let proposed_candidates = ProposedCandidates::<Test>::get();
+		println!("Proposed Candidates {:?}",proposed_candidates);
+		assert_eq!(proposed_candidates.len(), 3, "Three (3) proposed candidates.");
+
+		let waiting_candidates = WaitingCandidates::<Test>::get();
+		println!("Waiting Candidates {:?}",waiting_candidates);
+		assert_eq!(waiting_candidates.len(), 6, "On first session, equal to the desired and proposed candidates immediately.");			
+
+		// No queuing status, if new waiting candidate.  Immediately goes to authoring
+		// level 0.
+		candidate_3.status = Status::Authoring;
+		let proposed_candidates = ProposedCandidates::<Test>::get();
+		assert_eq!(proposed_candidates[0], candidate_3, "Status is now authoring level 0 (no queuing).");
 
 		System::set_block_number(System::block_number() + 1);
 		XodeStaking::on_initialize(System::block_number());
 
 		let _ = XodeStaking::offline_candidate(RuntimeOrigin::signed(3));
 
+		candidate_3.offline = true;
+		candidate_3.last_updated = System::block_number();
+
+		System::set_block_number((11 * MINUTES).into());
+
+		XodeStaking::on_initialize(System::block_number());
+		XodeStaking::new_session(11);
+		
+		Session::on_initialize(System::block_number()); 
+
+		let validators = pallet_session::Validators::<Test>::get();
+		println!("Validators {:?}",validators);
+		assert_eq!(validators.len(), 6, "First session, still unchanged");
+
+		let invulnerables = pallet_collator_selection::Invulnerables::<Test>::get();
+		println!("Invulnerables {:?}",invulnerables);
+		assert_eq!(invulnerables.len(), 6, "On first session, un-change!");
+
+		let queued_keys = pallet_session::QueuedKeys::<Test>::get();
+		println!("Keys {:?}",queued_keys);
+		assert_eq!(queued_keys.len(), 6, "Must be equal to invulnerables always.");
+
+		let proposed_candidates = ProposedCandidates::<Test>::get();
+		println!("Proposed Candidates {:?}",proposed_candidates);
+		assert_eq!(proposed_candidates.len(), 3, "Three (3) proposed candidates.");
+
+		let waiting_candidates = WaitingCandidates::<Test>::get();
+		println!("Waiting Candidates {:?}",waiting_candidates);
+		assert_eq!(waiting_candidates.len(), 5, "On first session, equal to the desired and proposed candidates immediately.");		
+
+		candidate_3.status = Status::Authoring;
+		let proposed_candidates = ProposedCandidates::<Test>::get();
+		assert_eq!(proposed_candidates[2], candidate_3, "Status is still authoring.");
+
+		System::set_block_number((12 * MINUTES).into());
+
+		XodeStaking::on_initialize(System::block_number());
+		XodeStaking::new_session(12);
+		
+		Session::on_initialize(System::block_number()); 
+
+		let validators = pallet_session::Validators::<Test>::get();
+		println!("Validators {:?}",validators);
+		assert_eq!(validators.len(), 6, "First session, still unchanged");
+
+		let invulnerables = pallet_collator_selection::Invulnerables::<Test>::get();
+		println!("Invulnerables {:?}",invulnerables);
+		assert_eq!(invulnerables.len(), 5, "On first session, un-change!");
+
+		let queued_keys = pallet_session::QueuedKeys::<Test>::get();
+		println!("Keys {:?}",queued_keys);
+		assert_eq!(queued_keys.len(), 5, "Must be equal to invulnerables always.");
+
+		let proposed_candidates = ProposedCandidates::<Test>::get();
+		println!("Proposed Candidates {:?}",proposed_candidates);
+		assert_eq!(proposed_candidates.len(), 3, "Three (3) proposed candidates.");
+
+		let waiting_candidates = WaitingCandidates::<Test>::get();
+		println!("Waiting Candidates {:?}",waiting_candidates);
+		assert_eq!(waiting_candidates.len(), 5, "On first session, equal to the desired and proposed candidates immediately.");		
+
+		candidate_3.status = Status::Queuing;
+		let proposed_candidates = ProposedCandidates::<Test>::get();
+		assert_eq!(proposed_candidates[2], candidate_3, "Status is now queuing after being offline.");
+
+		System::set_block_number((13 * MINUTES).into());
+
+		XodeStaking::on_initialize(System::block_number());
+		XodeStaking::new_session(13);
+		
+		Session::on_initialize(System::block_number()); 
+
+		let validators = pallet_session::Validators::<Test>::get();
+		println!("Validators {:?}",validators);
+		assert_eq!(validators.len(), 5, "First session, still unchanged");
+
+		let invulnerables = pallet_collator_selection::Invulnerables::<Test>::get();
+		println!("Invulnerables {:?}",invulnerables);
+		assert_eq!(invulnerables.len(), 5, "On first session, un-change!");
+
+		let queued_keys = pallet_session::QueuedKeys::<Test>::get();
+		println!("Keys {:?}",queued_keys);
+		assert_eq!(queued_keys.len(), 5, "Must be equal to invulnerables always.");
+
+		let proposed_candidates = ProposedCandidates::<Test>::get();
+		println!("Proposed Candidates {:?}",proposed_candidates);
+		assert_eq!(proposed_candidates.len(), 3, "Three (3) proposed candidates.");
+
+		let waiting_candidates = WaitingCandidates::<Test>::get();
+		println!("Waiting Candidates {:?}",waiting_candidates);
+		assert_eq!(waiting_candidates.len(), 5, "On first session, equal to the desired and proposed candidates immediately.");		
+
+		candidate_3.status = Status::Waiting;
+		let proposed_candidates = ProposedCandidates::<Test>::get();
+		assert_eq!(proposed_candidates[2], candidate_3, "Status is now waiting (Ready to leave)");
+
 		System::set_block_number(System::block_number() + 1);
 		XodeStaking::on_initialize(System::block_number());
 
-		let _ = XodeStaking::leave_candidate(RuntimeOrigin::signed(3));
+		let leaving = XodeStaking::leave_candidate(RuntimeOrigin::signed(3));
+		println!("Leaving {:?}",leaving);
 
-		candidate_3.offline = true;
 		candidate_3.leaving = true;
 		candidate_3.last_updated = System::block_number();
 
@@ -521,19 +757,39 @@ fn test_pallet_xode_staking() {
 		assert_eq!(proposed_candidates.len(), 3, "The number of proposed candidates should be 3");
 		assert_eq!(proposed_candidates[2], candidate_3, "Must match with the last proposed candidate, because it is leaving.");	
 
-		System::set_block_number((9 * MINUTES).into());
+		System::set_block_number((14 * MINUTES).into());
 
 		XodeStaking::on_initialize(System::block_number());
-		XodeStaking::new_session(9);
+		XodeStaking::new_session(14);
 		
 		Session::on_initialize(System::block_number()); 
+
+		let validators = pallet_session::Validators::<Test>::get();
+		println!("Validators {:?}",validators);
+		assert_eq!(validators.len(), 5, "First session, still unchanged");
+
+		let invulnerables = pallet_collator_selection::Invulnerables::<Test>::get();
+		println!("Invulnerables {:?}",invulnerables);
+		assert_eq!(invulnerables.len(), 5, "On second session, it will get the previous waiting candidates");
+
+		let queued_keys = pallet_session::QueuedKeys::<Test>::get();
+		println!("Keys {:?}",queued_keys);
+		assert_eq!(queued_keys.len(), 5, "Must be equal to invulnerables always.");
+
+		let proposed_candidates = ProposedCandidates::<Test>::get();
+		println!("Proposed Candidates {:?}",proposed_candidates);
+		assert_eq!(proposed_candidates.len(), 2, "Three (3) proposed candidates.");
+
+		let waiting_candidates = WaitingCandidates::<Test>::get();
+		println!("Waiting Candidates {:?}",waiting_candidates);
+		assert_eq!(waiting_candidates.len(), 5, "On first session, less than one, since one candidate is leaving");		
 
 		// =======================================================================
 		// SCENE 7 (Authoring): 
 		// ----------------------------------------------------------------------- 
 		// Todo
 		// =======================================================================
-		
+
 	});
 }
 
