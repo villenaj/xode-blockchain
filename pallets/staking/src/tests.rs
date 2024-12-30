@@ -414,7 +414,7 @@ fn test_pallet_xode_staking() {
 		// SCENE 6 (Online): Within Session 6, 7, 8 and Session 9 initialization 
 		// ----------------------------------------------------------------------- 
 		// 1. Make one proposed candidate go online after being offline
-		// 2. Again it takes two session to be authoring even if
+		// 2. Todo: Control, set online only if the status is already queuing
 		// =======================================================================
 		System::set_block_number(System::block_number() + 1);
 		XodeStaking::on_initialize(System::block_number());
@@ -525,7 +525,7 @@ fn test_pallet_xode_staking() {
 		assert_eq!(proposed_candidates[1], candidate_1);
 
 		// =======================================================================
-		// SCENE 7 (Leaving): Within Session 9 and Session 10 initialization
+		// SCENE 7 (Leaving): Within Session 9, 10, 11, 12, 13 and Session 14 initialization
 		// ----------------------------------------------------------------------- 
 		// 1. Add a new candidate (Candidate-3), bond then leave
 		// 2. Make sure to first offline the proposed candidate before leaving
@@ -785,10 +785,41 @@ fn test_pallet_xode_staking() {
 		assert_eq!(waiting_candidates.len(), 5, "On first session, less than one, since one candidate is leaving");		
 
 		// =======================================================================
-		// SCENE 7 (Authoring): 
+		// SCENE 8 (Authoring): Within Session 14 and Session 15 initialization
 		// ----------------------------------------------------------------------- 
-		// Todo
+		// 1. Set the commission for both candidate
+		// 2. Try authoring a block
 		// =======================================================================
+		System::set_block_number(System::block_number() + 1);
+		
+		let _ = XodeStaking::set_commission_of_candidate(RuntimeOrigin::signed(1),10);
+		let _ = XodeStaking::set_commission_of_candidate(RuntimeOrigin::signed(2),20);
+
+		candidate_1.commission = 10;
+		candidate_1.status = Status::Authoring;
+		candidate_1.status_level = 1;
+		candidate_1.last_updated = System::block_number();
+		candidate_2.commission = 20;
+		candidate_2.status = Status::Authoring;
+		candidate_2.status_level = 1;
+		candidate_2.last_updated = System::block_number();
+
+		let proposed_candidates = ProposedCandidates::<Test>::get();
+		assert_eq!(proposed_candidates[0], candidate_2);
+		assert_eq!(proposed_candidates[1], candidate_1);
+
+		System::on_finalize(System::block_number());
+		XodeStaking::on_initialize(System::block_number());		
+
+		let author = Authorship::author();
+		assert_eq!(author, Some(proposed_candidates[1].who)); 
+
+		let actual_authors = ActualAuthors::<Test>::get();
+		println!("Actual Authors {:?}",actual_authors);
+		assert_eq!(actual_authors.len(), 1);
+
+		assert_eq!(Balances::free_balance(&1), 800);
+
 
 	});
 }

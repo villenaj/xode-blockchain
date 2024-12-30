@@ -8,6 +8,8 @@ use frame_support::parameter_types;
 use sp_consensus_aura::sr25519::AuthorityId as AuraId;
 use xcm::latest::prelude::BodyId;
 
+use frame_support::ConsensusEngineId;
+
 pub const SLOT_DURATION: u64 = 6000;
 pub type Balance = u128;
 pub type AccountId = u64;
@@ -136,9 +138,25 @@ impl pallet_session::Config for Test {
 	type WeightInfo = ();
 }
 
+pub struct AuthorGiven;
+impl frame_support::traits::FindAuthor<AccountId> for AuthorGiven {
+    fn find_author<'a, I>(_digests: I) -> Option<AccountId>
+    where
+        I: 'a + IntoIterator<Item = (ConsensusEngineId, &'a [u8])>,
+    {
+		let authors = vec![13620103657161844528, 14516343343327982992, 10654826648675244518, 1, 2];
+
+		let block_number = frame_system::Pallet::<Test>::block_number();
+		let round_robin_index = block_number % authors.len() as u64;
+
+        Some(authors[round_robin_index as usize])
+    }	
+}
+
 impl pallet_authorship::Config for Test {
-	type FindAuthor = pallet_session::FindAccountFromAuthorIndex<Self, Aura>;
-	type EventHandler = (CollatorSelection,);
+	//type FindAuthor = pallet_session::FindAccountFromAuthorIndex<Self, Aura>;
+	type FindAuthor = AuthorGiven;
+	type EventHandler = (CollatorSelection, XodeStaking);
 }
 
 parameter_types! {

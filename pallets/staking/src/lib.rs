@@ -468,6 +468,7 @@ pub mod pallet {
 		/// Online Proposed Candidate 
 		/// Note:
 		///		Make the candidate online again.
+		/// 	Todo: Check first the status if its already queuing
 		#[pallet::call_index(7)]
 		#[pallet::weight(<weights::SubstrateWeight<T> as WeightInfo>::online_candidate())]
 		pub fn online_candidate(origin: OriginFor<T>,) -> DispatchResultWithPostInfo {
@@ -905,6 +906,14 @@ pub mod pallet {
 			// Wait list the authors
 			let _ = Self::wait_list_authors();
 		}
+	}
+
+	impl<T: Config> pallet_authorship::EventHandler<T::AccountId, BlockNumberFor<T>> for Pallet<T>
+	{
+		fn note_author(author: T::AccountId) {
+			// TODO: transfer fees here
+		}
+
 	}
 
 }

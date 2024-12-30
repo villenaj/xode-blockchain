@@ -27,7 +27,7 @@
 mod xcm_config;
 
 // Substrate and Polkadot dependencies
-use crate::Timestamp;
+use crate::{Timestamp, XodeStaking};
 use cumulus_pallet_parachain_system::RelayNumberMonotonicallyIncreases;
 use cumulus_primitives_core::{AggregateMessageOrigin, ParaId};
 use frame_support::{
@@ -160,7 +160,7 @@ impl pallet_timestamp::Config for Runtime {
 
 impl pallet_authorship::Config for Runtime {
 	type FindAuthor = pallet_session::FindAccountFromAuthorIndex<Self, Aura>;
-	type EventHandler = (CollatorSelection,);
+	type EventHandler = (CollatorSelection, XodeStaking);
 }
 
 parameter_types! {
