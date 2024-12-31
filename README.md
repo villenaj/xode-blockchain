@@ -23,4 +23,17 @@
 
 </div>
 
+#### Smart Contract Support
+Xode Blockchain supports smart contracts (Wasm contracts) using the ink! framework, enabling developers to create and deploy secure and efficient decentralized applications. In the future, Xode Blockchain will also support EVM/Solidity contracts, expanding the ecosystem and allowing for greater interoperability with existing Ethereum-based applications.
 
+#### Asset Hub 
+Xode Blockchain has the pallet-assets installed, allowing for the creation, management, and transfer of custom assets on the network. This pallet enables the use of fungible tokens, providing flexibility for developers to build decentralized applications with token-based economies. In the future, Xode Blockchain will also introduce XCM Transport Methods (XCMP, HRMP, VMP) for cross-chain applications, enhancing interoperability and enabling seamless communication and asset transfers across different blockchains.
+
+#### Proof-of-Stake
+Xode Blockchain has built-in staking pallets to support fully decentralized nodes, enabling token holders to participate in the network's security and governance. These pallets facilitate the staking process, allowing validators and nominators to secure the network while earning rewards for their contributions.
+
+#### Governance
+Governance and treasury on Xode Blockchain are handled through the Xode Foundation, a Panama-based DAO, utilizing two collective pallets: the Treasury Council and the Technical Committee. These pallets facilitate decentralized decision-making and resource allocation, ensuring that the network's development and financial management are transparent, community-driven, and aligned with the ecosystem's long-term goals. Our goal is to expand the governance into OpenGov, further enhancing community involvement and decentralizing decision-making processes, paving the way for an even more inclusive and resilient governance structure.
+
+#### [Block scanner](https://xode.net/blockscanner)
+Xode Blockchain integrates indexing and block scanning utilities through Subsquid, providing efficient data indexing and querying capabilities. This allows developers and users to easily access and analyze blockchain data, improving the overall user experience and enabling more advanced applications and analytics on the network.
