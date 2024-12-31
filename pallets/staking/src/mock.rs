@@ -1,10 +1,24 @@
 use frame_support::{
 	derive_impl, 
-	weights::constants::RocksDbWeight,
+	weights::{
+		constants::RocksDbWeight,
+		WeightToFeePolynomial,
+		WeightToFeeCoefficients,
+		constants::ExtrinsicBaseWeight,
+		ConstantMultiplier,
+		WeightToFeeCoefficient,
+	},
 	PalletId,
 	parameter_types,
 	ConsensusEngineId,
-	traits::AsEnsureOriginWithArg,
+	traits::{ 
+		AsEnsureOriginWithArg,
+		OnUnbalanced,
+		fungible::Credit,
+		Imbalance,
+		tokens::imbalance::ResolveTo,
+		fungible::Balanced,
+	},
 };
 use frame_system::{
 	mocking::MockBlock, EnsureRoot, GenesisConfig,
@@ -12,11 +26,15 @@ use frame_system::{
 };
 use sp_runtime::{
 	impl_opaque_keys, 
-	traits:: { ConstU64, ConstU32, AccountIdConversion}, 
+	traits:: { ConstU8, ConstU64, ConstU32, AccountIdConversion}, 
 	BuildStorage, 
 };
 use sp_consensus_aura::sr25519::AuthorityId as AuraId;
 use xcm::latest::prelude::BodyId;
+use sp_runtime::Perbill;
+use smallvec::smallvec;
+use polkadot_runtime_common::SlowAdjustingFeeUpdate;
+
 
 pub const SLOT_DURATION: u64 = 6000;
 pub type Balance = u128;
@@ -25,6 +43,8 @@ pub type BlockNumber = u32;
 
 pub const MILLI_SECS_PER_BLOCK: u32 = 6000;
 pub const MINUTES: BlockNumber = 60_000 / (MILLI_SECS_PER_BLOCK as BlockNumber);
+pub const MILLI_UNIT: Balance = 1_000_000_000;
+pub const MICRO_UNIT: Balance = 1_000_000;
 
 impl_opaque_keys! {
 	pub struct SessionKeys {
@@ -84,6 +104,9 @@ mod test_runtime {
 
 	#[runtime::pallet_index(11)]
 	pub type Treasury = pallet_treasury;
+
+	#[runtime::pallet_index(12)]
+	pub type TransactionPayment = pallet_transaction_payment;
 }
 
 #[derive_impl(frame_system::config_preludes::TestDefaultConfig)]
@@ -307,6 +330,74 @@ impl pallet_treasury::Config for Test {
 	type Paymaster = frame_support::traits::tokens::pay::PayAssetFromAccount<pallet_assets::Pallet<Test>, XodeTreasuryAccount>;
 	type BalanceConverter = pallet_asset_rate::Pallet<Test>;
 	type PayoutPeriod = SpendPayoutPeriod;
+}
+
+pub struct WeightToFee;
+impl WeightToFeePolynomial for WeightToFee {
+	type Balance = Balance;
+	fn polynomial() -> WeightToFeeCoefficients<Self::Balance> {
+		let p = MILLI_UNIT / 10;
+		let q = 100 * Balance::from(ExtrinsicBaseWeight::get().ref_time());
+		smallvec![WeightToFeeCoefficient {
+			degree: 1,
+			negative: false,
+			coeff_frac: Perbill::from_rational(p % q, q),
+			coeff_integer: p / q,
+		}]
+	}
+}
+
+pub const TREASURY_SHARE: u32 = 20;
+pub const AUTHOR_SHARE: u32 = 80;
+
+pub struct DealWithFees<R>(core::marker::PhantomData<R>);
+impl<R> OnUnbalanced<Credit<R::AccountId, pallet_balances::Pallet<R>>> for DealWithFees<R>
+where
+	R: pallet_balances::Config + pallet_authorship::Config + pallet_treasury::Config + crate::Config,
+    <R as frame_system::Config>::AccountId: From<AccountId>,
+    <R as frame_system::Config>::AccountId: Into<AccountId>,
+{
+	fn on_unbalanceds(
+		mut fees_then_tips: impl Iterator<Item = Credit<R::AccountId, pallet_balances::Pallet<R>>>,
+	) {
+		if let Some(fees) = fees_then_tips.next() {
+			let mut split = fees.ration(TREASURY_SHARE, AUTHOR_SHARE);
+			if let Some(tips) = fees_then_tips.next() {
+				tips.merge_into(&mut split.1);
+			}
+			ResolveTo::<pallet_treasury::TreasuryAccountId<R>, pallet_balances::Pallet<R>>::on_unbalanced(split.0);
+			<ToAuthor<R> as OnUnbalanced<_>>::on_unbalanced(split.1);
+		}
+	}
+}
+
+pub struct ToAuthor<R>(core::marker::PhantomData<R>);
+impl<R> OnUnbalanced<Credit<R::AccountId, pallet_balances::Pallet<R>>> for ToAuthor<R>
+where
+    R: pallet_balances::Config + pallet_authorship::Config + crate::Config,
+    <R as frame_system::Config>::AccountId: From<AccountId>,
+    <R as frame_system::Config>::AccountId: Into<AccountId>,
+{
+    fn on_nonzero_unbalanced(
+        amount: Credit<<R as frame_system::Config>::AccountId, pallet_balances::Pallet<R>>,
+    ) {
+        if let Some(author) = <pallet_authorship::Pallet<R>>::author() {
+			let _ = <pallet_balances::Pallet<R>>::resolve(&author, amount);
+        }
+    }
+}
+
+parameter_types! {
+	pub const TransactionByteFee: Balance = 10 * MICRO_UNIT;
+}
+
+impl pallet_transaction_payment::Config for Test {
+	type RuntimeEvent = RuntimeEvent;
+	type OnChargeTransaction = pallet_transaction_payment::FungibleAdapter<Balances, DealWithFees<Test>>;
+	type WeightToFee = WeightToFee;
+	type LengthToFee = ConstantMultiplier<Balance, TransactionByteFee>;
+	type FeeMultiplierUpdate = SlowAdjustingFeeUpdate<Self>;
+	type OperationalFeeMultiplier = ConstU8<5>;
 }
 
 parameter_types! {

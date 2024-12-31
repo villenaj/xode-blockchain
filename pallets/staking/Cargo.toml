@@ -30,6 +30,11 @@ pallet-balances.workspace = true
 pallet-authorship.workspace = true
 sp-staking.workspace = true
 hex.workspace = true
+
+[dev-dependencies]
+sp-core = { default-features = true, workspace = true }
+sp-io = { default-features = true, workspace = true }
+
 # Mock
 sp-consensus-aura.workspace = true
 pallet-timestamp.workspace = true
@@ -39,10 +44,9 @@ pallet-assets.workspace = true
 pallet-asset-rate.workspace = true
 pallet-indices.workspace = true
 pallet-treasury.workspace = true
-
-[dev-dependencies]
-sp-core = { default-features = true, workspace = true }
-sp-io = { default-features = true, workspace = true }
+pallet-transaction-payment.workspace = true
+smallvec = { workspace = true, default-features = true }
+polkadot-runtime-common.workspace = true
 
 [features]
 default = ["std"]
@@ -75,6 +79,8 @@ std = [
 	"pallet-asset-rate/std",
 	"pallet-indices/std",
 	"pallet-treasury/std",
+	"pallet-transaction-payment/std",
+	"polkadot-runtime-common/std",
 ]
 try-runtime = [
 	"frame-support/try-runtime",
