@@ -239,7 +239,6 @@ pub mod pallet {
 		fn on_initialize(_current_block: BlockNumberFor<T>) -> Weight {
 			// Get the author
 			if let Some(author) = pallet_authorship::Pallet::<T>::author() {
-				println!("Get author (x): {:?}", author.clone());
 				let _ = Self::add_author(author.clone());
 			}
 
@@ -746,7 +745,7 @@ pub mod pallet {
 				}	
 			}
 			
-			for non_author in non_authors.iter() {
+			for _non_author in non_authors.iter() {
 				// Todo: Slashed the author and make it offline, prerequisite Aura Round Robbin
 				// let _ = Self::offline_proposed_candidate(non_author.clone(),true);
 				// Self::sort_proposed_candidates();
@@ -911,9 +910,8 @@ pub mod pallet {
 
 	impl<T: Config> pallet_authorship::EventHandler<T::AccountId, BlockNumberFor<T>> for Pallet<T>
 	{
-		fn note_author(author: T::AccountId) {
+		fn note_author(_author: T::AccountId) {
 			// TODO: transfer fees here
-			println!("Note author: {:?}", author);
 		}
 
 	}

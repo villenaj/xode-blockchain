@@ -35,6 +35,10 @@ sp-consensus-aura.workspace = true
 pallet-timestamp.workspace = true
 xcm.workspace = true
 parachains-common.workspace = true
+pallet-assets.workspace = true
+pallet-asset-rate.workspace = true
+pallet-indices.workspace = true
+pallet-treasury.workspace = true
 
 [dev-dependencies]
 sp-core = { default-features = true, workspace = true }
@@ -67,6 +71,10 @@ std = [
 	"sp-consensus-aura/std",
 	"xcm/std",
 	"parachains-common/std",
+	"pallet-assets/std",
+	"pallet-asset-rate/std",
+	"pallet-indices/std",
+	"pallet-treasury/std",
 ]
 try-runtime = [
 	"frame-support/try-runtime",

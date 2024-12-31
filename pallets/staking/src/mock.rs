@@ -1,14 +1,22 @@
-use frame_support::{derive_impl, 
+use frame_support::{
+	derive_impl, 
 	weights::constants::RocksDbWeight,
 	PalletId,
+	parameter_types,
+	ConsensusEngineId,
+	traits::AsEnsureOriginWithArg,
 };
-use frame_system::{mocking::MockBlock, EnsureRoot, GenesisConfig};
-use sp_runtime::{impl_opaque_keys, traits::ConstU64, BuildStorage, };
-use frame_support::parameter_types;
+use frame_system::{
+	mocking::MockBlock, EnsureRoot, GenesisConfig,
+	EnsureWithSuccess, EnsureSigned,
+};
+use sp_runtime::{
+	impl_opaque_keys, 
+	traits:: { ConstU64, ConstU32, AccountIdConversion}, 
+	BuildStorage, 
+};
 use sp_consensus_aura::sr25519::AuthorityId as AuraId;
 use xcm::latest::prelude::BodyId;
-
-use frame_support::ConsensusEngineId;
 
 pub const SLOT_DURATION: u64 = 6000;
 pub type Balance = u128;
@@ -64,6 +72,18 @@ mod test_runtime {
 
 	#[runtime::pallet_index(7)]
 	pub type Session = pallet_session;
+
+	#[runtime::pallet_index(8)]
+	pub type Assets = pallet_assets;
+
+	#[runtime::pallet_index(9)]
+	pub type AssetRate = pallet_asset_rate;
+
+	#[runtime::pallet_index(10)]
+	pub type Indices = pallet_indices;
+
+	#[runtime::pallet_index(11)]
+	pub type Treasury = pallet_treasury;
 }
 
 #[derive_impl(frame_system::config_preludes::TestDefaultConfig)]
@@ -137,11 +157,9 @@ impl pallet_session::Config for Test {
 	type Keys = SessionKeys;
 	type WeightInfo = ();
 }
-
-
 pub struct AuthorGiven;
-static mut FIXED_AUTHOR: Option<AccountId> = None;
 
+static mut FIXED_AUTHOR: Option<AccountId> = None;
 impl frame_support::traits::FindAuthor<AccountId> for AuthorGiven {
     fn find_author<'a, I>(_digests: I) -> Option<AccountId>
     where
@@ -193,6 +211,102 @@ impl pallet_balances::Config for Test {
 	type FreezeIdentifier = ();
 	type MaxFreezes = ();
 	type RuntimeFreezeReason = ();
+}
+
+pub const ASSETS_UNIT: Balance = 1_000_000_000_000;
+pub const ASSETS_MILLIUNIT: Balance = 1_000_000_000;
+pub const ASSETS_MICROUNIT: Balance = 1_000_000;
+pub const ASSETS_EXISTENTIAL_DEPOSIT: Balance = ASSETS_MILLIUNIT;
+
+pub const fn deposit(items: u32, bytes: u32) -> Balance {
+	(items as Balance * 20 * ASSETS_UNIT + (bytes as Balance) * 100 * ASSETS_MICROUNIT) / 100
+}
+
+parameter_types! {
+	pub const AssetDeposit: Balance = 10 * ASSETS_UNIT;
+	pub const AssetAccountDeposit: Balance = deposit(1, 16);
+	pub const ApprovalDeposit: Balance = ASSETS_EXISTENTIAL_DEPOSIT;
+	pub const StringLimit: u32 = 50;
+	pub const MetadataDepositBase: Balance = deposit(1, 68);
+	pub const MetadataDepositPerByte: Balance = deposit(0, 1);
+}
+
+impl pallet_assets::Config for Test {
+	type RuntimeEvent = RuntimeEvent;
+	type Balance = Balance;
+	type RemoveItemsLimit = ConstU32<1_000>;
+	type AssetId = u32;
+	type AssetIdParameter = codec::Compact<u32>;
+	type Currency = Balances;
+	type CreateOrigin = AsEnsureOriginWithArg<EnsureSigned<AccountId>>;
+	type ForceOrigin = frame_system::EnsureRoot<AccountId>;
+	type AssetDeposit = AssetDeposit;
+	type AssetAccountDeposit = AssetAccountDeposit;
+	type MetadataDepositBase = MetadataDepositBase;
+	type MetadataDepositPerByte = MetadataDepositPerByte;
+	type ApprovalDeposit = ApprovalDeposit;
+	type StringLimit = StringLimit;
+	type Freezer = ();
+	type Extra = ();
+	type CallbackHandle = ();
+	type WeightInfo = pallet_assets::weights::SubstrateWeight<Test>;
+	#[cfg(feature = "runtime-benchmarks")]
+	type BenchmarkHelper = ();
+}
+
+impl pallet_asset_rate::Config for Test {
+	type CreateOrigin = frame_system::EnsureRoot<AccountId>;
+	type RemoveOrigin = frame_system::EnsureRoot<AccountId>;
+	type UpdateOrigin = frame_system::EnsureRoot<AccountId>;
+	type Currency = Balances;
+	type AssetKind = u32;
+	type RuntimeEvent = RuntimeEvent;
+	type WeightInfo = pallet_asset_rate::weights::SubstrateWeight<Test>;
+}
+
+pub const MILLICENTS: Balance = 1_000_000_000;
+pub const CENTS: Balance = 1_000 * MILLICENTS; 
+pub const DOLLARS: Balance = 100 * CENTS;
+
+parameter_types! {
+	pub const IndexDeposit: Balance = 1 * DOLLARS;
+}
+
+impl pallet_indices::Config for Test {
+	type AccountIndex = u32;
+	type Currency = Balances;
+	type Deposit = IndexDeposit;
+	type RuntimeEvent = RuntimeEvent;
+	type WeightInfo = pallet_indices::weights::SubstrateWeight<Test>;
+}
+
+parameter_types! {
+    pub const TreasuryPalletId: PalletId = PalletId(*b"py/trsry");
+	pub const SpendPeriod: BlockNumber = 1 * MINUTES; 
+	pub const MaxApprovals: u32 = 100;
+	pub const MaxBalance: Balance = Balance::max_value();
+	pub XodeTreasuryAccount: AccountId = TreasuryPalletId::get().into_account_truncating();
+	pub const SpendPayoutPeriod: BlockNumber = 30 * MINUTES; 
+}
+
+impl pallet_treasury::Config for Test {
+    type PalletId = TreasuryPalletId;
+    type Currency = Balances;
+    type RejectOrigin = frame_system::EnsureRoot<AccountId>;
+    type RuntimeEvent = RuntimeEvent; 
+    type SpendPeriod = SpendPeriod;
+    type Burn = ();  
+	type BurnDestination = ();
+	type SpendFunds = ();  
+    type WeightInfo = ();
+    type MaxApprovals = ConstU32<100>;
+	type AssetKind = u32;
+	type Beneficiary = AccountId;
+	type BeneficiaryLookup = pallet_indices::Pallet<Test>;
+	type SpendOrigin = EnsureWithSuccess<frame_system::EnsureRoot<AccountId>, AccountId, MaxBalance>; 
+	type Paymaster = frame_support::traits::tokens::pay::PayAssetFromAccount<pallet_assets::Pallet<Test>, XodeTreasuryAccount>;
+	type BalanceConverter = pallet_asset_rate::Pallet<Test>;
+	type PayoutPeriod = SpendPayoutPeriod;
 }
 
 parameter_types! {
