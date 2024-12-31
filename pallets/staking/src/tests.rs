@@ -788,9 +788,16 @@ fn test_pallet_xode_staking() {
 		// SCENE 8 (Authoring): Within Session 14 and Session 15 initialization
 		// ----------------------------------------------------------------------- 
 		// 1. Set the commission for both candidate
-		// 2. Try authoring a block
+		// 2. Try authoring a block, do not call Authorship::author()
+		// 3. Modified the Authorship FindAuthor setting
 		// =======================================================================
+		AuthorGiven::set_author(proposed_candidates[1].who);
+
 		System::set_block_number(System::block_number() + 1);
+		XodeStaking::on_initialize(System::block_number());
+
+		Authorship::on_initialize(System::block_number());
+		Authorship::on_finalize(System::block_number());
 		
 		let _ = XodeStaking::set_commission_of_candidate(RuntimeOrigin::signed(1),10);
 		let _ = XodeStaking::set_commission_of_candidate(RuntimeOrigin::signed(2),20);
@@ -808,19 +815,26 @@ fn test_pallet_xode_staking() {
 		assert_eq!(proposed_candidates[0], candidate_2);
 		assert_eq!(proposed_candidates[1], candidate_1);
 
-		System::on_finalize(System::block_number());
-		XodeStaking::on_initialize(System::block_number());		
-
-		let author = Authorship::author();
-		assert_eq!(author, Some(proposed_candidates[1].who)); 
-
 		let actual_authors = ActualAuthors::<Test>::get();
 		println!("Actual Authors {:?}",actual_authors);
 		assert_eq!(actual_authors.len(), 1);
 
 		assert_eq!(Balances::free_balance(&1), 800);
+		
+		AuthorGiven::set_author(proposed_candidates[0].who);
 
+		System::set_block_number(System::block_number() + 1);
+		XodeStaking::on_initialize(System::block_number());		
 
+		Authorship::on_initialize(System::block_number());
+		Authorship::on_finalize(System::block_number());
+
+		let author = Authorship::author();
+		assert_eq!(author, Some(proposed_candidates[0].who)); 
+
+		let actual_authors = ActualAuthors::<Test>::get();
+		println!("Actual Authors {:?}",actual_authors);
+		assert_eq!(actual_authors.len(), 2);
 	});
 }
 

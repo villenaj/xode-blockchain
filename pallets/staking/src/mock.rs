@@ -138,19 +138,36 @@ impl pallet_session::Config for Test {
 	type WeightInfo = ();
 }
 
+
 pub struct AuthorGiven;
+static mut FIXED_AUTHOR: Option<AccountId> = None;
+
 impl frame_support::traits::FindAuthor<AccountId> for AuthorGiven {
     fn find_author<'a, I>(_digests: I) -> Option<AccountId>
     where
         I: 'a + IntoIterator<Item = (ConsensusEngineId, &'a [u8])>,
     {
-		let authors = vec![13620103657161844528, 14516343343327982992, 10654826648675244518, 1, 2];
-
-		let block_number = frame_system::Pallet::<Test>::block_number();
-		let round_robin_index = block_number % authors.len() as u64;
-
-        Some(authors[round_robin_index as usize])
+		unsafe {
+            let author = FIXED_AUTHOR;
+            println!("Get author(r): {:?}", author);
+            author
+        }
     }	
+}
+impl AuthorGiven {
+    pub fn set_author(author: AccountId) {
+        unsafe {
+            FIXED_AUTHOR = Some(author);
+            println!("Set author: {:?}", author);
+        }
+    }
+
+    pub fn clear_author() {
+        unsafe {
+            FIXED_AUTHOR = None;
+            println!("Clear author");
+        }
+    }
 }
 
 impl pallet_authorship::Config for Test {

@@ -239,6 +239,7 @@ pub mod pallet {
 		fn on_initialize(_current_block: BlockNumberFor<T>) -> Weight {
 			// Get the author
 			if let Some(author) = pallet_authorship::Pallet::<T>::author() {
+				println!("Get author (x): {:?}", author.clone());
 				let _ = Self::add_author(author.clone());
 			}
 
@@ -912,6 +913,7 @@ pub mod pallet {
 	{
 		fn note_author(author: T::AccountId) {
 			// TODO: transfer fees here
+			println!("Note author: {:?}", author);
 		}
 
 	}
