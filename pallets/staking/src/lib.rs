@@ -318,6 +318,9 @@ pub mod pallet {
 		pub fn bond_candidate(origin: OriginFor<T>, new_bond: BalanceOf<T>,) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
 
+			// Check if the candidate is registered.
+			ensure!(ProposedCandidates::<T>::get().iter().any(|c| c.who == who), Error::<T>::ProposedCandidateNotFound); 
+
 			// When we set the new bond to zero we assume that the candidate is leaving
 			if new_bond == Zero::zero() {
 				ensure!(!WaitingCandidates::<T>::get().contains(&who), Error::<T>::WaitingCandidateMember);
