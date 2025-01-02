@@ -7597,6 +7597,7 @@ dependencies = [
 name = "pallet-xode-staking"
 version = "0.1.0"
 dependencies = [
+ "cumulus-primitives-core",
  "frame-benchmarking",
  "frame-support",
  "frame-system",
@@ -7622,6 +7623,7 @@ dependencies = [
  "sp-io",
  "sp-runtime",
  "sp-staking 36.0.0",
+ "sp-version",
  "staging-xcm",
 ]
 

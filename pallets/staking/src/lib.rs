@@ -46,7 +46,7 @@ pub mod pallet {
 	use frame_support::dispatch::DispatchResult;
 	use frame_support::{dispatch::DispatchResultWithPostInfo, pallet_prelude::*, };
 	use frame_system::pallet_prelude::*;
-	use sp_runtime::traits::{AccountIdConversion, Zero,};
+	use sp_runtime::traits::Zero;
 	use sp_runtime::Saturating;
 	use scale_info::prelude::vec::Vec;
 	use scale_info::prelude::vec;
@@ -56,7 +56,8 @@ pub mod pallet {
 	use pallet_session::SessionManager;
 	use sp_staking::SessionIndex;
 
-	use frame_support::PalletId;
+	// use sp_runtime::traits::AccountIdConversion;
+	// use frame_support::PalletId;
 	use frame_support::traits::{Currency, ReservableCurrency};
 
 	pub type BalanceOf<T> = <<T as Config>::StakingCurrency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
@@ -266,19 +267,19 @@ pub mod pallet {
 		/// Retrieve the treasury account
 		/// Note:
 		/// 	Temporary extrinsic to monitor fees.
-		#[pallet::call_index(0)]
-		#[pallet::weight(Weight::from_parts(10_000, 0) + T::DbWeight::get().writes(1))]
-		pub fn retrieve_treasury_account(_origin: OriginFor<T>) -> DispatchResultWithPostInfo {
-			// May panic during runtime (Must fix!)
-		 	let treasury= PalletId(*b"py/trsry").try_into_account().expect("Error converting to account");
-		 	let account_info = frame_system::Pallet::<T>::account(&treasury);
-		 	let account_data = account_info.data;	
-		 	Self::deposit_event(Event::TreasuryAccountRetrieved { _treasury: treasury, _data: account_data, });
-		 	Ok(().into())
-		}
+		// #[pallet::call_index(0)]
+		// #[pallet::weight(<weights::SubstrateWeight<T> as WeightInfo>::register_candidate())]
+		// pub fn retrieve_treasury_account(_origin: OriginFor<T>) -> DispatchResultWithPostInfo {
+		// 	// May panic during runtime (Must fix!)
+		//  	let treasury= PalletId(*b"py/trsry").try_into_account().expect("Error converting to account");
+		//  	let account_info = frame_system::Pallet::<T>::account(&treasury);
+		//  	let account_data = account_info.data;	
+		//  	Self::deposit_event(Event::TreasuryAccountRetrieved { _treasury: treasury, _data: account_data, });
+		//  	Ok(().into())
+		// }
 
 		/// Register a new candidate in the Proposed Candidate list
-		#[pallet::call_index(1)]
+		#[pallet::call_index(0)]
 		#[pallet::weight(<weights::SubstrateWeight<T> as WeightInfo>::register_candidate())]
 		pub fn register_candidate(origin: OriginFor<T>) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
@@ -313,7 +314,7 @@ pub mod pallet {
 		/// 	a candidate is updated, sort immediately the proposed candidates.
 		/// Todo: 
 		/// 	How do we deal with the reserve and unreserve for some reason fails?
-		#[pallet::call_index(2)]
+		#[pallet::call_index(1)]
 		#[pallet::weight(<weights::SubstrateWeight<T> as WeightInfo>::bond_candidate())]
 		pub fn bond_candidate(origin: OriginFor<T>, new_bond: BalanceOf<T>,) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
@@ -359,7 +360,7 @@ pub mod pallet {
 		/// Set commission
 		/// Note:
 		/// 	Numbers accepted are from 1 to 100 and no irrational numbers
-		#[pallet::call_index(3)]
+		#[pallet::call_index(2)]
 		#[pallet::weight(<weights::SubstrateWeight<T> as WeightInfo>::set_commission_of_candidate())]
 		pub fn set_commission_of_candidate(origin: OriginFor<T>, commission: u8) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
@@ -385,7 +386,7 @@ pub mod pallet {
 		/// Todo:
 		/// 	How to handle the reservation if there is a failure in adding the delegation.
 		/// 	Clean delegations when a candidate leaves to save space.
-		#[pallet::call_index(4)]
+		#[pallet::call_index(3)]
 		#[pallet::weight(<weights::SubstrateWeight<T> as WeightInfo>::stake_candidate())]
 		pub fn stake_candidate(origin: OriginFor<T>, candidate: T::AccountId, amount: BalanceOf<T>) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
@@ -418,7 +419,7 @@ pub mod pallet {
 		/// Un-stake Proposed Candidate
 		/// Note:
 		/// 	Remove first the delegation (stake amount) before un-reserving
-		#[pallet::call_index(5)]
+		#[pallet::call_index(4)]
 		#[pallet::weight(<weights::SubstrateWeight<T> as WeightInfo>::unstake_candidate())]
 		pub fn unstake_candidate(origin: OriginFor<T>, candidate: T::AccountId) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
@@ -456,7 +457,7 @@ pub mod pallet {
 		///		Temporarily leave the candidacy without having to un-bond and un-stake.
 		/// 	The offline status will be reflected only in the next session if the 
 		/// 	candidate is already in the waiting list.
-		#[pallet::call_index(6)]
+		#[pallet::call_index(5)]
 		#[pallet::weight(<weights::SubstrateWeight<T> as WeightInfo>::offline_candidate())]
 		pub fn offline_candidate(origin: OriginFor<T>,) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
@@ -469,7 +470,7 @@ pub mod pallet {
 		/// Note:
 		///		Make the candidate online again.
 		/// 	Todo: Check first the status if its already queuing
-		#[pallet::call_index(7)]
+		#[pallet::call_index(6)]
 		#[pallet::weight(<weights::SubstrateWeight<T> as WeightInfo>::online_candidate())]
 		pub fn online_candidate(origin: OriginFor<T>,) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
@@ -482,7 +483,7 @@ pub mod pallet {
 		/// Note:
 		/// 	Once the leaving flag is set to true, immediately remove the account in the
 		/// 	Waiting Candidate list.
-		#[pallet::call_index(8)]
+		#[pallet::call_index(7)]
 		#[pallet::weight(<weights::SubstrateWeight<T> as WeightInfo>::leave_candidate())]
 		pub fn leave_candidate(origin: OriginFor<T>,) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
@@ -508,7 +509,7 @@ pub mod pallet {
 
 	}
 
-	/// =======
+	///	 =======
 	/// Helpers
 	/// =======
 	impl<T: Config> Pallet<T> {
@@ -908,8 +909,10 @@ pub mod pallet {
 		}
 	}
 
-	impl<T: Config> pallet_authorship::EventHandler<T::AccountId, BlockNumberFor<T>> for Pallet<T>
-	{
+	/// ===============
+	/// Authorship
+	/// ===============
+	impl<T: Config> pallet_authorship::EventHandler<T::AccountId, BlockNumberFor<T>> for Pallet<T> {
 		fn note_author(_author: T::AccountId) {
 			// TODO: transfer fees here
 		}

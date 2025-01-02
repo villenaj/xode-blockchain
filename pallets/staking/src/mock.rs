@@ -1,12 +1,14 @@
 use frame_support::{
 	derive_impl, 
 	weights::{
-		constants::RocksDbWeight,
+		constants,
+		Weight,
 		WeightToFeePolynomial,
 		WeightToFeeCoefficients,
-		constants::ExtrinsicBaseWeight,
 		ConstantMultiplier,
 		WeightToFeeCoefficient,
+		RuntimeDbWeight,
+		constants::WEIGHT_REF_TIME_PER_SECOND,
 	},
 	PalletId,
 	parameter_types,
@@ -21,20 +23,23 @@ use frame_support::{
 	},
 };
 use frame_system::{
-	mocking::MockBlock, EnsureRoot, GenesisConfig,
+	EnsureRoot, GenesisConfig,
 	EnsureWithSuccess, EnsureSigned,
+	limits::{BlockLength, BlockWeights},
 };
 use sp_runtime::{
-	impl_opaque_keys, 
-	traits:: { ConstU8, ConstU64, ConstU32, AccountIdConversion}, 
-	BuildStorage, 
+	generic, impl_opaque_keys, traits:: { AccountIdConversion, BlakeTwo256, ConstU32, ConstU64, ConstU8}, BuildStorage, MultiAddress, MultiSignature
 };
 use sp_consensus_aura::sr25519::AuthorityId as AuraId;
 use xcm::latest::prelude::BodyId;
 use sp_runtime::Perbill;
 use smallvec::smallvec;
-use polkadot_runtime_common::SlowAdjustingFeeUpdate;
-
+use polkadot_runtime_common::{
+	SlowAdjustingFeeUpdate,
+	BlockHashCount,
+};
+use frame_support::traits::VariantCountOf;
+use frame_support::pallet_prelude::DispatchClass;
 
 pub const SLOT_DURATION: u64 = 6000;
 pub type Balance = u128;
@@ -45,6 +50,27 @@ pub const MILLI_SECS_PER_BLOCK: u32 = 6000;
 pub const MINUTES: BlockNumber = 60_000 / (MILLI_SECS_PER_BLOCK as BlockNumber);
 pub const MILLI_UNIT: Balance = 1_000_000_000;
 pub const MICRO_UNIT: Balance = 1_000_000;
+
+pub type SignedExtra = (
+	frame_system::CheckNonZeroSender<Test>,
+	frame_system::CheckSpecVersion<Test>,
+	frame_system::CheckTxVersion<Test>,
+	frame_system::CheckGenesis<Test>,
+	frame_system::CheckEra<Test>,
+	frame_system::CheckNonce<Test>,
+	frame_system::CheckWeight<Test>,
+	pallet_transaction_payment::ChargeTransactionPayment<Test>,
+);
+
+pub type UncheckedExtrinsic =
+	generic::UncheckedExtrinsic<Address, RuntimeCall, Signature, SignedExtra>;
+
+pub type Nonce = u32;
+pub type Hash = sp_core::H256;
+pub type Header = generic::Header<BlockNumber, BlakeTwo256>;
+pub type Block = generic::Block<Header, UncheckedExtrinsic>;
+pub type Address = MultiAddress<AccountId, ()>;
+pub type Signature = MultiSignature;
 
 impl_opaque_keys! {
 	pub struct SessionKeys {
@@ -109,13 +135,57 @@ mod test_runtime {
 	pub type TransactionPayment = pallet_transaction_payment;
 }
 
+const AVERAGE_ON_INITIALIZE_RATIO: Perbill = Perbill::from_percent(5);
+const NORMAL_DISPATCH_RATIO: Perbill = Perbill::from_percent(75);
+const MAXIMUM_BLOCK_WEIGHT: Weight = Weight::from_parts(
+	WEIGHT_REF_TIME_PER_SECOND.saturating_mul(2),
+	cumulus_primitives_core::relay_chain::MAX_POV_SIZE as u64,
+);
+
+parameter_types! {
+	pub const BlockExecutionWeight: Weight = Weight::from_parts(constants::WEIGHT_REF_TIME_PER_NANOS.saturating_mul(5_000_000), 0);
+	pub const ExtrinsicBaseWeight: Weight = Weight::from_parts(constants::WEIGHT_REF_TIME_PER_NANOS.saturating_mul(125_000), 0);
+	pub const RocksDbWeight: RuntimeDbWeight = RuntimeDbWeight {
+		read: 25_000 * constants::WEIGHT_REF_TIME_PER_NANOS,
+		write: 100_000 * constants::WEIGHT_REF_TIME_PER_NANOS,
+	};
+}
+
+parameter_types! {
+	pub RuntimeBlockLength: BlockLength =
+		BlockLength::max_with_normal_ratio(5 * 1024 * 1024, NORMAL_DISPATCH_RATIO);
+	pub RuntimeBlockWeights: BlockWeights = BlockWeights::builder()
+		.base_block(BlockExecutionWeight::get())
+		.for_class(DispatchClass::all(), |weights| {
+			weights.base_extrinsic = ExtrinsicBaseWeight::get();
+		})
+		.for_class(DispatchClass::Normal, |weights| {
+			weights.max_total = Some(NORMAL_DISPATCH_RATIO * MAXIMUM_BLOCK_WEIGHT);
+		})
+		.for_class(DispatchClass::Operational, |weights| {
+			weights.max_total = Some(MAXIMUM_BLOCK_WEIGHT);
+			weights.reserved = Some(
+				MAXIMUM_BLOCK_WEIGHT - NORMAL_DISPATCH_RATIO * MAXIMUM_BLOCK_WEIGHT
+			);
+		})
+		.avg_block_initialization(AVERAGE_ON_INITIALIZE_RATIO)
+		.build_or_panic();
+	pub const SS58Prefix: u16 = 42;
+}
+
 #[derive_impl(frame_system::config_preludes::TestDefaultConfig)]
 impl frame_system::Config for Test {
-	type Nonce = u64;
-	type Block = MockBlock<Test>;
-	type BlockHashCount = ConstU64<250>;
-	type DbWeight = RocksDbWeight;
+	type AccountId = AccountId;
+	type Nonce = Nonce;
+	type Hash = Hash;
+	type Block = Block;
+	type BlockHashCount = BlockHashCount;
+	type Version = ();
 	type AccountData = pallet_balances::AccountData<Balance>;
+	type DbWeight = RocksDbWeight;
+	type BlockWeights = RuntimeBlockWeights;
+	type BlockLength = RuntimeBlockLength;
+	type SS58Prefix = SS58Prefix;
 }
 
 parameter_types! {
@@ -221,19 +291,19 @@ parameter_types! {
 	pub const ExistentialDeposit: u128 = 1;
 }
 impl pallet_balances::Config for Test {
-	type MaxReserves = ();
-	type ReserveIdentifier = [u8; 4];
-	type MaxLocks = ();
+	type MaxLocks = ConstU32<50>;
 	type Balance = Balance;
 	type RuntimeEvent = RuntimeEvent;
 	type DustRemoval = ();
 	type ExistentialDeposit = ExistentialDeposit;
 	type AccountStore = System;
-	type WeightInfo = ();
-	type RuntimeHoldReason = ();
-	type FreezeIdentifier = ();
-	type MaxFreezes = ();
-	type RuntimeFreezeReason = ();
+	type WeightInfo = pallet_balances::weights::SubstrateWeight<Test>;
+	type MaxReserves = ConstU32<50>;
+	type ReserveIdentifier = [u8; 8];
+	type RuntimeHoldReason = RuntimeHoldReason;
+	type RuntimeFreezeReason = RuntimeFreezeReason;
+	type FreezeIdentifier = RuntimeFreezeReason;
+	type MaxFreezes = VariantCountOf<RuntimeFreezeReason>;
 }
 
 pub const ASSETS_UNIT: Balance = 1_000_000_000_000;
@@ -336,6 +406,7 @@ pub struct WeightToFee;
 impl WeightToFeePolynomial for WeightToFee {
 	type Balance = Balance;
 	fn polynomial() -> WeightToFeeCoefficients<Self::Balance> {
+		println!("Polynomial");
 		let p = MILLI_UNIT / 10;
 		let q = 100 * Balance::from(ExtrinsicBaseWeight::get().ref_time());
 		smallvec![WeightToFeeCoefficient {
@@ -360,6 +431,7 @@ where
 	fn on_unbalanceds(
 		mut fees_then_tips: impl Iterator<Item = Credit<R::AccountId, pallet_balances::Pallet<R>>>,
 	) {
+		println!("Fee treasury");
 		if let Some(fees) = fees_then_tips.next() {
 			let mut split = fees.ration(TREASURY_SHARE, AUTHOR_SHARE);
 			if let Some(tips) = fees_then_tips.next() {
@@ -412,11 +484,11 @@ parameter_types! {
 
 impl crate::Config for Test {
 	type RuntimeEvent = RuntimeEvent;
-	type WeightInfo = ();
 	type MaxProposedCandidates = MaxProposedCandidates;
 	type MaxProposedCandidateDelegates = MaxProposedCandidateDelegates;
 	type XaverNodes = Nodes;
 	type StakingCurrency = Balances;
+	type WeightInfo =  crate::weights::SubstrateWeight<Test>;
 }
 
 pub fn test1_ext() -> sp_io::TestExternalities {
