@@ -51,6 +51,7 @@ pub mod pallet {
 	use scale_info::prelude::vec::Vec;
 	use scale_info::prelude::vec;
 	use hex::decode;
+	use frame_support::PalletId;
 
 	// Sessions
 	use pallet_session::SessionManager;
@@ -89,6 +90,10 @@ pub mod pallet {
 
 		/// The staking currency trait.
 		type StakingCurrency: ReservableCurrency<Self::AccountId>;
+
+		/// The staking's pallet id, used for deriving its pot account ID.
+		#[pallet::constant]
+		type PalletId: Get<PalletId>;
 	}
 
 	#[pallet::pallet]

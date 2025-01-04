@@ -16,7 +16,7 @@ use sp_runtime::traits::{Dispatchable, SignedExtension};
 use pallet_transaction_payment::FungibleAdapter;
 
 #[test]
-fn test_pallet_xode_staking() {
+fn test_pallet_xode_staking_process() {
 	test1_ext().execute_with(|| {
 		// ========================================================================
 		// SCENE 1 (Initialization): At Block 0 and Session 1 initialization
@@ -849,7 +849,7 @@ fn test_pallet_xode_staking() {
 }
 
 #[test]
-fn test_pallet_xode_staking_fees() {
+fn test_pallet_xode_staking_fees_treasury_author_share() {
 	test1_ext().execute_with(|| {
 		System::set_block_number(0);
 		System::on_initialize(0);
@@ -859,29 +859,11 @@ fn test_pallet_xode_staking_fees() {
 		assert_eq!(desired_candidates.len(), 3, "There should be exactly three desired candidates");
 
 		let _ = Balances::deposit_creating(&desired_candidates[0], 123456789012345);
-		let key = sr25519::Public::from_raw([1u8; 32]);
-		let session_keys = SessionKeys { aura: key.into(),};
-		let result = Session::set_keys(RuntimeOrigin::signed(desired_candidates[0]), session_keys.clone(), Vec::new());
-		println!("{:?} free balance: {:?}, {:?}: {:?}",desired_candidates[0], Balances::free_balance(&desired_candidates[0]), session_keys, result);
-		assert!(result.is_ok(), "Failed to set session keys: {:?}", result);
-		let _ = Balances::deposit_creating(&desired_candidates[1], 123456789012345);
-		let key = sr25519::Public::from_raw([2u8; 32]);
-		let session_keys = SessionKeys { aura: key.into(),};
-		let result = Session::set_keys(RuntimeOrigin::signed(desired_candidates[1]), session_keys.clone(), Vec::new());
-		println!("{:?} free balance: {:?}, {:?}: {:?}",desired_candidates[1], Balances::free_balance(&desired_candidates[1]), session_keys, result);
-		assert!(result.is_ok(), "Failed to set session keys: {:?}", result);
-		let _ = Balances::deposit_creating(&desired_candidates[2], 1001234567890123450);
-		let key = sr25519::Public::from_raw([3u8; 32]);
-		let session_keys = SessionKeys { aura: key.into(),};
-		let result = Session::set_keys(RuntimeOrigin::signed(desired_candidates[2]), session_keys.clone(), Vec::new());
-		println!("{:?} free balance: {:?}, {:?}: {:?}",desired_candidates[2], Balances::free_balance(&desired_candidates[2]), session_keys, result);
-		assert!(result.is_ok(), "Failed to set session keys: {:?}", result);
+		let _ = Balances::deposit_creating(&1, 10000000000);
 
 		System::set_block_number(1);
 		System::on_initialize(1);
 		XodeStaking::on_initialize(1);
-
-		let _ = Balances::deposit_creating(&1, 10000000000);
 
 		AuthorGiven::set_author(1);
 		Authorship::on_initialize(1);
@@ -899,7 +881,7 @@ fn test_pallet_xode_staking_fees() {
 		println!("Info: {:?}",info.clone());
 
 		// Dispatch the call
-		let pre_d = ChargeTransactionPayment::<Test>::from(0).pre_dispatch(
+		let _ = ChargeTransactionPayment::<Test>::from(0).pre_dispatch(
 			&desired_candidates[0], 
 			&call.clone(), 
 			&info, 
@@ -914,7 +896,7 @@ fn test_pallet_xode_staking_fees() {
 		//let imbalance = Balances::withdraw(&desired_candidates[0], actual_fee, WithdrawReasons::TRANSACTION_PAYMENT, ExistenceRequirement::KeepAlive).expect("Fee withdrawal should succeed");
 		//println!("Imbalance: {:?}",imbalance);
 
-		// Withdraw with DealWithFees implementation on charge transactio
+		// Withdraw with DealWithFees implementation on charge transaction
 		type FungibleAdapterT = FungibleAdapter<Balances, DealWithFees<Test>>;
 		let imbalance = <FungibleAdapterT as OnChargeTransaction<Test>>::withdraw_fee(
 			&desired_candidates[0],
@@ -931,6 +913,139 @@ fn test_pallet_xode_staking_fees() {
 		assert_eq!(Balances::free_balance(XodeTreasuryAccount::get()), 4222880);
 		assert_eq!(Balances::free_balance(1), 10016891520);
 
+	});
+}
+
+#[test]
+fn test_pallet_xode_staking_fees_author_delegator_share()  {
+	test1_ext().execute_with(|| {
+		System::set_block_number(0);
+		System::on_initialize(0);
+		XodeStaking::on_initialize(System::block_number());
+
+		let desired_candidates = DesiredCandidates::<Test>::get();
+		assert_eq!(desired_candidates.len(), 3, "There should be exactly three desired candidates");
+
+		// Candidate (Author)
+		let _ = Balances::deposit_creating(&1, 100000000000000); // Author
+		let _ = Balances::deposit_creating(&2, 100000000000000); // Caller
+		// Delegator (5 accounts)
+		let _ = Balances::deposit_creating(&11, 100000000000000);
+		let _ = Balances::deposit_creating(&12, 100000000000000);
+		let _ = Balances::deposit_creating(&13, 100000000000000);
+		let _ = Balances::deposit_creating(&14, 100000000000000);
+		let _ = Balances::deposit_creating(&15, 100000000000000);
+
+		System::set_block_number(1);
+		System::on_initialize(1);
+		XodeStaking::on_initialize(1);
+
+		// Set the author
+		AuthorGiven::set_author(1);
+		Authorship::on_initialize(1);
+		Authorship::on_finalize(1);
+
+		let author = Authorship::author();
+		assert_eq!(author, Some(1));
+
+		// Register the candidate and put session keys
+		let _ = XodeStaking::register_candidate(RuntimeOrigin::signed(1));
+		let key = sr25519::Public::from_raw([1u8; 32]);
+		let session_keys = SessionKeys { aura: key.into(),};
+		let result = Session::set_keys(RuntimeOrigin::signed(1), session_keys.clone(), Vec::new());
+		assert!(result.is_ok(), "Failed to set session keys: {:?}", result);
+
+		// Bond candidate and set commission
+		// 100000000000000 - 10000000000000 = 90000000000000
+		let _ = XodeStaking::bond_candidate(RuntimeOrigin::signed(1), 10000000000000);
+		assert_eq!(Balances::free_balance(&1), 90000000000000);
+
+		// Set the commission to 50%
+		let _ = XodeStaking::set_commission_of_candidate(RuntimeOrigin::signed(1), 50);
+
+		// Stake
+		let _ = XodeStaking::stake_candidate(RuntimeOrigin::signed(11), 1, 10000000000000);
+		assert_eq!(Balances::free_balance(&11), 90000000000000);
+		let _ = XodeStaking::stake_candidate(RuntimeOrigin::signed(12), 1, 20000000000000);
+		assert_eq!(Balances::free_balance(&12), 80000000000000);
+		let _ = XodeStaking::stake_candidate(RuntimeOrigin::signed(13), 1, 30000000000000);
+		assert_eq!(Balances::free_balance(&13), 70000000000000);
+		let _ = XodeStaking::stake_candidate(RuntimeOrigin::signed(14), 1, 40000000000000);
+		assert_eq!(Balances::free_balance(&14), 60000000000000);
+		let _ = XodeStaking::stake_candidate(RuntimeOrigin::signed(15), 1, 50000000000000);
+		assert_eq!(Balances::free_balance(&15), 50000000000000);
+
+		// Construct the call (register a candidate, e.g., 2)
+		let call = RuntimeCall::XodeStaking(crate::Call::register_candidate { });
+		let info = call.get_dispatch_info();
+		let len = call.encode().len();
+		println!("Info: {:?}",info.clone());
+
+		// Dispatch the call
+		let _ = ChargeTransactionPayment::<Test>::from(0).pre_dispatch(
+			&2, 
+			&call.clone(), 
+			&info, 
+			len
+		).expect("pre_dispatch error");
+		let post_result = call.clone().dispatch(RuntimeOrigin::signed(2)).expect("dispatch failure");
+		let actual_fee = TransactionPayment::compute_actual_fee(len.try_into().unwrap(), &info, &post_result, 0);
+		// actual fee: 21114400
+		println!("Fee: {:?}",actual_fee);
+		
+		// TODO: Though not significant but we must explain why there is a difference of 1000000
+		// 100000000000000 - 21114400 = 99999978885600
+		// 99999978885600 - 99999977885600 = 1000000 (Why??) 
+		println!("After Balance: {:?}",Balances::free_balance(2));
+		assert_eq!(Balances::free_balance(&2), 99999977885600);
+
+		// Withdraw with DealWithFees implementation on charge transaction
+		type FungibleAdapterT = FungibleAdapter<Balances, DealWithFees<Test>>;
+		let imbalance = <FungibleAdapterT as OnChargeTransaction<Test>>::withdraw_fee(
+			&2,
+			&call.clone(), 
+			&info,
+			actual_fee,
+			0
+		).expect("pre_dispatch error");
+		println!("Imbalance: {:?}",imbalance);
+
+		// Deal with fees
+		DealWithFees::<Test>::on_unbalanceds(vec![imbalance.unwrap()].into_iter());
+
+		// 21114400 * 20% = 4222880
+		assert_eq!(Balances::free_balance(XodeTreasuryAccount::get()), 4222880);
+
+		// Starting: 21_114_400 * 80% = 16_891_520
+		// Commission = 50%
+		
+		// Staker 1 Ratio (1/15=6%) = 16_891_520 * 0.5 * 0.06 = 506_746 (Perbill, decimal drops)
+		// 90_000_000_000_000 + 506_746 = 90_000_000_506_746 
+		assert_eq!(Balances::free_balance(11), 90_000_000_506_746);
+
+		// Remaining = 16_891_520 - 506_746 = 16_384_774
+		// Staker 2 Ratio (2/15=13%) = 16_384_774 * 0.5 * 0.13 = 1_065_011 (Perbill, decimal drops)
+		// 80_000_000_000_000 + 1_065_011 = 80_000_001_065_011 
+		assert_eq!(Balances::free_balance(12), 80_000_001_065_011);
+
+		// Remaining = 16_384_774 - 1_065_011 = 15_319_763
+		// Staker 3 Ratio (3/15=20%) = 15_319_763 * 0.5 * 0.20 = 1_531_977 (Perbill, decimal drops)
+		// 70_000_000_000_000 + 1_531_977 = 70_000_001_531_977
+		assert_eq!(Balances::free_balance(13), 70_000_001_531_977);		
+
+		// Remaining = 15_319_763 - 1_531_977 = 13_787_786
+		// Staker 4 Ratio (4/15=26%) = 13_787_786 * 0.5 * 0.26 = 1_792_413 (Perbill, decimal drops)
+		// 60_000_000_000_000 + 1_792_413 = 60_000_001_792_413
+		assert_eq!(Balances::free_balance(14), 60_000_001_792_413);			
+
+		// Remaining = 13_787_786 - 1_792_413 = 11_995_373
+		// Staker 5 Ratio (5/15=33%) = 11_995_373 * 0.5 * 0.33 = 1_979_237 (Perbill, decimal drops)
+		// 50_000_000_000_000 + 1_979_237 = 50_000_001_979_237
+		assert_eq!(Balances::free_balance(15), 50_000_001_979_237);		
+
+		// Remaining = 11_995_373 - 1_979_237 = 10_016_136
+		// 90000000000000 + 10_016_136 = 90_000_010_016_136
+		assert_eq!(Balances::free_balance(1), 90_000_010_016_136);
 	});
 }
 

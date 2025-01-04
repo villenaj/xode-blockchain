@@ -40,6 +40,8 @@ use polkadot_runtime_common::{
 };
 use frame_support::traits::VariantCountOf;
 use frame_support::pallet_prelude::DispatchClass;
+use sp_runtime::Percent;
+use sp_runtime::traits::Zero;
 
 pub const SLOT_DURATION: u64 = 6000;
 pub type Balance = u128;
@@ -447,8 +449,66 @@ where
     fn on_nonzero_unbalanced(
         amount: Credit<<R as frame_system::Config>::AccountId, pallet_balances::Pallet<R>>,
     ) {
+		println!("Author fee - 1");
         if let Some(author) = <pallet_authorship::Pallet<R>>::author() {
-			let _ = <pallet_balances::Pallet<R>>::resolve(&author, amount);
+
+			println!("Author fee - 2");
+			if let Some(candidate) = crate::ProposedCandidates::<R>::get().iter().find(|c| c.who == author) {
+
+				// commission of the delegator
+				println!("Author fee - 3");
+				let commission = Percent::from_percent(candidate.commission.into());
+				if commission.deconstruct() > 0 {
+
+					println!("Author fee - 4");
+					if let Some(delegations) = crate::Delegations::<R>::get(&author) {
+						
+						// remaining amount to be shared
+						let mut remaining_amount = amount;
+
+						// distribute only to delegator with stake > 0
+						println!("Remaining Amount: {:?}", remaining_amount);
+						for (_index, delegation) in delegations.iter().enumerate() {
+							if delegation.stake > Zero::zero() {
+								
+								// stake / total_stake
+								print!("Delegator: {:?}, ", delegation.delegator);
+								let delegator_share_ratio = Percent::from_rational(delegation.stake, candidate.total_stake);
+								print!("Ratio: {:?}, ", delegator_share_ratio);
+								print!("Commission: {:?}, ", commission);
+
+								// delegator_share_amount
+								//let delegator_share_amount = shared_amount.saturating_mul(
+								//	(delegator_share_ratio.deconstruct() / 100).into()
+								//).saturating_mul(
+								//	(commission.deconstruct() / 100).into()
+								//);
+								let ds1 = Perbill::from_percent(delegator_share_ratio.deconstruct() as u32).mul_ceil(remaining_amount.peek());
+								let ds2 = Perbill::from_percent(commission.deconstruct() as u32).mul_ceil(ds1);
+								print!("Delegator share: {:?}, ", ds2);
+
+
+								// extract the delegator_share_amount (share) from the remaining amount, then resolve it.
+								let (share, leftover) = remaining_amount.split(ds2.into());
+								let _ = <pallet_balances::Pallet<R>>::resolve(&delegation.delegator,share,);
+
+								// the remaining amount (left-over) will be given to the next delegator.
+								remaining_amount = leftover; 
+								println!("Remaining amount: {:?}, ", remaining_amount);
+							}
+						}
+
+						// after all its delegator has been paid, the remaining amount will given to the author
+						let _ = <pallet_balances::Pallet<R>>::resolve(&author, remaining_amount);
+					}
+				} else {
+					// if the commission is zero, the author will not share
+					let _ = <pallet_balances::Pallet<R>>::resolve(&author, amount);
+				}
+			} else {
+				// if there is no delegator the author will get everything
+				let _ = <pallet_balances::Pallet<R>>::resolve(&author, amount);
+			}
         }
     }
 }
@@ -467,6 +527,7 @@ impl pallet_transaction_payment::Config for Test {
 }
 
 parameter_types! {
+	pub const XodeStakingPalletId: PalletId = PalletId(*b"xd/stkng");
 	pub const MaxProposedCandidates: u32 = 200;
 	pub const MaxProposedCandidateDelegates: u32 = 200;
 	pub const Nodes: &'static [&'static str] = &[
@@ -483,6 +544,7 @@ impl crate::Config for Test {
 	type XaverNodes = Nodes;
 	type StakingCurrency = Balances;
 	type WeightInfo = crate::weights::SubstrateWeight<Test>;
+	type PalletId = XodeStakingPalletId;
 }
 
 pub fn test1_ext() -> sp_io::TestExternalities {
