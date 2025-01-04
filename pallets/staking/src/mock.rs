@@ -528,8 +528,8 @@ impl pallet_transaction_payment::Config for Test {
 
 parameter_types! {
 	pub const XodeStakingPalletId: PalletId = PalletId(*b"xd/stkng");
-	pub const MaxProposedCandidates: u32 = 200;
-	pub const MaxProposedCandidateDelegates: u32 = 200;
+	pub const MaxProposedCandidates: u32 = 100;
+	pub const MaxProposedCandidateDelegates: u32 = 100;
 	pub const Nodes: &'static [&'static str] = &[
 		"0x306721211d5404bd9da88e0204360a1a9ab8b87c66c1bc2fcdd37f3c2222cc20",  	// Charlie
 		"0x90b5ab205c6974c9ea841be688864633dc9ca8a357843eeacf2314649965fe22", 	// Dave 

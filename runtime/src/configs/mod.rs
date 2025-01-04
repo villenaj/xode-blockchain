@@ -703,8 +703,8 @@ parameter_types! {
 impl pallet_xode_staking::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type WeightInfo = pallet_xode_staking::weights::SubstrateWeight<Runtime>;
-	type MaxProposedCandidates = ConstU32<200>;  
-	type MaxProposedCandidateDelegates = ConstU32<200>;  
+	type MaxProposedCandidates = ConstU32<100>;  
+	type MaxProposedCandidateDelegates = ConstU32<100>;  
 	type XaverNodes = Nodes;
 	type StakingCurrency = Balances;
 	type PalletId = XodeStakingPalletId;

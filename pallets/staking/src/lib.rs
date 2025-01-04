@@ -57,9 +57,6 @@ pub mod pallet {
 	use pallet_session::SessionManager;
 	use sp_staking::SessionIndex;
 
-	// use sp_runtime::traits::AccountIdConversion;
-	// use frame_support::PalletId;
-	use frame_support::dispatch::PostDispatchInfo;
 	use frame_support::traits::{Currency, ReservableCurrency};
 
 	pub type BalanceOf<T> = <<T as Config>::StakingCurrency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
@@ -270,20 +267,6 @@ pub mod pallet {
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
 
-		/// Retrieve the treasury account
-		/// Note:
-		/// 	Temporary extrinsic to monitor fees.
-		// #[pallet::call_index(0)]
-		// #[pallet::weight(<weights::SubstrateWeight<T> as WeightInfo>::register_candidate())]
-		// pub fn retrieve_treasury_account(_origin: OriginFor<T>) -> DispatchResultWithPostInfo {
-		// 	// May panic during runtime (Must fix!)
-		//  	let treasury= PalletId(*b"py/trsry").try_into_account().expect("Error converting to account");
-		//  	let account_info = frame_system::Pallet::<T>::account(&treasury);
-		//  	let account_data = account_info.data;	
-		//  	Self::deposit_event(Event::TreasuryAccountRetrieved { _treasury: treasury, _data: account_data, });
-		//  	Ok(().into())
-		// }
-
 		/// Register a new candidate in the Proposed Candidate list
 		#[pallet::call_index(0)]
 		#[pallet::weight(<weights::SubstrateWeight<T> as WeightInfo>::register_candidate())]
@@ -311,12 +294,7 @@ pub mod pallet {
             })?;
 			Self::deposit_event(Event::ProposedCandidateAdded { _proposed_candidate: who });
 			
-			let weight_used = Weight::from_parts(14_300_000, 8587);
-			Ok(PostDispatchInfo {
-				actual_weight: Some(weight_used),
-				pays_fee: Pays::Yes,
-			})
-			//Ok(().into())
+			Ok(().into())
 		}
 
 		/// Bond Proposed Candidate
