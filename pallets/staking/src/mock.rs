@@ -62,10 +62,8 @@ pub type SignedExtra = (
 	pallet_transaction_payment::ChargeTransactionPayment<Test>,
 );
 
-pub type UncheckedExtrinsic =
-	generic::UncheckedExtrinsic<Address, RuntimeCall, Signature, SignedExtra>;
+pub type UncheckedExtrinsic = generic::UncheckedExtrinsic<Address, RuntimeCall, Signature, SignedExtra>;
 
-pub type Nonce = u32;
 pub type Hash = sp_core::H256;
 pub type Header = generic::Header<BlockNumber, BlakeTwo256>;
 pub type Block = generic::Block<Header, UncheckedExtrinsic>;
@@ -97,42 +95,35 @@ mod test_runtime {
 
 	#[runtime::pallet_index(0)]
 	pub type System = frame_system;
-
 	#[runtime::pallet_index(1)]
-	pub type XodeStaking = crate;
+	pub type Timestamp = pallet_timestamp;
+
 
 	#[runtime::pallet_index(2)]
 	pub type Balances = pallet_balances;
-
 	#[runtime::pallet_index(3)]
-	pub type Timestamp = pallet_timestamp;
+	pub type TransactionPayment = pallet_transaction_payment;
 
 	#[runtime::pallet_index(4)]
-	pub type Aura = pallet_aura;
-
+	pub type Authorship = pallet_authorship;
 	#[runtime::pallet_index(5)]
 	pub type CollatorSelection = pallet_collator_selection;
-
 	#[runtime::pallet_index(6)]
-	pub type Authorship = pallet_authorship;
-
-	#[runtime::pallet_index(7)]
 	pub type Session = pallet_session;
+	#[runtime::pallet_index(7)]
+	pub type Aura = pallet_aura;
 
 	#[runtime::pallet_index(8)]
 	pub type Assets = pallet_assets;
-
 	#[runtime::pallet_index(9)]
 	pub type AssetRate = pallet_asset_rate;
-
 	#[runtime::pallet_index(10)]
 	pub type Indices = pallet_indices;
-
 	#[runtime::pallet_index(11)]
 	pub type Treasury = pallet_treasury;
 
 	#[runtime::pallet_index(12)]
-	pub type TransactionPayment = pallet_transaction_payment;
+	pub type XodeStaking = crate;
 }
 
 const AVERAGE_ON_INITIALIZE_RATIO: Perbill = Perbill::from_percent(5);
@@ -169,23 +160,26 @@ parameter_types! {
 			);
 		})
 		.avg_block_initialization(AVERAGE_ON_INITIALIZE_RATIO)
-		.build_or_panic();
+	 	.build_or_panic();
 	pub const SS58Prefix: u16 = 42;
 }
 
+
 #[derive_impl(frame_system::config_preludes::TestDefaultConfig)]
 impl frame_system::Config for Test {
-	type AccountId = AccountId;
-	type Nonce = Nonce;
-	type Hash = Hash;
+    type BaseCallFilter = frame_support::traits::Everything;
+    type BlockWeights = RuntimeBlockWeights;
+    type BlockLength = RuntimeBlockLength;
+    type DbWeight = RocksDbWeight;
+    type RuntimeOrigin = RuntimeOrigin;
+    type RuntimeCall = RuntimeCall;
+    type Hash = Hash;
+    type Hashing = BlakeTwo256;
+    type AccountId = u64;
+    type BlockHashCount = BlockHashCount;
 	type Block = Block;
-	type BlockHashCount = BlockHashCount;
-	type Version = ();
+    type PalletInfo = PalletInfo;
 	type AccountData = pallet_balances::AccountData<Balance>;
-	type DbWeight = RocksDbWeight;
-	type BlockWeights = RuntimeBlockWeights;
-	type BlockLength = RuntimeBlockLength;
-	type SS58Prefix = SS58Prefix;
 }
 
 parameter_types! {
@@ -406,7 +400,7 @@ pub struct WeightToFee;
 impl WeightToFeePolynomial for WeightToFee {
 	type Balance = Balance;
 	fn polynomial() -> WeightToFeeCoefficients<Self::Balance> {
-		println!("Polynomial");
+		println!("Polynomial: {:?}", Balance::from(ExtrinsicBaseWeight::get().ref_time()));
 		let p = MILLI_UNIT / 10;
 		let q = 100 * Balance::from(ExtrinsicBaseWeight::get().ref_time());
 		smallvec![WeightToFeeCoefficient {
@@ -488,7 +482,7 @@ impl crate::Config for Test {
 	type MaxProposedCandidateDelegates = MaxProposedCandidateDelegates;
 	type XaverNodes = Nodes;
 	type StakingCurrency = Balances;
-	type WeightInfo =  crate::weights::SubstrateWeight<Test>;
+	type WeightInfo = crate::weights::SubstrateWeight<Test>;
 }
 
 pub fn test1_ext() -> sp_io::TestExternalities {

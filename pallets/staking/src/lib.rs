@@ -58,6 +58,7 @@ pub mod pallet {
 
 	// use sp_runtime::traits::AccountIdConversion;
 	// use frame_support::PalletId;
+	use frame_support::dispatch::PostDispatchInfo;
 	use frame_support::traits::{Currency, ReservableCurrency};
 
 	pub type BalanceOf<T> = <<T as Config>::StakingCurrency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
@@ -304,7 +305,13 @@ pub mod pallet {
                 Ok(())
             })?;
 			Self::deposit_event(Event::ProposedCandidateAdded { _proposed_candidate: who });
-			Ok(().into())
+			
+			let weight_used = Weight::from_parts(14_300_000, 8587);
+			Ok(PostDispatchInfo {
+				actual_weight: Some(weight_used),
+				pays_fee: Pays::Yes,
+			})
+			//Ok(().into())
 		}
 
 		/// Bond Proposed Candidate
