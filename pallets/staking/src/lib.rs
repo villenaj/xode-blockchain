@@ -52,7 +52,7 @@ pub mod pallet {
 	use scale_info::prelude::vec;
 	use hex::decode;
 	use frame_support::PalletId;
-
+	
 	// Sessions
 	use pallet_session::SessionManager;
 	use sp_staking::SessionIndex;
@@ -91,6 +91,9 @@ pub mod pallet {
 		/// The staking's pallet id, used for deriving its pot account ID.
 		#[pallet::constant]
 		type PalletId: Get<PalletId>;
+
+		/// Use to monitor staling candidate
+		type MaxStalingPeriod: Get<BlockNumberFor<Self>>;
 	}
 
 	#[pallet::pallet]
@@ -112,6 +115,7 @@ pub mod pallet {
 		pub bond: Balance,
 		pub total_stake: Balance,
 		pub last_updated: BlockNumber,
+		pub last_authored: BlockNumber,
 		pub leaving: bool,
 		pub offline: bool,
 		pub commission: u8,
@@ -243,6 +247,7 @@ pub mod pallet {
 		fn on_initialize(_current_block: BlockNumberFor<T>) -> Weight {
 			// Get the author
 			if let Some(author) = pallet_authorship::Pallet::<T>::author() {
+				let _ = Self::authored_proposed_candidate(author.clone());
 				let _ = Self::add_author(author.clone());
 			}
 
@@ -282,6 +287,7 @@ pub mod pallet {
                 bond: Zero::zero(),
                 total_stake: Zero::zero(),
                 last_updated: frame_system::Pallet::<T>::block_number(),
+				last_authored: frame_system::Pallet::<T>::block_number(),
 				leaving: false,
 				offline: false,
 				commission: 0,
@@ -601,6 +607,19 @@ pub mod pallet {
 			Ok(().into())
 		}
 
+		/// Set the block when the proposed candidate authors
+		/// Note:
+		/// 	1. This is helper function is called every hook initialization. Hence, we get
+		/// 	   the current block.
+		pub fn authored_proposed_candidate(proposed_candidate: T::AccountId) -> DispatchResult {
+			ProposedCandidates::<T>::mutate(|candidates| {
+				if let Some(candidate) = candidates.iter_mut().find(|c| c.who == proposed_candidate) {
+					candidate.last_authored = frame_system::Pallet::<T>::block_number();
+				}
+			});
+			Ok(())
+		}
+
 		/// Go offline/online proposed candidates
 		/// Note:
 		pub fn offline_proposed_candidate(proposed_candidate: T::AccountId, offline: bool) -> DispatchResult {
@@ -739,12 +758,30 @@ pub mod pallet {
 				}	
 			}
 			
-			for _non_author in non_authors.iter() {
+			for non_author in non_authors.iter() {
 				// Todo: Slashed the author and make it offline, prerequisite Aura Round Robbin
 				// let _ = Self::offline_proposed_candidate(non_author.clone(),true);
 				// Self::sort_proposed_candidates();
 
 				// Todo: Slashed the delegator for that author, Prerequisite Aura Round Robbin
+
+				// Optional alternative of slashing the authors as of the moment:
+				// 1. If the candidate is staling.  Staling means that he hasn't been authoring
+				//    for the last two period.
+				let current_block_number = frame_system::Pallet::<T>::block_number();
+				ProposedCandidates::<T>::mutate(|candidates| {
+					if let Some(candidate) = candidates.iter_mut().find(|c| c.who == *non_author) {
+						let last_authored_block_number = candidate.last_authored;
+						let diff = current_block_number.saturating_sub(last_authored_block_number);
+						let max_stale_period = T::MaxStalingPeriod::get();
+						if diff > max_stale_period {
+							// Set the candidate to offline if staling
+							candidate.offline = true;
+							candidate.last_updated = current_block_number;
+							Self::sort_proposed_candidates();
+						}
+					}
+				});
 			}
 			
 			// Clear the new set of actual authors

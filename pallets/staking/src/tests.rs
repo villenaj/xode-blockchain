@@ -98,6 +98,7 @@ fn test_pallet_xode_staking_process() {
 			bond: 0,
 			total_stake: 0,
 			last_updated: System::block_number(),
+			last_authored: System::block_number(),
 			leaving: false,
 			offline: false,
 			commission: 0,
@@ -109,6 +110,7 @@ fn test_pallet_xode_staking_process() {
 			bond: 0,
 			total_stake: 0,
 			last_updated: System::block_number(),
+			last_authored: System::block_number(),
 			leaving: false,
 			offline: false,
 			commission: 0,
@@ -192,6 +194,7 @@ fn test_pallet_xode_staking_process() {
 
 		candidate_1.bond = 400;
 		candidate_1.last_updated = System::block_number();
+		candidate_1.last_authored = System::block_number();
 		
 		let proposed_candidates = ProposedCandidates::<Test>::get();
 		assert_eq!(proposed_candidates[0], candidate_1, "The first candidate data does not match");
@@ -207,6 +210,8 @@ fn test_pallet_xode_staking_process() {
 
 		candidate_1.bond = 200;
 		candidate_1.last_updated = System::block_number();
+		candidate_1.last_authored = System::block_number();
+
 		let proposed_candidates = ProposedCandidates::<Test>::get();
 		assert_eq!(proposed_candidates[0], candidate_2, "The first candidate data does not match");
 		assert_eq!(proposed_candidates[1], candidate_1, "The second candidate data does not match");
@@ -240,7 +245,9 @@ fn test_pallet_xode_staking_process() {
 
 		// No more queuing, immediately sent to authoring at level 0
 		candidate_1.status = Status::Authoring;
+		candidate_1.last_authored = System::block_number();
 		candidate_2.status = Status::Authoring;
+
 		let proposed_candidates = ProposedCandidates::<Test>::get();
 		assert_eq!(proposed_candidates[0], candidate_2, "The first candidate data does not match");
 		assert_eq!(proposed_candidates[1], candidate_1, "The second candidate data does not match");
@@ -294,6 +301,7 @@ fn test_pallet_xode_staking_process() {
 		
 		candidate_1.total_stake = 30;
 		candidate_1.last_updated = System::block_number();
+		candidate_1.last_authored = System::block_number();
 
 		let proposed_candidates = ProposedCandidates::<Test>::get();
 		assert_eq!(proposed_candidates[0], candidate_2);
@@ -328,6 +336,7 @@ fn test_pallet_xode_staking_process() {
 
 		candidate_1.status = Status::Authoring;
 		candidate_1.status_level = 1;
+		candidate_1.last_authored = System::block_number();
 		candidate_2.status = Status::Authoring;
 		candidate_2.status_level = 1;
 		let proposed_candidates = ProposedCandidates::<Test>::get();
@@ -354,6 +363,7 @@ fn test_pallet_xode_staking_process() {
 
 		candidate_2.offline = true;
 		candidate_2.last_updated = System::block_number();
+		candidate_1.last_authored = System::block_number();
 
 		let proposed_candidates = ProposedCandidates::<Test>::get();
 		assert_eq!(proposed_candidates[0], candidate_1);
@@ -413,8 +423,10 @@ fn test_pallet_xode_staking_process() {
 		println!("Waiting Candidates {:?}",waiting_candidates);
 		assert_eq!(waiting_candidates.len(), 4, "The waiting candidates is equal to the desired candidates and online proposed candidates");	
 
+		candidate_1.last_authored = System::block_number();
 		candidate_2.status = Status::Queuing;
 		candidate_2.status_level = 0;
+		candidate_2.last_updated = System::block_number();
 		let proposed_candidates = ProposedCandidates::<Test>::get();
 		assert_eq!(proposed_candidates[0], candidate_1);
 		assert_eq!(proposed_candidates[1], candidate_2);
@@ -430,6 +442,7 @@ fn test_pallet_xode_staking_process() {
 
 		let _ = XodeStaking::online_candidate(RuntimeOrigin::signed(2));
 
+		candidate_1.last_authored = System::block_number();
 		candidate_2.offline = false;
 		candidate_2.last_updated = System::block_number();
 
@@ -462,9 +475,14 @@ fn test_pallet_xode_staking_process() {
 
 		let waiting_candidates = WaitingCandidates::<Test>::get();
 		println!("Waiting Candidates {:?}",waiting_candidates);
-		assert_eq!(waiting_candidates.len(), 5, "The waiting candidates is equal to the desired candidates and online proposed candidates");		
+		assert_eq!(waiting_candidates.len(), 4, "The waiting candidates is equal to the desired candidates and online proposed candidates");		
 
-		candidate_2.status = Status::Queuing;
+		// Todo: Force offline (non-authoring)
+		// candidate_2.status = Status::Queuing;
+		candidate_2.status = Status::Waiting;
+		candidate_2.offline = true;
+		candidate_2.last_updated = System::block_number();
+		candidate_1.last_authored = System::block_number();
 		let proposed_candidates = ProposedCandidates::<Test>::get();
 		assert_eq!(proposed_candidates[0], candidate_2);
 		assert_eq!(proposed_candidates[1], candidate_1);
@@ -482,19 +500,19 @@ fn test_pallet_xode_staking_process() {
 
 		let invulnerables = pallet_collator_selection::Invulnerables::<Test>::get();
 		println!("Invulnerables {:?}",invulnerables);
-		assert_eq!(invulnerables.len(), 5, "Invulerables after new session must have 5 entries, equal to desired candidates plus 2 proposed candidates");
+		assert_eq!(invulnerables.len(), 4, "Invulerables after new session must have 5 entries, equal to desired candidates plus 2 proposed candidates");
 
 		let queued_keys = pallet_session::QueuedKeys::<Test>::get();
 		println!("Keys {:?}",queued_keys);
-		assert_eq!(queued_keys.len(), 5, "Keys are exactly equal to invulnerables.");
+		assert_eq!(queued_keys.len(), 4, "Keys are exactly equal to invulnerables.");
 
 		let proposed_candidates = ProposedCandidates::<Test>::get();
 		println!("Proposed Candidates {:?}",proposed_candidates);
-		assert_eq!(proposed_candidates.len(), 2, "Two (2) proposed candidates.");
+		assert_eq!(proposed_candidates.len(), 1, "Two (2) proposed candidates.");
 
 		let waiting_candidates = WaitingCandidates::<Test>::get();
 		println!("Waiting Candidates {:?}",waiting_candidates);
-		assert_eq!(waiting_candidates.len(), 5, "The waiting candidates is equal to the desired candidates and online proposed candidates");	
+		assert_eq!(waiting_candidates.len(), 4, "The waiting candidates is equal to the desired candidates and online proposed candidates");	
 
 		candidate_2.status = Status::Authoring;
 		let proposed_candidates = ProposedCandidates::<Test>::get();
@@ -563,6 +581,7 @@ fn test_pallet_xode_staking_process() {
 			bond: 0,
 			total_stake: 0,
 			last_updated: System::block_number(),
+			last_authored: System::block_number(),
 			leaving: false,
 			offline: false,
 			commission: 0,
@@ -1184,6 +1203,7 @@ fn test_pallet_xode_staking_register_candidate_default_values() {
         assert_eq!(candidate_info.bond, 0);
         assert_eq!(candidate_info.total_stake, 0);
         assert_eq!(candidate_info.last_updated, System::block_number());
+		assert_eq!(candidate_info.last_authored, System::block_number());
         assert_eq!(candidate_info.leaving, false);
         assert_eq!(candidate_info.offline, false);
         assert_eq!(candidate_info.commission, 0);

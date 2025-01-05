@@ -698,6 +698,7 @@ parameter_types! {
 		"0x90b5ab205c6974c9ea841be688864633dc9ca8a357843eeacf2314649965fe22", 	// Dave (Use for development)
 		"0xe659a7a1628cdd93febc04a4e0646ea20e9f5f0ce097d9a05290d4a9e054df4e",   // Eve (Use for development)
 	];
+	pub const MaxStalingPeriod: BlockNumber = MINUTES * 2; 
 }
 
 impl pallet_xode_staking::Config for Runtime {
@@ -708,5 +709,6 @@ impl pallet_xode_staking::Config for Runtime {
 	type XaverNodes = Nodes;
 	type StakingCurrency = Balances;
 	type PalletId = XodeStakingPalletId;
+	type MaxStalingPeriod = MaxStalingPeriod;
 }
 
