@@ -108,8 +108,14 @@ pub mod pallet {
 		Authoring = 4,
 	}
 
+	impl Default for Status {
+		fn default() -> Self {
+			Status::Offline
+		}
+	}
+
 	/// Candidate info
-	#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, scale_info::TypeInfo, MaxEncodedLen,)]
+	#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, scale_info::TypeInfo, MaxEncodedLen)]
 	pub struct CandidateInfo<AccountId, Balance, BlockNumber> {
 		pub who: AccountId,
 		pub bond: Balance,
@@ -121,6 +127,28 @@ pub mod pallet {
 		pub commission: u8,
 		pub status: Status,
 		pub status_level: u8,
+	}
+
+	impl<AccountId, Balance, BlockNumber> Default for CandidateInfo<AccountId, Balance, BlockNumber>
+	where
+		AccountId: Default,
+		Balance: Default,
+		BlockNumber: Default,
+	{
+		fn default() -> Self {
+			Self {
+				who: AccountId::default(),
+				bond: Balance::default(),
+				total_stake: Balance::default(),
+				last_updated: BlockNumber::default(),
+				last_authored: BlockNumber::default(),
+				leaving: false,
+				offline: false,
+				commission: 0,
+				status: Status::default(),
+				status_level: 0,
+			}
+		}
 	}
 		
 	/// Proposed candidates 
@@ -674,8 +702,11 @@ pub mod pallet {
             let mut proposed_candidates = ProposedCandidates::<T>::get();
             proposed_candidates.sort_by(|a, b| {
                 a.offline.cmp(&b.offline)
-					.then_with(|| b.bond.cmp(&a.bond))
-					.then_with(|| b.total_stake.cmp(&a.total_stake))
+					.then_with(|| {
+						let a_combined = a.bond + a.total_stake;
+						let b_combined = b.bond + b.total_stake;
+						b_combined.cmp(&a_combined)
+					})
                     .then_with(|| a.last_updated.cmp(&b.last_updated)) 
             });
             ProposedCandidates::<T>::put(proposed_candidates);
