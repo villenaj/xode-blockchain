@@ -149,7 +149,6 @@ mod benchmarks {
     );
   }
 
-
   #[benchmark]
   fn stake_candidate() {
     initial_config::<T>();

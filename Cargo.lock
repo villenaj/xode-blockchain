@@ -7597,24 +7597,33 @@ dependencies = [
 name = "pallet-xode-staking"
 version = "0.1.0"
 dependencies = [
+ "cumulus-primitives-core",
  "frame-benchmarking",
  "frame-support",
  "frame-system",
  "hex",
+ "pallet-asset-rate",
+ "pallet-assets",
  "pallet-aura",
  "pallet-authorship",
  "pallet-balances",
  "pallet-collator-selection",
+ "pallet-indices",
  "pallet-session",
  "pallet-timestamp",
+ "pallet-transaction-payment",
+ "pallet-treasury",
  "parachains-common",
  "parity-scale-codec",
+ "polkadot-runtime-common",
  "scale-info",
+ "smallvec",
  "sp-consensus-aura",
  "sp-core",
  "sp-io",
  "sp-runtime",
  "sp-staking 36.0.0",
+ "sp-version",
  "staging-xcm",
 ]
 
