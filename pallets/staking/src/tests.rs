@@ -176,9 +176,7 @@ fn test_pallet_xode_staking_process() {
 		assert_eq!(proposed_candidates[0], candidates[1], "Must match");
 		assert_eq!(proposed_candidates[1], candidates[0], "Must match");
 
-		System::set_block_number((2 * MINUTES).into());
-		XodeStaking::on_initialize(System::block_number());
-		candidates[0].last_authored = System::block_number();
+		set_new_block_with_author(&mut candidates[0], 2 * MINUTES);
 
 		XodeStaking::new_session(2);
 		Session::on_initialize(System::block_number()); 
@@ -220,9 +218,7 @@ fn test_pallet_xode_staking_process() {
 		assert_eq!(proposed_candidates[0], candidates[0], "Must match");
 		assert_eq!(proposed_candidates[1], candidates[1], "Must match");
 
-		System::set_block_number(System::block_number() + 1);
-		XodeStaking::on_initialize(System::block_number());
-		candidates[0].last_authored = System::block_number();
+		set_new_block_with_author(&mut candidates[1], System::block_number() + 1);
 		
 		let proposed_candidates = ProposedCandidates::<Test>::get();
 		let _ = XodeStaking::bond_candidate(RuntimeOrigin::signed(proposed_candidates[0].who), 200);
@@ -277,7 +273,30 @@ fn test_pallet_xode_staking_process() {
 			let amount = (i as u128 - 10) * 1_000;
 			let _ = Balances::deposit_creating(&i, 1_000_000);
 			let _ = XodeStaking::stake_candidate(RuntimeOrigin::signed(i), candidates[0].who, amount);
-
+			System::set_block_number(0);
+			XodeStaking::on_initialize(System::block_number());
+			
+			let desired_candidates = DesiredCandidates::<Test>::get();
+			assert_eq!(desired_candidates.len(), 3, "There should be exactly three desired candidates");
+	
+			for i in 0..3 {
+				let _ = Balances::deposit_creating(&desired_candidates[i], 1_000_000);
+				let k = i as u8 + 1u8;
+				let key = sr25519::Public::from_raw([k; 32]);
+				let session_keys = SessionKeys { aura: key.into(),};
+				let result = Session::set_keys(
+					RuntimeOrigin::signed(desired_candidates[i]), 
+					session_keys.clone(), 
+					Vec::new()
+				);
+				println!("{:?} free balance: {:?}, {:?}: {:?}",desired_candidates[i], 
+					Balances::free_balance(&desired_candidates[i]), 
+					session_keys, 
+					result
+				);
+				assert!(result.is_ok(), "Failed to set session keys: {:?}", result);
+			}
+	
 			println!("Delegate: {:?}-{:?}",&i,Balances::free_balance(&i));
 			assert_eq!(Balances::free_balance(&i), 1_000_000 - amount);
 		}
@@ -290,6 +309,8 @@ fn test_pallet_xode_staking_process() {
 			println!("Delegate: {:?}-{:?}",&i,Balances::free_balance(&i));
 			assert_eq!(Balances::free_balance(&i), 1_000_000 - amount);
 		}		
+
+		set_new_block_with_author(&mut candidates[1], System::block_number());
 
 		candidates[0].total_stake = 6_000;
 		candidates[0].last_updated = System::block_number();
@@ -846,33 +867,196 @@ fn test_pallet_xode_staking_fees_author_delegator_share()  {
 		// Starting: 22_114_400 * 80% = 17_691_520
 		// Commission = 50%
 		
-		// Staker 1 Ratio (1/15=6%) = 17_691_520 * 0.5 * 0.06 = 530_746 (Perbill, decimal drops)
+		// Staker 1 Ratio (1/15=6%) = 17_691_520 * 0.5 * 0.06 = 530_746 
 		// 90_000_000_000_000 + 530_746 = 90_000_000_530_746 
 		assert_eq!(Balances::free_balance(11), 90_000_000_530_746);
 
 		// Remaining = 17_691_520 - 530_746 = 17_160_774
-		// Staker 2 Ratio (2/15=13%) = 17_160_774 * 0.5 * 0.13 = 1_115_451 (Perbill, decimal drops)
+		// Staker 2 Ratio (2/15=13%) = 17_160_774 * 0.5 * 0.13 = 1_115_451 
 		// 80_000_000_000_000 + 1_115_451 = 80_000_001_115_451 
 		assert_eq!(Balances::free_balance(12), 80_000_001_115_451);
 
 		// Remaining = 17_160_774 - 1_115_451 = 16_045_323
-		// Staker 3 Ratio (3/15=20%) = 16_045_323 * 0.5 * 0.20 = 1_604_533 (Perbill, decimal drops)
+		// Staker 3 Ratio (3/15=20%) = 16_045_323 * 0.5 * 0.20 = 1_604_533 
 		// 70_000_000_000_000 + 1_604_533 = 70_000_001_604_533
 		assert_eq!(Balances::free_balance(13), 70_000_001_604_533);		
 
 		// Remaining = 16_045_323 - 1_604_533 = 14_440_790
-		// Staker 4 Ratio (4/15=26%) = 14_440_790 * 0.5 * 0.26 = 1_877_303 (Perbill, decimal drops)
+		// Staker 4 Ratio (4/15=26%) = 14_440_790 * 0.5 * 0.26 = 1_877_303 
 		// 60_000_000_000_000 + 1_877_303 = 60_000_001_877_303
 		assert_eq!(Balances::free_balance(14), 60_000_001_877_303);			
 
 		// Remaining = 14_440_790 - 1_877_303 = 12_563_487
-		// Staker 5 Ratio (5/15=33%) = 12_563_487 * 0.5 * 0.33 = 2_072_976 (Perbill, decimal drops)
+		// Staker 5 Ratio (5/15=33%) = 12_563_487 * 0.5 * 0.33 = 2_072_976 
 		// 50_000_000_000_000 + 2_072_976 = 50_000_002_072_976
 		assert_eq!(Balances::free_balance(15), 50_000_002_072_976);		
 
 		// Remaining = 12_563_487 - 2_072_976 = 10_490_511
-		// 90000000000000 + 10_490_511 = 90_000_010_490_511
+		// 90_000_000_000_000 + 10_490_511 = 90_000_010_490_511
 		assert_eq!(Balances::free_balance(1), 90_000_010_490_511);
+	});
+}
+
+#[test]
+fn test_pallet_xode_staking_author_staling() {
+	test1_ext().execute_with(|| {
+		System::set_block_number(0);
+		XodeStaking::on_initialize(System::block_number());
+		
+		let desired_candidates = DesiredCandidates::<Test>::get();
+		assert_eq!(desired_candidates.len(), 3, "There should be exactly three desired candidates");
+
+		for i in 0..3 {
+			let _ = Balances::deposit_creating(&desired_candidates[i], 1_000_000);
+			let k = i as u8 + 1u8;
+			let key = sr25519::Public::from_raw([k; 32]);
+			let session_keys = SessionKeys { aura: key.into(),};
+			let result = Session::set_keys(
+				RuntimeOrigin::signed(desired_candidates[i]), 
+				session_keys.clone(), 
+				Vec::new()
+			);
+			println!("{:?} free balance: {:?}, {:?}: {:?}",desired_candidates[i], 
+				Balances::free_balance(&desired_candidates[i]), 
+				session_keys, 
+				result
+			);
+			assert!(result.is_ok(), "Failed to set session keys: {:?}", result);
+        }
+
+		System::set_block_number((1 * MINUTES).into());
+		XodeStaking::on_initialize(System::block_number());
+
+		check_staking_storages(
+			0, 
+			0, 
+			0, 
+			0, 
+			3,
+			8,
+			1,
+		);
+		
+		let mut candidates: [CandidateInfo<AccountId, Balance, BlockNumber>; 3] = [
+			Default::default(), 
+			Default::default(),
+			Default::default(),
+		];
+		for i in 0..3 {
+			let account_id = i as u64 + 1;
+			let candidate = CandidateInfo {
+				who: account_id,
+				bond: 0,
+				total_stake: 0,
+				last_updated: System::block_number(),
+				last_authored: System::block_number(),
+				leaving: false,
+				offline: false,
+				commission: 0,
+				status: Status::Online,
+				status_level: 0,
+			};
+			candidates[i] = candidate;
+			let _ = XodeStaking::register_candidate(RuntimeOrigin::signed(account_id));
+		}
+	
+		let proposed_candidates = ProposedCandidates::<Test>::get();
+		assert_eq!(proposed_candidates.len(), 3, "The number of proposed candidates should be 3");
+	
+		for i in 0..3 {
+			assert_eq!(proposed_candidates[i], candidates[i], "Must match");
+	
+			let _ = Balances::deposit_creating(&proposed_candidates[i].who, 1_000_000);
+			let k = i as u8 + 10u8;
+			let key = sr25519::Public::from_raw([k; 32]);
+			let session_keys = SessionKeys { aura: key.into(),};
+			let result = Session::set_keys(
+				RuntimeOrigin::signed(proposed_candidates[i].who), 
+				session_keys.clone(), 
+				Vec::new()
+			);
+			assert!(result.is_ok(), "Failed to set session keys: {:?}", result);
+	
+			let b = (i as u128 + 1u128) * 100u128;
+			let _ = XodeStaking::bond_candidate(RuntimeOrigin::signed(proposed_candidates[i].who), b);
+			assert_eq!(Balances::free_balance(&proposed_candidates[i].who), 1_000_000u128 - b);
+	
+			candidates[i].bond = b;
+			candidates[i].last_updated = System::block_number();
+		}
+	
+		// Index reverse because of sorting based on bond
+		let proposed_candidates = ProposedCandidates::<Test>::get();
+		assert_eq!(proposed_candidates[0], candidates[2], "Must match");
+		assert_eq!(proposed_candidates[1], candidates[1], "Must match");
+		assert_eq!(proposed_candidates[2], candidates[0], "Must match");
+
+		set_new_block_with_author(&mut candidates[0], 2 * MINUTES);
+
+		XodeStaking::new_session(2);
+		Session::on_initialize(System::block_number()); 
+
+		check_staking_storages(
+			0, 
+			3, 
+			3, 
+			3, 
+			6,
+			8,
+			2,
+		);
+
+		set_new_block_with_author(&mut candidates[1], 3 * MINUTES);
+
+		XodeStaking::new_session(3);
+		Session::on_initialize(System::block_number()); 
+
+		check_staking_storages(
+			3, 
+			6, 
+			6, 
+			3, 
+			6,
+			8,
+			3,
+		);
+
+		set_new_block_with_author(&mut candidates[0], 4 * MINUTES);
+
+		XodeStaking::new_session(4);
+		Session::on_initialize(System::block_number()); 
+
+		check_staking_storages(
+			6, 
+			6, 
+			6, 
+			3, 
+			6,		
+			8,
+			4,
+		);
+
+		set_new_block_with_author(&mut candidates[0], 5 * MINUTES);
+
+		XodeStaking::new_session(5);
+		Session::on_initialize(System::block_number()); 
+
+		check_staking_storages(
+			6, 
+			6, 
+			6, 
+			3, 
+			5,	// candidates[2] is staling
+			8,
+			5,
+		);
+
+		candidates[2].offline = true;
+		candidates[2].last_updated = System::block_number();
+		candidates[2].status = Status::Authoring;
+
+		let proposed_candidates = ProposedCandidates::<Test>::get();
+		assert_eq!(proposed_candidates[0], candidates[2], "Must match");
 	});
 }
 
