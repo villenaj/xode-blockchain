@@ -56,7 +56,7 @@ use polkadot_runtime_common::{
 };
 use sp_consensus_aura::sr25519::AuthorityId as AuraId;
 use sp_runtime:: {
-	Perbill, Percent, Saturating,
+	Perbill, Percent,
 	traits::{ AccountIdConversion, Zero },
 };
 use sp_version::RuntimeVersion;
@@ -196,33 +196,48 @@ where
         amount: Credit<<R as frame_system::Config>::AccountId, pallet_balances::Pallet<R>>,
     ) {
         if let Some(author) = <pallet_authorship::Pallet<R>>::author() {
-			// Reward calculation for author and delegator
-			// Todo: Transfer the reward calculation to the staking pallet and just call the helper function.
-			//       for example: (Before transfering perform actual test)
-			//		
-			//		 We transferred the recording of the author from here to on block initialization so as to include
-			//		 blocks with no transaction fees or vacant to be recorded as authored blocks.
-			//        * let _ = pallet_xode_staking::Pallet::<R>::add_author(author.clone());
+
 			if let Some(candidate) = pallet_xode_staking::ProposedCandidates::<R>::get().iter().find(|c| c.who == author) {
-				if let Some(delegations) = pallet_xode_staking::Delegations::<R>::get(&author) {
-					let commission = Percent::from_percent(candidate.commission.into());
-					let share = amount.peek();
-					let mut remaining_imbalance = amount;
-					for (_index, delegation) in delegations.iter().enumerate() {
-						if delegation.stake > Zero::zero() {
-							let ratio = Percent::from_rational(delegation.stake, candidate.total_stake);
-							let delegator_share = share.saturating_mul(ratio.deconstruct().into()).saturating_mul(commission.deconstruct().into());
-							let (imbalance_share, leftover) = remaining_imbalance.split(delegator_share.into());
-							remaining_imbalance = leftover; 
-							// For the delegator
-							let _ = <pallet_balances::Pallet<R>>::resolve(&delegation.delegator,imbalance_share,);
+
+				// commission of the delegator
+				let commission = Percent::from_percent(candidate.commission.into());
+				if commission.deconstruct() > 0 {
+
+					if let Some(delegations) = pallet_xode_staking::Delegations::<R>::get(&author) {
+						
+						// remaining amount to be shared
+						let mut remaining_amount = amount;
+
+						// distribute only to delegator with stake > 0
+						for (_index, delegation) in delegations.iter().enumerate() {
+							if delegation.stake > Zero::zero() {
+								
+								// stake / total_stake
+								let delegator_share_ratio = Percent::from_rational(delegation.stake, candidate.total_stake);
+
+								// delegator_share_amount (ds)
+								let ds1 = Perbill::from_percent(delegator_share_ratio.deconstruct() as u32).mul_ceil(remaining_amount.peek());
+								let ds2 = Perbill::from_percent(commission.deconstruct() as u32).mul_ceil(ds1);
+
+								// extract the delegator_share_amount (share) from the remaining amount, then resolve it.
+								let (share, leftover) = remaining_amount.split(ds2.into());
+								let _ = <pallet_balances::Pallet<R>>::resolve(&delegation.delegator,share,);
+
+								// the remaining amount (left-over) will be given to the next delegator.
+								remaining_amount = leftover; 
+							}
 						}
+
+						// after all its delegator has been paid, the remaining amount will given to the author
+						let _ = <pallet_balances::Pallet<R>>::resolve(&author, remaining_amount);
 					}
-					// For the Author
-					if remaining_imbalance.peek() > Zero::zero() {
-						let _ = <pallet_balances::Pallet<R>>::resolve(&author, remaining_imbalance);
-					}
-				} 
+				} else {
+					// if the commission is zero, the author will not share
+					let _ = <pallet_balances::Pallet<R>>::resolve(&author, amount);
+				}
+			} else {
+				// if there is no delegator the author will get everything
+				let _ = <pallet_balances::Pallet<R>>::resolve(&author, amount);
 			}
         }
     }
@@ -677,19 +692,23 @@ impl pallet_membership::Config<TreasuryCouncilInstance> for Runtime {
 /// Staking Xode
 /// ============
 parameter_types! {
+	pub const XodeStakingPalletId: PalletId = PalletId(*b"xd/stkng");
 	pub const Nodes: &'static [&'static str] = &[
 		"0x306721211d5404bd9da88e0204360a1a9ab8b87c66c1bc2fcdd37f3c2222cc20",  	// Charlie (Use for development)
 		"0x90b5ab205c6974c9ea841be688864633dc9ca8a357843eeacf2314649965fe22", 	// Dave (Use for development)
 		"0xe659a7a1628cdd93febc04a4e0646ea20e9f5f0ce097d9a05290d4a9e054df4e",   // Eve (Use for development)
 	];
+	pub const MaxStalingPeriod: BlockNumber = MINUTES * 2; 
 }
 
 impl pallet_xode_staking::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type WeightInfo = pallet_xode_staking::weights::SubstrateWeight<Runtime>;
-	type MaxProposedCandidates = ConstU32<200>;  
-	type MaxProposedCandidateDelegates = ConstU32<200>;  
+	type MaxProposedCandidates = ConstU32<100>;  
+	type MaxProposedCandidateDelegates = ConstU32<100>;  
 	type XaverNodes = Nodes;
 	type StakingCurrency = Balances;
+	type PalletId = XodeStakingPalletId;
+	type MaxStalingPeriod = MaxStalingPeriod;
 }
 

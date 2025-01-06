@@ -49,17 +49,17 @@ pub mod pallet {
 	use frame_support::dispatch::DispatchResult;
 	use frame_support::{dispatch::DispatchResultWithPostInfo, pallet_prelude::*, };
 	use frame_system::pallet_prelude::*;
-	use sp_runtime::traits::{AccountIdConversion, Zero,};
+	use sp_runtime::traits::Zero;
 	use sp_runtime::Saturating;
 	use scale_info::prelude::vec::Vec;
 	use scale_info::prelude::vec;
 	use hex::decode;
-
+	use frame_support::PalletId;
+	
 	// Sessions
 	use pallet_session::SessionManager;
 	use sp_staking::SessionIndex;
 
-	use frame_support::PalletId;
 	use frame_support::traits::{Currency, ReservableCurrency};
 
 	pub type BalanceOf<T> = <<T as Config>::StakingCurrency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
@@ -90,6 +90,13 @@ pub mod pallet {
 
 		/// The staking currency trait.
 		type StakingCurrency: ReservableCurrency<Self::AccountId>;
+
+		/// The staking's pallet id, used for deriving its pot account ID.
+		#[pallet::constant]
+		type PalletId: Get<PalletId>;
+
+		/// Use to monitor staling candidate
+		type MaxStalingPeriod: Get<BlockNumberFor<Self>>;
 	}
 
 	#[pallet::pallet]
@@ -104,18 +111,47 @@ pub mod pallet {
 		Authoring = 4,
 	}
 
+	impl Default for Status {
+		fn default() -> Self {
+			Status::Offline
+		}
+	}
+
 	/// Candidate info
-	#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, scale_info::TypeInfo, MaxEncodedLen,)]
+	#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, scale_info::TypeInfo, MaxEncodedLen)]
 	pub struct CandidateInfo<AccountId, Balance, BlockNumber> {
 		pub who: AccountId,
 		pub bond: Balance,
 		pub total_stake: Balance,
 		pub last_updated: BlockNumber,
+		pub last_authored: BlockNumber,
 		pub leaving: bool,
 		pub offline: bool,
 		pub commission: u8,
 		pub status: Status,
 		pub status_level: u8,
+	}
+
+	impl<AccountId, Balance, BlockNumber> Default for CandidateInfo<AccountId, Balance, BlockNumber>
+	where
+		AccountId: Default,
+		Balance: Default,
+		BlockNumber: Default,
+	{
+		fn default() -> Self {
+			Self {
+				who: AccountId::default(),
+				bond: Balance::default(),
+				total_stake: Balance::default(),
+				last_updated: BlockNumber::default(),
+				last_authored: BlockNumber::default(),
+				leaving: false,
+				offline: false,
+				commission: 0,
+				status: Status::default(),
+				status_level: 0,
+			}
+		}
 	}
 		
 	/// Proposed candidates 
@@ -242,6 +278,7 @@ pub mod pallet {
 		fn on_initialize(_current_block: BlockNumberFor<T>) -> Weight {
 			// Get the author
 			if let Some(author) = pallet_authorship::Pallet::<T>::author() {
+				let _ = Self::authored_proposed_candidate(author.clone());
 				let _ = Self::add_author(author.clone());
 			}
 
@@ -266,22 +303,8 @@ pub mod pallet {
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
 
-		/// Retrieve the treasury account
-		/// Note:
-		/// 	Temporary extrinsic to monitor fees.
-		#[pallet::call_index(0)]
-		#[pallet::weight(Weight::from_parts(10_000, 0) + T::DbWeight::get().writes(1))]
-		pub fn retrieve_treasury_account(_origin: OriginFor<T>) -> DispatchResultWithPostInfo {
-			// May panic during runtime (Must fix!)
-		 	let treasury= PalletId(*b"py/trsry").try_into_account().expect("Error converting to account");
-		 	let account_info = frame_system::Pallet::<T>::account(&treasury);
-		 	let account_data = account_info.data;	
-		 	Self::deposit_event(Event::TreasuryAccountRetrieved { _treasury: treasury, _data: account_data, });
-		 	Ok(().into())
-		}
-
 		/// Register a new candidate in the Proposed Candidate list
-		#[pallet::call_index(1)]
+		#[pallet::call_index(0)]
 		#[pallet::weight(<weights::SubstrateWeight<T> as WeightInfo>::register_candidate())]
 		pub fn register_candidate(origin: OriginFor<T>) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
@@ -295,6 +318,7 @@ pub mod pallet {
                 bond: Zero::zero(),
                 total_stake: Zero::zero(),
                 last_updated: frame_system::Pallet::<T>::block_number(),
+				last_authored: frame_system::Pallet::<T>::block_number(),
 				leaving: false,
 				offline: false,
 				commission: 0,
@@ -306,6 +330,7 @@ pub mod pallet {
                 Ok(())
             })?;
 			Self::deposit_event(Event::ProposedCandidateAdded { _proposed_candidate: who });
+			
 			Ok(().into())
 		}
 
@@ -316,10 +341,13 @@ pub mod pallet {
 		/// 	a candidate is updated, sort immediately the proposed candidates.
 		/// Todo: 
 		/// 	How do we deal with the reserve and unreserve for some reason fails?
-		#[pallet::call_index(2)]
+		#[pallet::call_index(1)]
 		#[pallet::weight(<weights::SubstrateWeight<T> as WeightInfo>::bond_candidate())]
 		pub fn bond_candidate(origin: OriginFor<T>, new_bond: BalanceOf<T>,) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
+
+			// Check if the candidate is registered.
+			ensure!(ProposedCandidates::<T>::get().iter().any(|c| c.who == who), Error::<T>::ProposedCandidateNotFound); 
 
 			// When we set the new bond to zero we assume that the candidate is leaving
 			if new_bond == Zero::zero() {
@@ -362,7 +390,7 @@ pub mod pallet {
 		/// Set commission
 		/// Note:
 		/// 	Numbers accepted are from 1 to 100 and no irrational numbers
-		#[pallet::call_index(3)]
+		#[pallet::call_index(2)]
 		#[pallet::weight(<weights::SubstrateWeight<T> as WeightInfo>::set_commission_of_candidate())]
 		pub fn set_commission_of_candidate(origin: OriginFor<T>, commission: u8) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
@@ -388,7 +416,7 @@ pub mod pallet {
 		/// Todo:
 		/// 	How to handle the reservation if there is a failure in adding the delegation.
 		/// 	Clean delegations when a candidate leaves to save space.
-		#[pallet::call_index(4)]
+		#[pallet::call_index(3)]
 		#[pallet::weight(<weights::SubstrateWeight<T> as WeightInfo>::stake_candidate())]
 		pub fn stake_candidate(origin: OriginFor<T>, candidate: T::AccountId, amount: BalanceOf<T>) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
@@ -421,7 +449,7 @@ pub mod pallet {
 		/// Un-stake Proposed Candidate
 		/// Note:
 		/// 	Remove first the delegation (stake amount) before un-reserving
-		#[pallet::call_index(5)]
+		#[pallet::call_index(4)]
 		#[pallet::weight(<weights::SubstrateWeight<T> as WeightInfo>::unstake_candidate())]
 		pub fn unstake_candidate(origin: OriginFor<T>, candidate: T::AccountId) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
@@ -459,7 +487,7 @@ pub mod pallet {
 		///		Temporarily leave the candidacy without having to un-bond and un-stake.
 		/// 	The offline status will be reflected only in the next session if the 
 		/// 	candidate is already in the waiting list.
-		#[pallet::call_index(6)]
+		#[pallet::call_index(5)]
 		#[pallet::weight(<weights::SubstrateWeight<T> as WeightInfo>::offline_candidate())]
 		pub fn offline_candidate(origin: OriginFor<T>,) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
@@ -472,7 +500,7 @@ pub mod pallet {
 		/// Note:
 		///		Make the candidate online again.
 		/// 	Todo: Check first the status if its already queuing
-		#[pallet::call_index(7)]
+		#[pallet::call_index(6)]
 		#[pallet::weight(<weights::SubstrateWeight<T> as WeightInfo>::online_candidate())]
 		pub fn online_candidate(origin: OriginFor<T>,) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
@@ -485,7 +513,7 @@ pub mod pallet {
 		/// Note:
 		/// 	Once the leaving flag is set to true, immediately remove the account in the
 		/// 	Waiting Candidate list.
-		#[pallet::call_index(8)]
+		#[pallet::call_index(7)]
 		#[pallet::weight(<weights::SubstrateWeight<T> as WeightInfo>::leave_candidate())]
 		pub fn leave_candidate(origin: OriginFor<T>,) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
@@ -511,7 +539,7 @@ pub mod pallet {
 
 	}
 
-	/// =======
+	///	 =======
 	/// Helpers
 	/// =======
 	impl<T: Config> Pallet<T> {
@@ -610,6 +638,19 @@ pub mod pallet {
 			Ok(().into())
 		}
 
+		/// Set the block when the proposed candidate authors
+		/// Note:
+		/// 	1. This is helper function is called every hook initialization. Hence, we get
+		/// 	   the current block.
+		pub fn authored_proposed_candidate(proposed_candidate: T::AccountId) -> DispatchResult {
+			ProposedCandidates::<T>::mutate(|candidates| {
+				if let Some(candidate) = candidates.iter_mut().find(|c| c.who == proposed_candidate) {
+					candidate.last_authored = frame_system::Pallet::<T>::block_number();
+				}
+			});
+			Ok(())
+		}
+
 		/// Go offline/online proposed candidates
 		/// Note:
 		pub fn offline_proposed_candidate(proposed_candidate: T::AccountId, offline: bool) -> DispatchResult {
@@ -664,8 +705,11 @@ pub mod pallet {
             let mut proposed_candidates = ProposedCandidates::<T>::get();
             proposed_candidates.sort_by(|a, b| {
                 a.offline.cmp(&b.offline)
-					.then_with(|| b.bond.cmp(&a.bond))
-					.then_with(|| b.total_stake.cmp(&a.total_stake))
+					.then_with(|| {
+						let a_combined = a.bond + a.total_stake;
+						let b_combined = b.bond + b.total_stake;
+						b_combined.cmp(&a_combined)
+					})
                     .then_with(|| a.last_updated.cmp(&b.last_updated)) 
             });
             ProposedCandidates::<T>::put(proposed_candidates);
@@ -754,6 +798,24 @@ pub mod pallet {
 				// Self::sort_proposed_candidates();
 
 				// Todo: Slashed the delegator for that author, Prerequisite Aura Round Robbin
+
+				// Optional alternative of slashing the authors as of the moment:
+				// 1. If the candidate is staling.  Staling means that he hasn't been authoring
+				//    for the last two period.
+				let current_block_number = frame_system::Pallet::<T>::block_number();
+				ProposedCandidates::<T>::mutate(|candidates| {
+					if let Some(candidate) = candidates.iter_mut().find(|c| c.who == *non_author) {
+						let last_authored_block_number = candidate.last_authored;
+						let diff = current_block_number.saturating_sub(last_authored_block_number);
+						let max_stale_period = T::MaxStalingPeriod::get();
+						if diff > max_stale_period {
+							// Set the candidate to offline if staling
+							candidate.offline = true;
+							candidate.last_updated = current_block_number;
+							Self::sort_proposed_candidates();
+						}
+					}
+				});
 			}
 			
 			// Clear the new set of actual authors
@@ -911,9 +973,11 @@ pub mod pallet {
 		}
 	}
 
-	impl<T: Config> pallet_authorship::EventHandler<T::AccountId, BlockNumberFor<T>> for Pallet<T>
-	{
-		fn note_author(author: T::AccountId) {
+	/// ===============
+	/// Authorship
+	/// ===============
+	impl<T: Config> pallet_authorship::EventHandler<T::AccountId, BlockNumberFor<T>> for Pallet<T> {
+		fn note_author(_author: T::AccountId) {
 			// TODO: transfer fees here
 		}
 
