@@ -27,7 +27,7 @@
 mod xcm_config;
 
 // Substrate and Polkadot dependencies
-use crate::{Timestamp, XodeStaking};
+use crate::{Timestamp, XodeStaking, Preimage};
 use cumulus_pallet_parachain_system::RelayNumberMonotonicallyIncreases;
 use cumulus_primitives_core::{AggregateMessageOrigin, ParaId};
 use frame_support::{
@@ -36,8 +36,8 @@ use frame_support::{
 	parameter_types,
 	traits::{
 		ConstBool, ConstU32, ConstU64, ConstU8, EitherOfDiverse, TransformOrigin, VariantCountOf,
-		AsEnsureOriginWithArg,Randomness,
-		fungible::{Balanced, Credit},
+		AsEnsureOriginWithArg,Randomness, LinearStoragePrice,
+		fungible::{Balanced, Credit, HoldConsideration},
 		OnUnbalanced,Imbalance,
 		tokens::imbalance::ResolveTo,
 	},
@@ -712,3 +712,30 @@ impl pallet_xode_staking::Config for Runtime {
 	type MaxStalingPeriod = MaxStalingPeriod;
 }
 
+parameter_types! {
+	pub const PreimageBaseDeposit: Balance = deposit(1, 0);
+	pub const PreimageByteDeposit: Balance = deposit(0, 1);
+	pub const PreimageHoldReason: RuntimeHoldReason = RuntimeHoldReason::Preimage(pallet_preimage::HoldReason::Preimage);
+}
+
+impl pallet_preimage::Config for Runtime {
+	type WeightInfo = pallet_preimage::weights::SubstrateWeight<Runtime>;
+	type RuntimeEvent = RuntimeEvent;
+	type Currency = Balances;
+	type ManagerOrigin = EnsureAllTechnicalCommittee;
+	type Consideration = HoldConsideration<
+		AccountId,
+		Balances,
+		PreimageHoldReason,
+		LinearStoragePrice<PreimageBaseDeposit, PreimageByteDeposit, Balance>,
+	>;
+}
+
+impl pallet_whitelist::Config for Runtime {
+	type WeightInfo = pallet_whitelist::weights::SubstrateWeight<Runtime>;
+	type RuntimeEvent = RuntimeEvent;
+	type RuntimeCall = RuntimeCall;
+	type WhitelistOrigin = EnsureTwoThirdsTechnicalCommittee;
+	type DispatchWhitelistedOrigin = EnsureTwoThirdsTechnicalCommittee;
+	type Preimages = Preimage;
+}
