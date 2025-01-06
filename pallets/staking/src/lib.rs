@@ -33,9 +33,8 @@ mod mock;
 
 #[cfg(test)]
 mod tests;
-
 #[cfg(test)]
-mod pallet_calls_tests;
+mod tests_calls;
 
 pub mod weights;
 pub use weights::*;

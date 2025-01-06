@@ -1,14 +1,9 @@
-use crate::{mock::*, Error, Event, 
-	CandidateInfo, Status, ActualAuthors,
-	DesiredCandidates, ProposedCandidates, WaitingCandidates,
+use crate::{mock::*, Error, Status, ProposedCandidates,
 };
 use frame_support::{
 	assert_noop, assert_ok,
-	traits::Hooks
 };
-use pallet_session::SessionManager;
 use frame_support::traits::{Currency, Imbalance};
-use sp_core::sr25519;
 
 // Register Candidate Function - Unit Tests
 // Run this command: cargo test test_pallet_xode_staking_register_candidate -- --nocapture
@@ -56,12 +51,11 @@ fn test_pallet_xode_staking_register_candidate_already_exists_should_error() {
 #[test]
 fn test_pallet_xode_staking_register_candidate_max_exceeded_should_error() {
 	test1_ext().execute_with(|| {
-        // These are the candidates 1,2, and 3
-		for i in 1..4 { 
+		for i in 1..101 { 
             assert_ok!(XodeStaking::register_candidate(RuntimeOrigin::signed(i)));
         }
 
-        let candidate = 4;
+        let candidate = 101;
 		assert_noop!(
             XodeStaking::register_candidate(RuntimeOrigin::signed(candidate)),
             Error::<Test>::ProposedCandidateMaxExceeded

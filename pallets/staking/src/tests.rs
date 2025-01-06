@@ -1,17 +1,17 @@
-use crate::{mock::*, Error, 
-	CandidateInfo, Status,
+use crate::{mock::*, CandidateInfo, Status,
 	DesiredCandidates, ProposedCandidates, WaitingCandidates,
 };
 use codec::Encode;
 use frame_support::{
-	assert_noop, assert_ok, dispatch::GetDispatchInfo, traits::{Hooks, OnUnbalanced,}
+	dispatch::GetDispatchInfo, traits::{Hooks, OnUnbalanced,}
 };
 
 use pallet_session::SessionManager;
 use frame_support::traits::Currency;
 use pallet_transaction_payment::{ChargeTransactionPayment, OnChargeTransaction};
 use sp_core::sr25519;
-use sp_runtime::traits::{Dispatchable, SignedExtension};
+use sp_runtime::traits::SignedExtension;
+use sp_runtime::traits::Dispatchable;
 
 use pallet_transaction_payment::FungibleAdapter;
 
