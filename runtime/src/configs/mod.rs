@@ -70,7 +70,7 @@ use super::{
 	AccountId, Aura, Balance, Balances, Block, BlockNumber, CollatorSelection, ConsensusHook, Hash,
 	MessageQueue, Nonce, PalletInfo, ParachainSystem, Runtime, RuntimeCall, RuntimeEvent,
 	RuntimeFreezeReason, RuntimeHoldReason, RuntimeOrigin, RuntimeTask, Session, SessionKeys,
-	System, WeightToFee, XcmpQueue, AVERAGE_ON_INITIALIZE_RATIO, EXISTENTIAL_DEPOSIT, HOURS, MINUTES,
+	System, WeightToFee, XcmpQueue, AVERAGE_ON_INITIALIZE_RATIO, EXISTENTIAL_DEPOSIT, DAYS, HOURS, MINUTES,
 	MAXIMUM_BLOCK_WEIGHT, UNIT, MICRO_UNIT, NORMAL_DISPATCH_RATIO, SLOT_DURATION, VERSION,
 	// Governance
 	TechnicalCommittee, TreasuryCouncil,
@@ -527,12 +527,8 @@ impl pallet_contracts::Config for Runtime {
 /// ========
 /// Treasury  
 /// ========
-pub const MILLICENTS: Balance = 1_000_000_000;
-pub const CENTS: Balance = 1_000 * MILLICENTS; 
-pub const DOLLARS: Balance = 100 * CENTS;
-
 parameter_types! {
-	pub const IndexDeposit: Balance = 1 * DOLLARS;
+	pub const IndexDeposit: Balance = 100 * UNIT;
 }
 
 impl pallet_indices::Config for Runtime {
@@ -557,13 +553,11 @@ impl pallet_asset_rate::Config for Runtime {
 
 parameter_types! {
     pub const TreasuryPalletId: PalletId = PalletId(*b"py/trsry");
-	// pub const SpendPeriod: BlockNumber = 1 * DAYS;
-	pub const SpendPeriod: BlockNumber = 1 * MINUTES; // Testing purpose only
+	pub const SpendPeriod: BlockNumber = 1 * DAYS;
 	pub const MaxApprovals: u32 = 100;
 	pub const MaxBalance: Balance = Balance::max_value();
 	pub XodeTreasuryAccount: AccountId = TreasuryPalletId::get().into_account_truncating();
-	// pub const SpendPayoutPeriod: BlockNumber = 30 * DAYS;
-	pub const SpendPayoutPeriod: BlockNumber = 30 * MINUTES; // Testing purpose only
+	pub const SpendPayoutPeriod: BlockNumber = 30 * DAYS;
 }
 
 impl pallet_treasury::Config for Runtime {
