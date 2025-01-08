@@ -71,7 +71,7 @@ use super::{
 	MessageQueue, Nonce, PalletInfo, ParachainSystem, Runtime, RuntimeCall, RuntimeEvent,
 	RuntimeFreezeReason, RuntimeHoldReason, RuntimeOrigin, RuntimeTask, Session, SessionKeys,
 	System, WeightToFee, XcmpQueue, AVERAGE_ON_INITIALIZE_RATIO, EXISTENTIAL_DEPOSIT, HOURS, MINUTES,
-	MAXIMUM_BLOCK_WEIGHT, MICRO_UNIT, NORMAL_DISPATCH_RATIO, SLOT_DURATION, VERSION,
+	MAXIMUM_BLOCK_WEIGHT, UNIT, MICRO_UNIT, NORMAL_DISPATCH_RATIO, SLOT_DURATION, VERSION,
 	// Governance
 	TechnicalCommittee, TreasuryCouncil,
 };
@@ -90,7 +90,6 @@ impl frame_support::traits::Contains<RuntimeCall> for AllowBalancesCall {
 
 parameter_types! {
 	pub const Version: RuntimeVersion = VERSION;
-
 	// This part is copied from Substrate's `bin/node/runtime/src/lib.rs`.
 	//  The `RuntimeBlockLength` and `RuntimeBlockWeights` exist here because the
 	// `DeletionWeightLimit` and `DeletionQueueDepth` depend on those to parameterize
@@ -409,19 +408,14 @@ impl pallet_collator_selection::Config for Runtime {
 /// ======
 /// Assets
 /// ======
-pub const ASSETS_UNIT: Balance = 1_000_000_000_000;
-pub const ASSETS_MILLIUNIT: Balance = 1_000_000_000;
-pub const ASSETS_MICROUNIT: Balance = 1_000_000;
-pub const ASSETS_EXISTENTIAL_DEPOSIT: Balance = ASSETS_MILLIUNIT;
-
 pub const fn deposit(items: u32, bytes: u32) -> Balance {
-	(items as Balance * 20 * ASSETS_UNIT + (bytes as Balance) * 100 * ASSETS_MICROUNIT) / 100
+	(items as Balance * 20 * UNIT + (bytes as Balance) * 100 * MICRO_UNIT) / 100
 }
 
 parameter_types! {
-	pub const AssetDeposit: Balance = 10 * ASSETS_UNIT;
+	pub const AssetDeposit: Balance = 10_000 * UNIT;
 	pub const AssetAccountDeposit: Balance = deposit(1, 16);
-	pub const ApprovalDeposit: Balance = ASSETS_EXISTENTIAL_DEPOSIT;
+	pub const ApprovalDeposit: Balance = EXISTENTIAL_DEPOSIT;
 	pub const StringLimit: u32 = 50;
 	pub const MetadataDepositBase: Balance = deposit(1, 68);
 	pub const MetadataDepositPerByte: Balance = deposit(0, 1);
