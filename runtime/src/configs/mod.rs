@@ -348,8 +348,7 @@ impl cumulus_pallet_xcmp_queue::Config for Runtime {
 }
 
 parameter_types! {
-	//pub const Period: u32 = 6 * HOURS;
-	pub const Period: u32 = MINUTES;
+	pub const Period: u32 = 6 * HOURS;
 	pub const Offset: u32 = 0;
 }
 
@@ -379,8 +378,7 @@ impl pallet_aura::Config for Runtime {
 
 parameter_types! {
 	pub const PotId: PalletId = PalletId(*b"PotStake");
-	// pub const SessionLength: BlockNumber = 6 * HOURS;
-	pub const SessionLength: BlockNumber = 6 * MINUTES;
+	pub const SessionLength: BlockNumber = 6 * HOURS;
 	// StakingAdmin pluralistic body.
 	pub const StakingAdminBodyId: BodyId = BodyId::Defense;
 }
@@ -688,30 +686,6 @@ impl pallet_membership::Config<TreasuryCouncilInstance> for Runtime {
 	type WeightInfo = pallet_membership::weights::SubstrateWeight<Runtime>;
 }
 
-/// ============
-/// Staking Xode
-/// ============
-parameter_types! {
-	pub const XodeStakingPalletId: PalletId = PalletId(*b"xd/stkng");
-	pub const Nodes: &'static [&'static str] = &[
-		"0x306721211d5404bd9da88e0204360a1a9ab8b87c66c1bc2fcdd37f3c2222cc20",  	// Charlie (Use for development)
-		"0x90b5ab205c6974c9ea841be688864633dc9ca8a357843eeacf2314649965fe22", 	// Dave (Use for development)
-		"0xe659a7a1628cdd93febc04a4e0646ea20e9f5f0ce097d9a05290d4a9e054df4e",   // Eve (Use for development)
-	];
-	pub const MaxStalingPeriod: BlockNumber = MINUTES * 2; 
-}
-
-impl pallet_xode_staking::Config for Runtime {
-	type RuntimeEvent = RuntimeEvent;
-	type WeightInfo = pallet_xode_staking::weights::SubstrateWeight<Runtime>;
-	type MaxProposedCandidates = ConstU32<100>;  
-	type MaxProposedCandidateDelegates = ConstU32<100>;  
-	type XaverNodes = Nodes;
-	type StakingCurrency = Balances;
-	type PalletId = XodeStakingPalletId;
-	type MaxStalingPeriod = MaxStalingPeriod;
-}
-
 parameter_types! {
 	pub const PreimageBaseDeposit: Balance = deposit(1, 0);
 	pub const PreimageByteDeposit: Balance = deposit(0, 1);
@@ -739,3 +713,29 @@ impl pallet_whitelist::Config for Runtime {
 	type DispatchWhitelistedOrigin = EnsureTwoThirdsTechnicalCommittee;
 	type Preimages = Preimage;
 }
+
+/// ============
+/// Staking Xode
+/// ============
+parameter_types! {
+	pub const XodeStakingPalletId: PalletId = PalletId(*b"xd/stkng");
+	pub const Nodes: &'static [&'static str] = &[
+		"0x306721211d5404bd9da88e0204360a1a9ab8b87c66c1bc2fcdd37f3c2222cc20",  	// Charlie (Use for development)
+		"0x90b5ab205c6974c9ea841be688864633dc9ca8a357843eeacf2314649965fe22", 	// Dave (Use for development)
+		"0xe659a7a1628cdd93febc04a4e0646ea20e9f5f0ce097d9a05290d4a9e054df4e",   // Eve (Use for development)
+	];
+	pub const MaxStalingPeriod: BlockNumber = MINUTES * 2; 
+}
+
+impl pallet_xode_staking::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type WeightInfo = pallet_xode_staking::weights::SubstrateWeight<Runtime>;
+	type MaxProposedCandidates = ConstU32<100>;  
+	type MaxProposedCandidateDelegates = ConstU32<100>;  
+	type XaverNodes = Nodes;
+	type StakingCurrency = Balances;
+	type PalletId = XodeStakingPalletId;
+	type MaxStalingPeriod = MaxStalingPeriod;
+}
+
+
