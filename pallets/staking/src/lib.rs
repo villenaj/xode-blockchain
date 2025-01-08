@@ -96,6 +96,9 @@ pub mod pallet {
 
 		/// Use to monitor staling candidate
 		type MaxStalingPeriod: Get<BlockNumberFor<Self>>;
+
+		/// Minimum bond of proposed candidate
+		type MinProposedCandidateBond: Get<BalanceOf<Self>>;
 	}
 
 	#[pallet::pallet]

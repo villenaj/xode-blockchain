@@ -705,23 +705,34 @@ impl pallet_whitelist::Config for Runtime {
 /// ============
 parameter_types! {
 	pub const XodeStakingPalletId: PalletId = PalletId(*b"xd/stkng");
-	pub const Nodes: &'static [&'static str] = &[
-		"0x306721211d5404bd9da88e0204360a1a9ab8b87c66c1bc2fcdd37f3c2222cc20",  	// Charlie (Use for development)
-		"0x90b5ab205c6974c9ea841be688864633dc9ca8a357843eeacf2314649965fe22", 	// Dave (Use for development)
-		"0xe659a7a1628cdd93febc04a4e0646ea20e9f5f0ce097d9a05290d4a9e054df4e",   // Eve (Use for development)
-	];
 	pub const MaxStalingPeriod: BlockNumber = MINUTES * 2; 
+	pub const MaxProposedCandidates: u32 = 100;
+	pub const MaxProposedCandidateDelegates: u32 = 100;
+	pub const MinProposedCandidateBond: Balance = 10_000 * UNIT;
+	pub const Nodes: &'static [&'static str] = &[
+		"0xa8adc02652304a63002471f12ebeba61c6ba74b156be32c7f8e373983ee5dd56",  
+		"0x5c39ae0088c2244cef982148e0e5acc9a6bc10d3d4d81cdb7b20240951bc4253", 
+		"0xe8e73bb34c9394c31da71d91dbb237a0878a6e4e8755d8957de6be7215c94742", 
+		"0x48402d5c5330f3c24b9d7fd86688b6dcaa0d60f301c0c3c40dc86a67f80eea0e", 
+		"0x98ea2acefa92fb943c27bb751e40c9a3f400c045e9266fac3d410936403ba636", 
+		"0x10c7110da5e94ce09d08dd800c5d930538fa1183d518fdf20ab78d68d056a705", 
+		"0xeac97de954eb1a9f8f5b400291e0e666930ed56e5bd29d003e6ad374ff7b411a", 
+		"0x38abe047d49830936591aece873c94c8a5cb59c5f66ee2c304b2a2a923b5a60d", 
+		"0x8cc71d95e8404c16fb63f152f89ed9349727019eb92019e0030fdbb562a0c414", 
+		"0x3419ef403858b6ec86207595bcad0994bd830c82f841978f831a97240ccb9827", 
+	];
 }
 
 impl pallet_xode_staking::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type WeightInfo = pallet_xode_staking::weights::SubstrateWeight<Runtime>;
-	type MaxProposedCandidates = ConstU32<100>;  
-	type MaxProposedCandidateDelegates = ConstU32<100>;  
+	type MaxProposedCandidates = MaxProposedCandidates;  
+	type MaxProposedCandidateDelegates = MaxProposedCandidateDelegates;  
 	type XaverNodes = Nodes;
 	type StakingCurrency = Balances;
 	type PalletId = XodeStakingPalletId;
 	type MaxStalingPeriod = MaxStalingPeriod;
+	type MinProposedCandidateBond = MinProposedCandidateBond;
 }
 
 

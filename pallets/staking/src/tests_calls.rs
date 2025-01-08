@@ -82,7 +82,7 @@ fn test_pallet_xode_staking_register_candidate_default_values() {
 
         // Verify the default values in the storage
 		let candidates = ProposedCandidates::<Test>::get();
-        let candidate_info = candidates
+        let _candidate_info = candidates
             .iter()
             .find(|c| c.who == candidate);
             

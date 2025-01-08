@@ -52,6 +52,7 @@ pub const MILLI_SECS_PER_BLOCK: u32 = 6000;
 pub const MINUTES: BlockNumber = 60_000 / (MILLI_SECS_PER_BLOCK as BlockNumber);
 pub const MILLI_UNIT: Balance = 1_000_000_000;
 pub const MICRO_UNIT: Balance = 1_000_000;
+pub const PICO_UNIT: Balance = 1;
 
 pub type SignedExtra = (
 	frame_system::CheckNonZeroSender<Test>,
@@ -536,6 +537,7 @@ parameter_types! {
 		"0xe659a7a1628cdd93febc04a4e0646ea20e9f5f0ce097d9a05290d4a9e054df4e",   // Eve 
 	];
 	pub const MaxStalingPeriod: BlockNumber = MINUTES * 2; 
+	pub const MinProposedCandidateBond: Balance = PICO_UNIT;
 }
 
 impl crate::Config for Test {
@@ -547,6 +549,7 @@ impl crate::Config for Test {
 	type WeightInfo = crate::weights::SubstrateWeight<Test>;
 	type PalletId = XodeStakingPalletId;
 	type MaxStalingPeriod = MaxStalingPeriod;
+	type MinProposedCandidateBond = MinProposedCandidateBond;
 }
 
 pub fn test1_ext() -> sp_io::TestExternalities {
