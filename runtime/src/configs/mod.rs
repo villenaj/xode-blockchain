@@ -591,8 +591,7 @@ pub type EnsureTwoThirdsTechnicalCommittee = EnsureProportionMoreThan<AccountId,
 pub type EnsureAllTechnicalCommittee = EnsureProportionAtLeast<AccountId, TechnicalCommitteeInstance, 1, 1>; 
 
 parameter_types! {
-    // pub const TecnicalCommitteeMotionDuration: BlockNumber = 5 * DAYS;
-	pub const TecnicalCommitteeMotionDuration: BlockNumber = 1 * MINUTES; // For testing purpose only
+    pub const TecnicalCommitteeMotionDuration: BlockNumber = 5 * DAYS;
     pub const TecnicalCommitteeMaxProposals: u32 = 100;
     pub const TecnicalCommitteeMaxMembers: u32 = 100;
 	pub TechnicalMaxProposalWeight: Weight = Perbill::from_percent(50) * RuntimeBlockWeights::get().max_block;
@@ -637,8 +636,7 @@ pub type EnsureTwoThirdsTreasuryCouncil = EnsureProportionMoreThan<AccountId, Tr
 pub type EnsureAllTreasuryCouncil = EnsureProportionAtLeast<AccountId, TreasuryCouncilInstance, 1, 1>; 
 
 parameter_types! {
-    // pub const TreasuryCouncilMotionDuration: BlockNumber = 5 * DAYS;
-	pub const TreasuryCouncilMotionDuration: BlockNumber = 1 * MINUTES; // For testing purpose only
+    pub const TreasuryCouncilMotionDuration: BlockNumber = 5 * DAYS;
     pub const TreasuryCouncilMaxProposals: u32 = 100;
     pub const TreasuryCouncilMaxMembers: u32 = 100;
 	pub TreasuryMaxProposalWeight: Weight = Perbill::from_percent(50) * RuntimeBlockWeights::get().max_block;
