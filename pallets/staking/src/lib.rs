@@ -252,6 +252,7 @@ pub mod pallet {
 		ProposedCandidateStillAuthoring,
 		ProposedCandidateStillWaiting,
 		ProposedCandidateStillQueuing,
+		ProposedCandidateInsufficientBond,
 
 		WaitingCandidateAlreadyExist,
 		WaitingCandidateMaxExceeded,
@@ -350,6 +351,12 @@ pub mod pallet {
 
 			// Check if the candidate is registered.
 			ensure!(ProposedCandidates::<T>::get().iter().any(|c| c.who == who), Error::<T>::ProposedCandidateNotFound); 
+
+			// Minimum bond checked
+			ensure!(
+                new_bond > T::MinProposedCandidateBond::get(),
+                Error::<T>::ProposedCandidateInsufficientBond
+            );
 
 			// When we set the new bond to zero we assume that the candidate is leaving
 			if new_bond == Zero::zero() {

@@ -110,20 +110,20 @@ fn test_pallet_xode_staking_bond_candidate_works() {
         let candidate = 1;
 
         // Deposit initial funds and verify imbalances
-		let imbalance = Balances::deposit_creating(&candidate, 1000);
+		let imbalance = Balances::deposit_creating(&candidate, 100_000_000_000_000_000);
 		assert!(imbalance.peek() > 0, "Expected a positive imbalance for deposit creation");
 
         // Register the candidate
         assert_ok!(XodeStaking::register_candidate(RuntimeOrigin::signed(candidate)));
 
         // Bond the candidate
-		assert_ok!(XodeStaking::bond_candidate(RuntimeOrigin::signed(candidate), 100));
+		assert_ok!(XodeStaking::bond_candidate(RuntimeOrigin::signed(candidate), 11_000_000_000_000_000));
 
         let candidates = ProposedCandidates::<Test>::get();
         if let Some(candidate_info) = candidates.iter().find(|c| c.who == candidate) {    
-            assert_eq!(candidate_info.bond, 100);  
+            assert_eq!(candidate_info.bond, 11_000_000_000_000_000);  
         }  
-        assert_eq!(100, Balances::reserved_balance(candidate), "Should have 100 reserved balance.");
+        assert_eq!(11_000_000_000_000_000, Balances::reserved_balance(candidate), "Should have 11_000_000_000_000_000 reserved balance.");
 	});
 }
 
@@ -150,29 +150,29 @@ fn test_pallet_xode_staking_bond_candidate_increases_bond_and_reserves() {
         let candidate = 1;
 
         // Deposit initial funds and verify imbalances
-		let imbalance = Balances::deposit_creating(&candidate, 1000);
+		let imbalance = Balances::deposit_creating(&candidate, 100_000_000_000_000_000);
 		assert!(imbalance.peek() > 0, "Expected a positive imbalance for deposit creation");
 
         // Register the candidate
         assert_ok!(XodeStaking::register_candidate(RuntimeOrigin::signed(candidate)));
 
         // Bond the candidate
-		assert_ok!(XodeStaking::bond_candidate(RuntimeOrigin::signed(candidate), 100));
+		assert_ok!(XodeStaking::bond_candidate(RuntimeOrigin::signed(candidate), 11_000_000_000_000_000));
 
         let candidates = ProposedCandidates::<Test>::get();
         if let Some(candidate_info) = candidates.iter().find(|c| c.who == candidate) {    
-            assert_eq!(candidate_info.bond, 100);  
+            assert_eq!(candidate_info.bond, 11_000_000_000_000_000);  
         }  
-        assert_eq!(100, Balances::reserved_balance(candidate), "Should have 100 reserved balance.");
+        assert_eq!(11_000_000_000_000_000, Balances::reserved_balance(candidate), "Should have 100 reserved balance.");
         
         // Increase the bond and reserves
-		assert_ok!(XodeStaking::bond_candidate(RuntimeOrigin::signed(candidate), 200));
+		assert_ok!(XodeStaking::bond_candidate(RuntimeOrigin::signed(candidate), 21_000_000_000_000_000));
 
         let updated_candidates = ProposedCandidates::<Test>::get();
         if let Some(candidate_info) = updated_candidates.iter().find(|c| c.who == candidate) {    
-            assert_eq!(candidate_info.bond, 200);  
+            assert_eq!(candidate_info.bond, 21_000_000_000_000_000);  
         }  
-        assert_eq!(200, Balances::reserved_balance(candidate), "Should have 100 reserved balance.")
+        assert_eq!(21_000_000_000_000_000, Balances::reserved_balance(candidate), "Should have 100 reserved balance.")
     });
 }
 

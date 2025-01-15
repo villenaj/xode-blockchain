@@ -4,3 +4,4 @@ zombienet/collator/
 client/node_modules/
 client/.env
 keys/
+chainspecs/
