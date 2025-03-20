@@ -3,3 +3,4 @@ zombienet/bin/
 zombienet/collator/
 client/node_modules/
 client/.env
+live/

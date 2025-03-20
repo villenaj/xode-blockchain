@@ -1,17 +1,17 @@
-use crate::{mock::*, Error, 
-	CandidateInfo, Status,
+use crate::{mock::*, CandidateInfo, Status,
 	DesiredCandidates, ProposedCandidates, WaitingCandidates,
 };
 use codec::Encode;
 use frame_support::{
-	assert_noop, assert_ok, dispatch::GetDispatchInfo, traits::{Hooks, OnUnbalanced,}
+	dispatch::GetDispatchInfo, traits::{Hooks, OnUnbalanced,}
 };
 
 use pallet_session::SessionManager;
 use frame_support::traits::Currency;
 use pallet_transaction_payment::{ChargeTransactionPayment, OnChargeTransaction};
 use sp_core::sr25519;
-use sp_runtime::traits::{Dispatchable, SignedExtension};
+use sp_runtime::traits::SignedExtension;
+use sp_runtime::traits::Dispatchable;
 
 use pallet_transaction_payment::FungibleAdapter;
 
@@ -1106,96 +1106,4 @@ fn test_pallet_xode_staking_left() {
 		let desired_candidates = DesiredCandidates::<Test>::get();
 		assert_eq!(desired_candidates.len(), 3, "There should be exactly three desired candidates");
 	});
-}
-
-// Register Candidate Function - Unit Tests
-#[test]
-fn test_pallet_xode_staking_register_candidate_works() {
-	test1_ext().execute_with(|| {
-        let candidate = 1;
-		assert_ok!(XodeStaking::register_candidate(RuntimeOrigin::signed(candidate)));
-
-		// TODO: (Try using dispatch calls, e.g., test_pallet_xode_staking_fees_treasury_author_share)
-		// I tried getting the last dispatched events, but it doesn't seem to be working.
-		// However, we really need to get the last dispatched events to ensure the test works.
-		
-		// System::assert_last_event(Event::ProposedCandidateAdded { 
-        //     _proposed_candidate: 1, 
-        // }.into());
-	});
-}
-
-#[test]
-fn test_pallet_xode_staking_register_candidate_no_existing_candidates() {
-    test1_ext().execute_with(|| {
-        let candidate = 1;
-        assert_ok!(XodeStaking::register_candidate(RuntimeOrigin::signed(candidate)));
-
-		let candidate_count = ProposedCandidates::<Test>::get().len();
-        assert_eq!(candidate_count, 1);
-    });
-}
-
-#[test]
-fn test_pallet_xode_staking_register_candidate_already_exists_should_error() {
-	test1_ext().execute_with(|| {
-        let candidate = 1;
-
-		assert_ok!(XodeStaking::register_candidate(RuntimeOrigin::signed(candidate)));
-		assert_noop!(
-			XodeStaking::register_candidate(RuntimeOrigin::signed(candidate)),
-			Error::<Test>::ProposedCandidateAlreadyExist
-		);
-	});
-}
-
-#[test]
-fn test_pallet_xode_staking_register_candidate_max_exceeded_should_error() {
-	test1_ext().execute_with(|| {
-		for i in 1..101 {
-            assert_ok!(XodeStaking::register_candidate(RuntimeOrigin::signed(i)));
-        }
-
-		// Max candidate is just 100, to match the validators
-        let candidate = 102;
-		assert_noop!(
-           XodeStaking::register_candidate(RuntimeOrigin::signed(candidate)),
-           Error::<Test>::ProposedCandidateMaxExceeded
-        );
-	});
-}
-
-#[test]
-fn test_pallet_xode_staking_register_candidate_invalid_account_should_error() {
-    test1_ext().execute_with(|| {
-        assert_noop!(
-            XodeStaking::register_candidate(RuntimeOrigin::none()),
-            sp_runtime::traits::BadOrigin
-        );
-    });
-}
-
-#[test]
-fn test_pallet_xode_staking_register_candidate_default_values() {
-    test1_ext().execute_with(|| {
-        let candidate = 1;
-        assert_ok!(XodeStaking::register_candidate(RuntimeOrigin::signed(candidate)));
-
-		let candidates = ProposedCandidates::<Test>::get();
-        let candidate_info = candidates
-            .iter()
-            .find(|c| c.who == candidate)
-            .expect("Candidate should be registered");
-
-        assert_eq!(candidate_info.who, candidate);
-        assert_eq!(candidate_info.bond, 0);
-        assert_eq!(candidate_info.total_stake, 0);
-        assert_eq!(candidate_info.last_updated, System::block_number());
-		assert_eq!(candidate_info.last_authored, System::block_number());
-        assert_eq!(candidate_info.leaving, false);
-        assert_eq!(candidate_info.offline, false);
-        assert_eq!(candidate_info.commission, 0);
-        assert_eq!(candidate_info.status, Status::Online);
-        assert_eq!(candidate_info.status_level, 0);
-    });
 }

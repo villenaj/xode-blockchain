@@ -27,7 +27,7 @@
 mod xcm_config;
 
 // Substrate and Polkadot dependencies
-use crate::{Timestamp, XodeStaking};
+use crate::{Timestamp, XodeStaking, Preimage};
 use cumulus_pallet_parachain_system::RelayNumberMonotonicallyIncreases;
 use cumulus_primitives_core::{AggregateMessageOrigin, ParaId};
 use frame_support::{
@@ -36,8 +36,8 @@ use frame_support::{
 	parameter_types,
 	traits::{
 		ConstBool, ConstU32, ConstU64, ConstU8, EitherOfDiverse, TransformOrigin, VariantCountOf,
-		AsEnsureOriginWithArg,Randomness,
-		fungible::{Balanced, Credit},
+		AsEnsureOriginWithArg,Randomness, LinearStoragePrice,
+		fungible::{Balanced, Credit, HoldConsideration},
 		OnUnbalanced,Imbalance,
 		tokens::imbalance::ResolveTo,
 	},
@@ -70,8 +70,8 @@ use super::{
 	AccountId, Aura, Balance, Balances, Block, BlockNumber, CollatorSelection, ConsensusHook, Hash,
 	MessageQueue, Nonce, PalletInfo, ParachainSystem, Runtime, RuntimeCall, RuntimeEvent,
 	RuntimeFreezeReason, RuntimeHoldReason, RuntimeOrigin, RuntimeTask, Session, SessionKeys,
-	System, WeightToFee, XcmpQueue, AVERAGE_ON_INITIALIZE_RATIO, EXISTENTIAL_DEPOSIT, MINUTES,
-	MAXIMUM_BLOCK_WEIGHT, MICRO_UNIT, NORMAL_DISPATCH_RATIO, SLOT_DURATION, VERSION,
+	System, WeightToFee, XcmpQueue, AVERAGE_ON_INITIALIZE_RATIO, EXISTENTIAL_DEPOSIT, DAYS, HOURS, MINUTES,
+	MAXIMUM_BLOCK_WEIGHT, UNIT, MICRO_UNIT, NORMAL_DISPATCH_RATIO, SLOT_DURATION, VERSION,
 	// Governance
 	TechnicalCommittee, TreasuryCouncil,
 };
@@ -90,7 +90,6 @@ impl frame_support::traits::Contains<RuntimeCall> for AllowBalancesCall {
 
 parameter_types! {
 	pub const Version: RuntimeVersion = VERSION;
-
 	// This part is copied from Substrate's `bin/node/runtime/src/lib.rs`.
 	//  The `RuntimeBlockLength` and `RuntimeBlockWeights` exist here because the
 	// `DeletionWeightLimit` and `DeletionQueueDepth` depend on those to parameterize
@@ -115,7 +114,8 @@ parameter_types! {
 		})
 		.avg_block_initialization(AVERAGE_ON_INITIALIZE_RATIO)
 		.build_or_panic();
-	pub const SS58Prefix: u16 = 42;
+	// pub const SS58Prefix: u16 = 42;
+	pub const SS58Prefix: u16 = 280;
 }
 
 /// The default types are being injected by [`derive_impl`](`frame_support::derive_impl`) from
@@ -348,8 +348,7 @@ impl cumulus_pallet_xcmp_queue::Config for Runtime {
 }
 
 parameter_types! {
-	//pub const Period: u32 = 6 * HOURS;
-	pub const Period: u32 = MINUTES;
+	pub const Period: u32 = 6 * HOURS;
 	pub const Offset: u32 = 0;
 }
 
@@ -379,8 +378,7 @@ impl pallet_aura::Config for Runtime {
 
 parameter_types! {
 	pub const PotId: PalletId = PalletId(*b"PotStake");
-	// pub const SessionLength: BlockNumber = 6 * HOURS;
-	pub const SessionLength: BlockNumber = 6 * MINUTES;
+	pub const SessionLength: BlockNumber = 6 * HOURS;
 	// StakingAdmin pluralistic body.
 	pub const StakingAdminBodyId: BodyId = BodyId::Defense;
 }
@@ -411,19 +409,14 @@ impl pallet_collator_selection::Config for Runtime {
 /// ======
 /// Assets
 /// ======
-pub const ASSETS_UNIT: Balance = 1_000_000_000_000;
-pub const ASSETS_MILLIUNIT: Balance = 1_000_000_000;
-pub const ASSETS_MICROUNIT: Balance = 1_000_000;
-pub const ASSETS_EXISTENTIAL_DEPOSIT: Balance = ASSETS_MILLIUNIT;
-
 pub const fn deposit(items: u32, bytes: u32) -> Balance {
-	(items as Balance * 20 * ASSETS_UNIT + (bytes as Balance) * 100 * ASSETS_MICROUNIT) / 100
+	(items as Balance * 20 * UNIT + (bytes as Balance) * 100 * MICRO_UNIT) / 100
 }
 
 parameter_types! {
-	pub const AssetDeposit: Balance = 10 * ASSETS_UNIT;
+	pub const AssetDeposit: Balance = 10_000 * UNIT;
 	pub const AssetAccountDeposit: Balance = deposit(1, 16);
-	pub const ApprovalDeposit: Balance = ASSETS_EXISTENTIAL_DEPOSIT;
+	pub const ApprovalDeposit: Balance = EXISTENTIAL_DEPOSIT;
 	pub const StringLimit: u32 = 50;
 	pub const MetadataDepositBase: Balance = deposit(1, 68);
 	pub const MetadataDepositPerByte: Balance = deposit(0, 1);
@@ -535,12 +528,8 @@ impl pallet_contracts::Config for Runtime {
 /// ========
 /// Treasury  
 /// ========
-pub const MILLICENTS: Balance = 1_000_000_000;
-pub const CENTS: Balance = 1_000 * MILLICENTS; 
-pub const DOLLARS: Balance = 100 * CENTS;
-
 parameter_types! {
-	pub const IndexDeposit: Balance = 1 * DOLLARS;
+	pub const IndexDeposit: Balance = 100 * UNIT;
 }
 
 impl pallet_indices::Config for Runtime {
@@ -565,13 +554,11 @@ impl pallet_asset_rate::Config for Runtime {
 
 parameter_types! {
     pub const TreasuryPalletId: PalletId = PalletId(*b"py/trsry");
-	// pub const SpendPeriod: BlockNumber = 1 * DAYS;
-	pub const SpendPeriod: BlockNumber = 1 * MINUTES; // Testing purpose only
+	pub const SpendPeriod: BlockNumber = 1 * DAYS;
 	pub const MaxApprovals: u32 = 100;
 	pub const MaxBalance: Balance = Balance::max_value();
 	pub XodeTreasuryAccount: AccountId = TreasuryPalletId::get().into_account_truncating();
-	// pub const SpendPayoutPeriod: BlockNumber = 30 * DAYS;
-	pub const SpendPayoutPeriod: BlockNumber = 30 * MINUTES; // Testing purpose only
+	pub const SpendPayoutPeriod: BlockNumber = 30 * DAYS;
 }
 
 impl pallet_treasury::Config for Runtime {
@@ -605,8 +592,7 @@ pub type EnsureTwoThirdsTechnicalCommittee = EnsureProportionMoreThan<AccountId,
 pub type EnsureAllTechnicalCommittee = EnsureProportionAtLeast<AccountId, TechnicalCommitteeInstance, 1, 1>; 
 
 parameter_types! {
-    // pub const TecnicalCommitteeMotionDuration: BlockNumber = 5 * DAYS;
-	pub const TecnicalCommitteeMotionDuration: BlockNumber = 1 * MINUTES; // For testing purpose only
+    pub const TecnicalCommitteeMotionDuration: BlockNumber = 5 * DAYS;
     pub const TecnicalCommitteeMaxProposals: u32 = 100;
     pub const TecnicalCommitteeMaxMembers: u32 = 100;
 	pub TechnicalMaxProposalWeight: Weight = Perbill::from_percent(50) * RuntimeBlockWeights::get().max_block;
@@ -651,8 +637,7 @@ pub type EnsureTwoThirdsTreasuryCouncil = EnsureProportionMoreThan<AccountId, Tr
 pub type EnsureAllTreasuryCouncil = EnsureProportionAtLeast<AccountId, TreasuryCouncilInstance, 1, 1>; 
 
 parameter_types! {
-    // pub const TreasuryCouncilMotionDuration: BlockNumber = 5 * DAYS;
-	pub const TreasuryCouncilMotionDuration: BlockNumber = 1 * MINUTES; // For testing purpose only
+    pub const TreasuryCouncilMotionDuration: BlockNumber = 5 * DAYS;
     pub const TreasuryCouncilMaxProposals: u32 = 100;
     pub const TreasuryCouncilMaxMembers: u32 = 100;
 	pub TreasuryMaxProposalWeight: Weight = Perbill::from_percent(50) * RuntimeBlockWeights::get().max_block;
@@ -688,27 +673,71 @@ impl pallet_membership::Config<TreasuryCouncilInstance> for Runtime {
 	type WeightInfo = pallet_membership::weights::SubstrateWeight<Runtime>;
 }
 
+parameter_types! {
+	pub const PreimageBaseDeposit: Balance = deposit(1, 0);
+	pub const PreimageByteDeposit: Balance = deposit(0, 1);
+	pub const PreimageHoldReason: RuntimeHoldReason = RuntimeHoldReason::Preimage(pallet_preimage::HoldReason::Preimage);
+}
+
+impl pallet_preimage::Config for Runtime {
+	type WeightInfo = pallet_preimage::weights::SubstrateWeight<Runtime>;
+	type RuntimeEvent = RuntimeEvent;
+	type Currency = Balances;
+	type ManagerOrigin = EnsureAllTechnicalCommittee;
+	type Consideration = HoldConsideration<
+		AccountId,
+		Balances,
+		PreimageHoldReason,
+		LinearStoragePrice<PreimageBaseDeposit, PreimageByteDeposit, Balance>,
+	>;
+}
+
+impl pallet_whitelist::Config for Runtime {
+	type WeightInfo = pallet_whitelist::weights::SubstrateWeight<Runtime>;
+	type RuntimeEvent = RuntimeEvent;
+	type RuntimeCall = RuntimeCall;
+	type WhitelistOrigin = EnsureTwoThirdsTechnicalCommittee;
+	type DispatchWhitelistedOrigin = EnsureTwoThirdsTechnicalCommittee;
+	type Preimages = Preimage;
+}
+
 /// ============
 /// Staking Xode
 /// ============
 parameter_types! {
 	pub const XodeStakingPalletId: PalletId = PalletId(*b"xd/stkng");
-	pub const Nodes: &'static [&'static str] = &[
-		"0x306721211d5404bd9da88e0204360a1a9ab8b87c66c1bc2fcdd37f3c2222cc20",  	// Charlie (Use for development)
-		"0x90b5ab205c6974c9ea841be688864633dc9ca8a357843eeacf2314649965fe22", 	// Dave (Use for development)
-		"0xe659a7a1628cdd93febc04a4e0646ea20e9f5f0ce097d9a05290d4a9e054df4e",   // Eve (Use for development)
-	];
 	pub const MaxStalingPeriod: BlockNumber = MINUTES * 2; 
+	pub const MaxProposedCandidates: u32 = 100;
+	pub const MaxProposedCandidateDelegates: u32 = 100;
+	pub const MinProposedCandidateBond: Balance = 10_000 * UNIT;
+	pub const Nodes: &'static [&'static str] = &[
+		"0xe4340f4ced8ec17fd3c81bd0db4915cd2fc2eec87ade3583055ed7b274eb481b",
+		"0x2e38a92f3f9ca93a9f80df3745abfa698607f89235e817f9b766a34e89c0d06d",
+		"0x2871b4504a9e2c302d5f591b0a510d5fd9134dd8dbd141c91f366d7510e61309",
+		"0x72bed6c1b43998ebdb4f1460760cfd1d89512713e444e4a29d7d8e1e1307ad77",
+		"0xa8adc02652304a63002471f12ebeba61c6ba74b156be32c7f8e373983ee5dd56",  
+		"0x5c39ae0088c2244cef982148e0e5acc9a6bc10d3d4d81cdb7b20240951bc4253", 
+		"0xe8e73bb34c9394c31da71d91dbb237a0878a6e4e8755d8957de6be7215c94742", 
+		"0x48402d5c5330f3c24b9d7fd86688b6dcaa0d60f301c0c3c40dc86a67f80eea0e", 
+		"0x98ea2acefa92fb943c27bb751e40c9a3f400c045e9266fac3d410936403ba636", 
+		"0x10c7110da5e94ce09d08dd800c5d930538fa1183d518fdf20ab78d68d056a705", 
+		"0xeac97de954eb1a9f8f5b400291e0e666930ed56e5bd29d003e6ad374ff7b411a", 
+		"0x38abe047d49830936591aece873c94c8a5cb59c5f66ee2c304b2a2a923b5a60d", 
+		"0x8cc71d95e8404c16fb63f152f89ed9349727019eb92019e0030fdbb562a0c414", 
+		"0x3419ef403858b6ec86207595bcad0994bd830c82f841978f831a97240ccb9827", 
+	];
 }
 
 impl pallet_xode_staking::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type WeightInfo = pallet_xode_staking::weights::SubstrateWeight<Runtime>;
-	type MaxProposedCandidates = ConstU32<100>;  
-	type MaxProposedCandidateDelegates = ConstU32<100>;  
+	type MaxProposedCandidates = MaxProposedCandidates;  
+	type MaxProposedCandidateDelegates = MaxProposedCandidateDelegates;  
 	type XaverNodes = Nodes;
 	type StakingCurrency = Balances;
 	type PalletId = XodeStakingPalletId;
 	type MaxStalingPeriod = MaxStalingPeriod;
+	type MinProposedCandidateBond = MinProposedCandidateBond;
 }
+
 

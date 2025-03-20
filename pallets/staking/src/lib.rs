@@ -33,6 +33,8 @@ mod mock;
 
 #[cfg(test)]
 mod tests;
+#[cfg(test)]
+mod tests_calls;
 
 pub mod weights;
 pub use weights::*;
@@ -94,6 +96,9 @@ pub mod pallet {
 
 		/// Use to monitor staling candidate
 		type MaxStalingPeriod: Get<BlockNumberFor<Self>>;
+
+		/// Minimum bond of proposed candidate
+		type MinProposedCandidateBond: Get<BalanceOf<Self>>;
 	}
 
 	#[pallet::pallet]
@@ -247,6 +252,7 @@ pub mod pallet {
 		ProposedCandidateStillAuthoring,
 		ProposedCandidateStillWaiting,
 		ProposedCandidateStillQueuing,
+		ProposedCandidateInsufficientBond,
 
 		WaitingCandidateAlreadyExist,
 		WaitingCandidateMaxExceeded,
@@ -345,6 +351,12 @@ pub mod pallet {
 
 			// Check if the candidate is registered.
 			ensure!(ProposedCandidates::<T>::get().iter().any(|c| c.who == who), Error::<T>::ProposedCandidateNotFound); 
+
+			// Minimum bond checked
+			ensure!(
+                new_bond > T::MinProposedCandidateBond::get(),
+                Error::<T>::ProposedCandidateInsufficientBond
+            );
 
 			// When we set the new bond to zero we assume that the candidate is leaving
 			if new_bond == Zero::zero() {

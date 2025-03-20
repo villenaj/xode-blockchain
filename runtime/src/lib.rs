@@ -354,9 +354,13 @@ mod runtime {
 	pub type TreasuryCouncil = pallet_collective::Pallet<Runtime, Instance2>;
 	#[runtime::pallet_index(48)]
 	pub type TreasuryCouncilMembership = pallet_membership::Pallet<Runtime, Instance2>;
+	#[runtime::pallet_index(49)]
+    pub type Preimage = pallet_preimage;
+	#[runtime::pallet_index(50)]
+    pub type Whitelist = pallet_whitelist;
 
 	// Pallet (Xode Blockchain)
-	#[runtime::pallet_index(50)]
+	#[runtime::pallet_index(60)]
 	pub type XodeStaking = pallet_xode_staking;
 	
 }
