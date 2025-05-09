@@ -362,6 +362,12 @@ mod runtime {
 	// Pallet (Xode Blockchain)
 	#[runtime::pallet_index(60)]
 	pub type XodeStaking = pallet_xode_staking;
+
+	// Utility
+	#[runtime::pallet_index(70)]	
+	pub type Utility = pallet_utility;
+	#[runtime::pallet_index(71)]	
+	pub type RootTesting = pallet_root_testing;
 	
 }
 
