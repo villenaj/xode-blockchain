@@ -1,6 +1,7 @@
 use crate::{
 	AccountId, AllPalletsWithSystem, Balances, ParachainInfo, ParachainSystem, PolkadotXcm,
 	Runtime, RuntimeCall, RuntimeEvent, RuntimeOrigin, WeightToFee, XcmpQueue,
+	Assets, Balance
 };
 use frame_support::{
 	parameter_types,
@@ -19,8 +20,9 @@ use xcm_builder::{
 	RelayChainAsNative, SiblingParachainAsNative, SiblingParachainConvertsVia,
 	SignedAccountId32AsNative, SignedToAccountId32, SovereignSignedViaLocation, TakeWeightCredit,
 	TrailingSetTopicAsId, UsingComponents, WithComputedOrigin, WithUniqueTopic,
+	FungiblesAdapter, LocalMint
 };
-use xcm_executor::XcmExecutor;
+use xcm_executor::{traits::MatchesFungibles, XcmExecutor};
 
 parameter_types! {
 	pub const RelayLocation: Location = Location::parent();
@@ -29,6 +31,7 @@ parameter_types! {
 	// For the real deployment, it is recommended to set `RelayNetwork` according to the relay chain
 	// and prepend `UniversalLocation` with `GlobalConsensus(RelayNetwork::get())`.
 	pub UniversalLocation: InteriorLocation = Parachain(ParachainInfo::parachain_id().into()).into();
+	pub CheckingAccount: AccountId = PolkadotXcm::check_account();
 }
 
 /// Type for specifying how a `Location` can be converted into an `AccountId`. This is used
@@ -43,18 +46,48 @@ pub type LocationToAccountId = (
 	AccountId32Aliases<RelayNetwork, AccountId>,
 );
 
-/// Means for transacting assets on this chain.
-pub type LocalAssetTransactor = FungibleAdapter<
-	// Use this currency:
-	Balances,
-	// Use this currency when it is a fungible asset matching the given location or name:
-	IsConcrete<RelayLocation>,
-	// Do a simple punn to convert an AccountId32 Location into a native chain account ID:
+// /// Means for transacting assets on this chain.
+// pub type LocalAssetTransactor = FungibleAdapter<
+// 	// Use this currency:
+// 	Balances,
+// 	// Use this currency when it is a fungible asset matching the given location or name:
+// 	IsConcrete<RelayLocation>,
+// 	// Do a simple punn to convert an AccountId32 Location into a native chain account ID:
+// 	LocationToAccountId,
+// 	// Our chain's account ID type (we can't get away without mentioning it explicitly):
+// 	AccountId,
+// 	// We don't track any teleports.
+// 	(),
+// >;
+
+pub struct AssetMatcher;
+impl MatchesFungibles<u32, Balance> for AssetMatcher {
+    fn matches_fungibles(asset: &Asset) -> Result<(u32, Balance), xcm_executor::traits::Error> {
+		if let Asset {
+            id: AssetId(Location {
+                parents: 1,
+                interior: Junctions::X2(junctions),
+            }),
+            fun: Fungibility::Fungible(amount),
+        } = asset
+        {
+            let juncs: &[Junction; 2] = junctions.as_ref();
+            if juncs[0] == Junction::Parachain(1000) && juncs[1] == Junction::GeneralIndex(1984) {
+                return Ok((1984, *amount));
+            }
+        }
+
+        Err(xcm_executor::traits::Error::AssetNotHandled)
+    }
+}
+
+pub type AssetTransactor = FungiblesAdapter<
+	Assets,
+	AssetMatcher,
 	LocationToAccountId,
-	// Our chain's account ID type (we can't get away without mentioning it explicitly):
 	AccountId,
-	// We don't track any teleports.
-	(),
+	LocalMint<parachains_common::impls::NonZeroIssuance<AccountId, Assets>>,
+	CheckingAccount,
 >;
 
 /// This is the type we use to convert an (incoming) XCM origin into a local `Origin` instance,
@@ -115,7 +148,7 @@ impl xcm_executor::Config for XcmConfig {
 	type RuntimeCall = RuntimeCall;
 	type XcmSender = XcmRouter;
 	// How to withdraw and deposit an asset.
-	type AssetTransactor = LocalAssetTransactor;
+	type AssetTransactor = AssetTransactor;
 	type OriginConverter = XcmOriginToTransactDispatchOrigin;
 	type IsReserve = NativeAsset;
 	type IsTeleporter = (); // Teleporting is disabled.
