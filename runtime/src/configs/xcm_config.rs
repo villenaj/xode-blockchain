@@ -1,6 +1,7 @@
 use crate::{
 	AccountId, AllPalletsWithSystem, Balances, ParachainInfo, ParachainSystem, PolkadotXcm,
 	Runtime, RuntimeCall, RuntimeEvent, RuntimeOrigin, WeightToFee, XcmpQueue,
+	Assets, Balance
 };
 use frame_support::{
 	parameter_types,
@@ -14,13 +15,16 @@ use polkadot_runtime_common::impls::ToAuthor;
 use xcm::latest::prelude::*;
 use xcm_builder::{
 	AccountId32Aliases, AllowExplicitUnpaidExecutionFrom, AllowTopLevelPaidExecutionFrom,
-	DenyReserveTransferToRelayChain, DenyThenTry, EnsureXcmOrigin, FixedWeightBounds,
-	FrameTransactionalProcessor, FungibleAdapter, IsConcrete, NativeAsset, ParentIsPreset,
+	DenyReserveTransferToRelayChain, DenyThenTry, EnsureXcmOrigin, FixedWeightBounds, // FungibleAdapter, IsConcrete,
+	FrameTransactionalProcessor, NativeAsset, ParentIsPreset,
 	RelayChainAsNative, SiblingParachainAsNative, SiblingParachainConvertsVia,
 	SignedAccountId32AsNative, SignedToAccountId32, SovereignSignedViaLocation, TakeWeightCredit,
 	TrailingSetTopicAsId, UsingComponents, WithComputedOrigin, WithUniqueTopic,
+	FungiblesAdapter, LocalMint
 };
-use xcm_executor::XcmExecutor;
+use xcm_executor::{traits::{MatchesFungibles, Error as MatchError}, XcmExecutor};
+use sp_runtime::print;
+use alloc::format;
 
 parameter_types! {
 	pub const RelayLocation: Location = Location::parent();
@@ -29,6 +33,13 @@ parameter_types! {
 	// For the real deployment, it is recommended to set `RelayNetwork` according to the relay chain
 	// and prepend `UniversalLocation` with `GlobalConsensus(RelayNetwork::get())`.
 	pub UniversalLocation: InteriorLocation = Parachain(ParachainInfo::parachain_id().into()).into();
+
+	/// The account used to perform checks or hold assets during XCM execution,
+	/// such as temporary crediting/debiting when receiving or sending assets.
+	/// 
+	/// This is typically a system-level account provided by the XCM pallet (PolkadotXcm),
+	/// used internally to avoid uncontrolled account creation.
+	pub CheckingAccount: AccountId = PolkadotXcm::check_account();
 }
 
 /// Type for specifying how a `Location` can be converted into an `AccountId`. This is used
@@ -43,36 +54,108 @@ pub type LocationToAccountId = (
 	AccountId32Aliases<RelayNetwork, AccountId>,
 );
 
-/// Means for transacting assets on this chain.
-pub type LocalAssetTransactor = FungibleAdapter<
-	// Use this currency:
-	Balances,
-	// Use this currency when it is a fungible asset matching the given location or name:
-	IsConcrete<RelayLocation>,
-	// Do a simple punn to convert an AccountId32 Location into a native chain account ID:
-	LocationToAccountId,
-	// Our chain's account ID type (we can't get away without mentioning it explicitly):
-	AccountId,
-	// We don't track any teleports.
-	(),
+/// Means for transacting Relay Chain native assets (like DOT/KSM) on this chain.
+///
+/// This transactor handles assets with `parents: 1, interior: Here`, and uses
+/// the local `Balances` pallet to mint/burn them. However, we commented it out
+/// because we're not supporting Relay Chain native tokens in our XCM setup.
+///
+/// Instead, we are handling asset transfers via a custom `AssetMatcher` using
+/// `FungiblesAdapter`, which supports parachain-originated or asset hub assets.
+///
+/// Uncomment this if you plan to support direct Relay Chain tokens in the future.
+// pub type LocalAssetTransactor = FungibleAdapter<
+// 	// Use this currency:
+// 	Balances,
+// 	// Use this currency when it is a fungible asset matching the given location or name:
+// 	IsConcrete<RelayLocation>,
+// 	// Do a simple punn to convert an AccountId32 Location into a native chain account ID:
+// 	LocationToAccountId,
+// 	// Our chain's account ID type (we can't get away without mentioning it explicitly):
+// 	AccountId,
+// 	// We don't track any teleports.
+// 	(),
+// >;
+
+/// A custom matcher that converts an incoming `Asset` from an XCM message into a local asset ID (`u32`) and amount (`Balance`).
+/// 
+/// This matcher is used by the XCM asset transactor to interpret multi-location `Asset` objects 
+/// and translate them to known local assets that can be used within the chain’s runtime.
+pub struct AssetMatcher;
+
+impl MatchesFungibles<u32, Balance> for AssetMatcher {
+    fn matches_fungibles(asset: &Asset) -> Result<(u32, Balance), xcm_executor::traits::Error> {
+		match asset {
+            Asset {
+                id: AssetId(Location {
+                    parents: 1,
+                    interior: Junctions::Here,
+                }),
+                fun: Fungibility::Fungible(amount),
+            } => Ok((123_456_789, *amount)),
+
+            Asset {
+                id: AssetId(Location {
+                    parents: 1,
+                    interior: Junctions::X3(junctions),
+                }),
+                fun: Fungibility::Fungible(amount),
+            } => {
+				match junctions.as_ref() {
+					[Junction::Parachain(1000), Junction::PalletInstance(50), Junction::GeneralIndex(asset_id)] |
+					[Junction::Parachain(4607), Junction::PalletInstance(40), Junction::GeneralIndex(asset_id)] => {
+						Ok((*asset_id as u32, *amount))
+					},
+					_ => Err(MatchError::AssetNotHandled),
+				}
+			},
+
+            _ => Err(MatchError::AssetNotHandled),
+        }
+    }
+}
+
+/// The `AssetTransactor` defines how the runtime handles fungible assets received or sent via XCM.
+///
+/// It interprets incoming `Asset` locations, resolves them to local asset IDs and balances,
+/// and executes operations such as minting, burning, or transferring tokens.
+///
+/// This implementation uses a custom `AssetMatcher` and supports parachain or AssetHub assets,
+/// but not native Relay Chain tokens (handled by a separate transactor if needed).
+pub type AssetTransactor = FungiblesAdapter<
+    // The asset handler used to inspect, mint, and burn tokens (e.g., orml-tokens or pallet-assets).
+    Assets,
+    // Custom matcher for converting incoming `Asset` to local (asset ID, balance) pairs.
+    // This supports Relay Chain, sibling parachains, or AssetHub assets.
+    AssetMatcher,
+    // Resolves `MultiLocation` origin accounts into native `AccountId`s.
+    LocationToAccountId,
+    // Native account identifier type used by the runtime.
+    AccountId,
+    // Handles minting tokens when assets arrive via XCM.
+    // NonZeroIssuance ensures no minting of zero-valued assets.
+    LocalMint<parachains_common::impls::NonZeroIssuance<AccountId, Assets>>,
+    // The system account used for internal checks during XCM asset handling.
+    // Prevents unwanted account creation unless explicitly allowed by policies.
+    CheckingAccount
 >;
 
-/// This is the type we use to convert an (incoming) XCM origin into a local `Origin` instance,
-/// ready for dispatching a transaction with Xcm's `Transact`. There is an `OriginKind` which can
-/// biases the kind of local `Origin` it will become.
+/// This is the type we use to convert an (incoming) XCM origin into a local Origin instance,
+/// ready for dispatching a transaction with Xcm's Transact. There is an OriginKind which can
+/// biases the kind of local Origin it will become.
 pub type XcmOriginToTransactDispatchOrigin = (
-	// Sovereign account converter; this attempts to derive an `AccountId` from the origin location
-	// using `LocationToAccountId` and then turn that into the usual `Signed` origin. Useful for
+	// Sovereign account converter; this attempts to derive an AccountId from the origin location
+	// using LocationToAccountId and then turn that into the usual Signed origin. Useful for
 	// foreign chains who want to have a local sovereign account on this chain which they control.
 	SovereignSignedViaLocation<LocationToAccountId, RuntimeOrigin>,
-	// Native converter for Relay-chain (Parent) location; will convert to a `Relay` origin when
+	// Native converter for Relay-chain (Parent) location; will convert to a Relay origin when
 	// recognized.
 	RelayChainAsNative<RelayChainOrigin, RuntimeOrigin>,
-	// Native converter for sibling Parachains; will convert to a `SiblingPara` origin when
+	// Native converter for sibling Parachains; will convert to a SiblingPara origin when
 	// recognized.
 	SiblingParachainAsNative<cumulus_pallet_xcm::Origin, RuntimeOrigin>,
-	// Native signed account converter; this just converts an `AccountId32` origin into a normal
-	// `RuntimeOrigin::Signed` origin of the same 32-byte value.
+	// Native signed account converter; this just converts an AccountId32 origin into a normal
+	// RuntimeOrigin::Signed origin of the same 32-byte value.
 	SignedAccountId32AsNative<RelayNetwork, RuntimeOrigin>,
 	// Xcm origins can be represented natively under the Xcm pallet's Xcm origin.
 	XcmPassthrough<RuntimeOrigin>,
@@ -115,7 +198,8 @@ impl xcm_executor::Config for XcmConfig {
 	type RuntimeCall = RuntimeCall;
 	type XcmSender = XcmRouter;
 	// How to withdraw and deposit an asset.
-	type AssetTransactor = LocalAssetTransactor;
+	// type AssetTransactor = LocalAssetTransactor;
+	type AssetTransactor = AssetTransactor;
 	type OriginConverter = XcmOriginToTransactDispatchOrigin;
 	type IsReserve = NativeAsset;
 	type IsTeleporter = (); // Teleporting is disabled.
@@ -167,7 +251,8 @@ impl pallet_xcm::Config for Runtime {
 	// Needs to be `Everything` for local testing.
 	type XcmExecutor = XcmExecutor<XcmConfig>;
 	type XcmTeleportFilter = Everything;
-	type XcmReserveTransferFilter = Nothing;
+	// type XcmReserveTransferFilter = Nothing;
+	type XcmReserveTransferFilter = Everything;
 	type Weigher = FixedWeightBounds<UnitWeightCost, RuntimeCall, MaxInstructions>;
 	type UniversalLocation = UniversalLocation;
 	type RuntimeOrigin = RuntimeOrigin;
