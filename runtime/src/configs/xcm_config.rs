@@ -23,8 +23,8 @@ use xcm_builder::{
 	FungiblesAdapter, LocalMint
 };
 use xcm_executor::{traits::{MatchesFungibles, Error as MatchError}, XcmExecutor};
-use sp_runtime::print;
-use alloc::format;
+// use sp_runtime::print;
+// use alloc::format;
 
 parameter_types! {
 	pub const RelayLocation: Location = Location::parent();
