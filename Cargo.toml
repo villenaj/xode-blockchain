@@ -122,3 +122,6 @@ pallet-collective = { version = "38.0.0", default-features = false }
 pallet-membership = { version = "38.0.0", default-features = false }
 pallet-preimage = { version = "38.0.0", default-features = false }
 pallet-whitelist = { version = "37.0.0", default-features = false }
+# Utility
+pallet-root-testing = { version = "14.0.0", default-features = false }
+pallet-utility = { version = "38.0.0", default-features = false }
