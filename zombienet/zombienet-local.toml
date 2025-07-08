@@ -31,7 +31,7 @@ cumulus_based = true
   name = "assethub-collator"
   command = "./bin/polkadot-parachain"
   args = ["-lxcmp=trace", "-lxcm=trace", "-lruntime=debug"]
-  ws_port = 9999
+  ws_port = 9988
 
 [[parachains]]
 id = 4607
