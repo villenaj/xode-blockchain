@@ -63,6 +63,7 @@ pub struct AssetMatcher;
 impl MatchesFungibles<u32, Balance> for AssetMatcher {
     fn matches_fungibles(asset: &Asset) -> Result<(u32, Balance), xcm_executor::traits::Error> {
 		match asset {
+			// XCM Inbound - Relay Chain native asset (e.g., KSM)
             Asset {
                 id: AssetId(Location {
                     parents: 1,
@@ -71,6 +72,23 @@ impl MatchesFungibles<u32, Balance> for AssetMatcher {
                 fun: Fungibility::Fungible(amount),
             } => Ok((100_000_000, *amount)),
 
+			// XCM Inbound - Sibling parachain asset (e.g., AssetHub)
+            Asset {
+                id: AssetId(Location {
+                    parents: 1,
+                    interior: Junctions::X3(junctions),
+                }),
+                fun: Fungibility::Fungible(amount),
+            } => {
+				match junctions.as_ref() {
+					[Junction::Parachain(1000), Junction::PalletInstance(50), Junction::GeneralIndex(asset_id)] => {
+						Ok((*asset_id as u32, *amount))
+					},
+					_ => Err(MatchError::AssetNotHandled),
+				}
+			},
+
+			// XCM Outbound - Local parachain asset (e.g., Xode)
             Asset {
                 id: AssetId(Location {
                     parents: 0,
@@ -222,7 +240,8 @@ impl pallet_xcm::Config for Runtime {
 	type SendXcmOrigin = EnsureXcmOrigin<RuntimeOrigin, LocalOriginToLocation>;
 	type XcmRouter = XcmRouter;
 	type ExecuteXcmOrigin = EnsureXcmOrigin<RuntimeOrigin, LocalOriginToLocation>;
-	type XcmExecuteFilter = Nothing;
+	// type XcmExecuteFilter = Nothing;
+	type XcmExecuteFilter = Everything;
 	// ^ Disable dispatchable execute on the XCM pallet.
 	// Needs to be `Everything` for local testing.
 	type XcmExecutor = XcmExecutor<XcmConfig>;

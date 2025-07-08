@@ -1,5 +1,6 @@
 [settings]
 timeout = 2000
+node_verifier = "None"
 
 [relaychain]
 default_command = "./bin/polkadot"
@@ -22,18 +23,19 @@ chain = "rococo-local"
   name = "dave"
   validator = true
 
-  [[relaychain.nodes]]
-  name = "eve"
-  validator = true
+[[parachains]]
+id = 1000
+cumulus_based = true
 
-  [[relaychain.nodes]]
-  name = "ferdie"
-  validator = true
+  [[parachains.collators]]
+  name = "assethub-collator"
+  command = "./bin/polkadot-parachain"
+  args = ["-lxcmp=trace", "-lxcm=trace", "-lruntime=debug"]
+  ws_port = 9988
 
 [[parachains]]
 id = 4607
 cumulus_based = true
-add_to_genesis = true
 
   [[parachains.collators]]
   name = "xode-collator"
