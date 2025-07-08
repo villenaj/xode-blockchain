@@ -54,29 +54,6 @@ pub type LocationToAccountId = (
 	AccountId32Aliases<RelayNetwork, AccountId>,
 );
 
-/// Means for transacting Relay Chain native assets (like DOT/KSM) on this chain.
-///
-/// This transactor handles assets with `parents: 1, interior: Here`, and uses
-/// the local `Balances` pallet to mint/burn them. However, we commented it out
-/// because we're not supporting Relay Chain native tokens in our XCM setup.
-///
-/// Instead, we are handling asset transfers via a custom `AssetMatcher` using
-/// `FungiblesAdapter`, which supports parachain-originated or asset hub assets.
-///
-/// Uncomment this if you plan to support direct Relay Chain tokens in the future.
-// pub type LocalAssetTransactor = FungibleAdapter<
-// 	// Use this currency:
-// 	Balances,
-// 	// Use this currency when it is a fungible asset matching the given location or name:
-// 	IsConcrete<RelayLocation>,
-// 	// Do a simple punn to convert an AccountId32 Location into a native chain account ID:
-// 	LocationToAccountId,
-// 	// Our chain's account ID type (we can't get away without mentioning it explicitly):
-// 	AccountId,
-// 	// We don't track any teleports.
-// 	(),
-// >;
-
 /// A custom matcher that converts an incoming `Asset` from an XCM message into a local asset ID (`u32`) and amount (`Balance`).
 /// 
 /// This matcher is used by the XCM asset transactor to interpret multi-location `Asset` objects 
@@ -86,14 +63,16 @@ pub struct AssetMatcher;
 impl MatchesFungibles<u32, Balance> for AssetMatcher {
     fn matches_fungibles(asset: &Asset) -> Result<(u32, Balance), xcm_executor::traits::Error> {
 		match asset {
+			// XCM Inbound - Relay Chain native asset (e.g., KSM)
             Asset {
                 id: AssetId(Location {
                     parents: 1,
                     interior: Junctions::Here,
                 }),
                 fun: Fungibility::Fungible(amount),
-            } => Ok((123_456_789, *amount)),
+            } => Ok((100_000_000, *amount)),
 
+			// XCM Inbound - Sibling parachain asset (e.g., AssetHub)
             Asset {
                 id: AssetId(Location {
                     parents: 1,
@@ -102,8 +81,23 @@ impl MatchesFungibles<u32, Balance> for AssetMatcher {
                 fun: Fungibility::Fungible(amount),
             } => {
 				match junctions.as_ref() {
-					[Junction::Parachain(1000), Junction::PalletInstance(50), Junction::GeneralIndex(asset_id)] |
-					[Junction::Parachain(4607), Junction::PalletInstance(40), Junction::GeneralIndex(asset_id)] => {
+					[Junction::Parachain(1000), Junction::PalletInstance(50), Junction::GeneralIndex(asset_id)] => {
+						Ok((*asset_id as u32, *amount))
+					},
+					_ => Err(MatchError::AssetNotHandled),
+				}
+			},
+
+			// XCM Outbound - Local parachain asset (e.g., Xode)
+            Asset {
+                id: AssetId(Location {
+                    parents: 0,
+                    interior: Junctions::X2(junctions),
+                }),
+                fun: Fungibility::Fungible(amount),
+            } => {
+				match junctions.as_ref() {
+					[Junction::PalletInstance(50), Junction::GeneralIndex(asset_id)] => {
 						Ok((*asset_id as u32, *amount))
 					},
 					_ => Err(MatchError::AssetNotHandled),
@@ -246,7 +240,8 @@ impl pallet_xcm::Config for Runtime {
 	type SendXcmOrigin = EnsureXcmOrigin<RuntimeOrigin, LocalOriginToLocation>;
 	type XcmRouter = XcmRouter;
 	type ExecuteXcmOrigin = EnsureXcmOrigin<RuntimeOrigin, LocalOriginToLocation>;
-	type XcmExecuteFilter = Nothing;
+	// type XcmExecuteFilter = Nothing;
+	type XcmExecuteFilter = Everything;
 	// ^ Disable dispatchable execute on the XCM pallet.
 	// Needs to be `Everything` for local testing.
 	type XcmExecutor = XcmExecutor<XcmConfig>;
