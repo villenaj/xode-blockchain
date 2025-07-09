@@ -14,12 +14,12 @@
 > Xode is a blockchain platform with its own on-chain governance that aims to bring game development, decentralized finance, real-word assets and businesses to Web3 and Polkadot.
 <br>
 
-
+<a href="https://xterium.app/"><img style="width: 10%; height: 10%" src="https://drive.google.com/uc?export=view&id=1_6AzbP_ha5ZB8L_6VBZs8q5zUdEGpESP"></img></a>
 <a href="https://novawallet.io/"><img style="width: 10%; height: 10%" src="https://drive.google.com/uc?export=view&id=1pJWJ6_n-XYmZreetrgSRnALkmt0BBpYe"></img></a>
 <a href="https://talisman.xyz/"><img style="width: 10%; height: 10%" src="https://drive.google.com/uc?export=view&id=1EB4cD2qo9WhkWfFIvzO9YbA8KA5HLVHV"></img></a>
 <a href="https://polkadot.js.org/extension/"><img style="width: 10%; height: 10%" src="https://drive.google.com/uc?export=view&id=1WpQuHdVVu1IyYtzbDirNWun4WUgm-_5c"></img></a>
 
-> Web3 wallets that support Xode Blockchain include [Nova Wallet](https://novawallet.io/), [Talisman](https://talisman.xyz/), and [PolkadotJS](https://polkadot.js.org/extension/), providing seamless integration and accessibility for users of the ecosystem.
+> Web3 wallets that support Xode Blockchain include [Xterium](https://xterium.app/), [Nova Wallet](https://novawallet.io/), [Talisman](https://talisman.xyz/), and [PolkadotJS](https://polkadot.js.org/extension/), providing seamless integration and accessibility for users of the ecosystem.
 <br>
 
 </div>
