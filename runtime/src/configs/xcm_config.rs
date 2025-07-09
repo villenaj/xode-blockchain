@@ -5,7 +5,7 @@ use crate::{
 };
 use frame_support::{
 	parameter_types,
-	traits::{ConstU32, Contains, Everything, Nothing},
+	traits::{ConstU32, Contains, Everything, Nothing, ContainsPair},
 	weights::Weight,
 };
 use frame_system::EnsureRoot;
@@ -15,8 +15,8 @@ use polkadot_runtime_common::impls::ToAuthor;
 use xcm::latest::prelude::*;
 use xcm_builder::{
 	AccountId32Aliases, AllowExplicitUnpaidExecutionFrom, AllowTopLevelPaidExecutionFrom,
-	DenyReserveTransferToRelayChain, DenyThenTry, EnsureXcmOrigin, FixedWeightBounds, // FungibleAdapter, IsConcrete,
-	FrameTransactionalProcessor, NativeAsset, ParentIsPreset,
+	DenyReserveTransferToRelayChain, DenyThenTry, EnsureXcmOrigin, FixedWeightBounds, // FungibleAdapter, IsConcrete, NativeAsset
+	FrameTransactionalProcessor, ParentIsPreset,
 	RelayChainAsNative, SiblingParachainAsNative, SiblingParachainConvertsVia,
 	SignedAccountId32AsNative, SignedToAccountId32, SovereignSignedViaLocation, TakeWeightCredit,
 	TrailingSetTopicAsId, UsingComponents, WithComputedOrigin, WithUniqueTopic,
@@ -134,6 +134,73 @@ pub type AssetTransactor = FungiblesAdapter<
     CheckingAccount
 >;
 
+/// This is a custom filter that matches assets that are considered "trusted reserve assets".
+/// It is used to determine if an asset can be treated as a reserve asset for XCM operations.
+pub struct TrustedReserveAssets;
+
+impl ContainsPair<Asset, Location> for TrustedReserveAssets {
+	fn contains(asset: &Asset, origin: &Location) -> bool {
+		log::trace!(target: "xcm::contains", "Trusted asset: {:?}, origin: {:?}", asset, origin);
+
+		match &origin {
+			// XCM Inbound - Match the relay chain (parent) as a trusted reserve asset.
+			Location { 
+				parents: 1, 
+				interior: Junctions::Here 
+			} => {
+				return &asset.id == &AssetId(Location {
+					parents: 1,
+					interior: Junctions::Here,
+				});
+			},
+
+			// XCM Inbound - Match a sibling parachain (Assethub - 1000) as a trusted reserve asset.
+			Location { 
+				parents: 1, 
+				interior: Junctions::X1(parachain_junction)
+			} => {
+				match parachain_junction.as_ref() {
+					[Junction::Parachain(1000)] => {
+						if let AssetId(Location { 
+							parents: 1, 
+							interior: Junctions::X3(asset_junctions) 
+						}) = &asset.id {
+							return matches!(
+								asset_junctions.as_ref(),
+								[Junction::Parachain(1000), Junction::PalletInstance(50), Junction::GeneralIndex(_)]
+							);
+						} else {
+							return false;
+						}
+					},
+					_ => return false,
+				}
+			},
+
+			// XCM Outbound - Match the local parachain (Xode) as a trusted reserve asset.
+			Location { 
+				parents: 0, 
+				interior: Junctions::Here 
+			} => {
+				if let AssetId(Location { 
+					parents: 0, 
+					interior: Junctions::X2(asset_junctions) 
+				}) = &asset.id {
+					return matches!(
+						asset_junctions.as_ref(),
+						[Junction::PalletInstance(50), Junction::GeneralIndex(_)]
+					);
+				} else {
+					return false;
+				}
+			},
+
+			// Any other origin or asset combination is not considered trusted and will return `false`.
+			_ => false,
+		}
+	}
+}
+
 /// This is the type we use to convert an (incoming) XCM origin into a local Origin instance,
 /// ready for dispatching a transaction with Xcm's Transact. There is an OriginKind which can
 /// biases the kind of local Origin it will become.
@@ -195,7 +262,8 @@ impl xcm_executor::Config for XcmConfig {
 	// type AssetTransactor = LocalAssetTransactor;
 	type AssetTransactor = AssetTransactor;
 	type OriginConverter = XcmOriginToTransactDispatchOrigin;
-	type IsReserve = NativeAsset;
+	// type IsReserve = NativeAsset;
+	type IsReserve = TrustedReserveAssets;
 	type IsTeleporter = (); // Teleporting is disabled.
 	type UniversalLocation = UniversalLocation;
 	type Barrier = Barrier;
