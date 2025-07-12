@@ -20,11 +20,9 @@ use xcm_builder::{
 	RelayChainAsNative, SiblingParachainAsNative, SiblingParachainConvertsVia,
 	SignedAccountId32AsNative, SignedToAccountId32, SovereignSignedViaLocation, TakeWeightCredit,
 	TrailingSetTopicAsId, UsingComponents, WithComputedOrigin, WithUniqueTopic,
-	FungiblesAdapter, LocalMint
+	FungiblesAdapter, LocalMint, AllowSubscriptionsFrom
 };
 use xcm_executor::{traits::{MatchesFungibles, Error as MatchError}, XcmExecutor};
-// use sp_runtime::print;
-// use alloc::format;
 
 parameter_types! {
 	pub const RelayLocation: Location = Location::parent();
@@ -62,6 +60,8 @@ pub struct AssetMatcher;
 
 impl MatchesFungibles<u32, Balance> for AssetMatcher {
     fn matches_fungibles(asset: &Asset) -> Result<(u32, Balance), xcm_executor::traits::Error> {
+		log::trace!(target: "xcm::matches_fungibles", "AssetMatcher: Asset: {:?}", asset);
+
 		match asset {
 			// XCM Inbound - Relay Chain native asset (e.g., KSM)
             Asset {
@@ -134,16 +134,16 @@ pub type AssetTransactor = FungiblesAdapter<
     CheckingAccount
 >;
 
-/// This is a custom filter that matches assets that are considered "trusted reserve assets".
-/// It is used to determine if an asset can be treated as a reserve asset for XCM operations.
+/// This filter determines whether a given asset and its origin location are considered "trusted reserve assets"
+/// for XCM reserve operations. Only assets and origins that match the trusted patterns will be treated as reserves.
 pub struct TrustedReserveAssets;
 
 impl ContainsPair<Asset, Location> for TrustedReserveAssets {
 	fn contains(asset: &Asset, origin: &Location) -> bool {
-		log::trace!(target: "xcm::contains", "Trusted asset: {:?}, origin: {:?}", asset, origin);
+		log::trace!(target: "xcm::contains", "TrustedReserveAssets: Asset: {:?}, origin: {:?}", asset, origin);
 
 		match &origin {
-			// XCM Inbound - Match the relay chain (parent) as a trusted reserve asset.
+			// Match the relay chain (parent) as a trusted reserve asset.
 			Location { 
 				parents: 1, 
 				interior: Junctions::Here 
@@ -154,7 +154,7 @@ impl ContainsPair<Asset, Location> for TrustedReserveAssets {
 				});
 			},
 
-			// XCM Inbound - Match a sibling parachain (Assethub - 1000) as a trusted reserve asset.
+			// Match a sibling parachain (e.g., AssetHub with ParaId 1000) as a trusted reserve asset.
 			Location { 
 				parents: 1, 
 				interior: Junctions::X1(parachain_junction)
@@ -177,25 +177,7 @@ impl ContainsPair<Asset, Location> for TrustedReserveAssets {
 				}
 			},
 
-			// XCM Outbound - Match the local parachain (Xode) as a trusted reserve asset.
-			Location { 
-				parents: 0, 
-				interior: Junctions::Here 
-			} => {
-				if let AssetId(Location { 
-					parents: 0, 
-					interior: Junctions::X2(asset_junctions) 
-				}) = &asset.id {
-					return matches!(
-						asset_junctions.as_ref(),
-						[Junction::PalletInstance(50), Junction::GeneralIndex(_)]
-					);
-				} else {
-					return false;
-				}
-			},
-
-			// Any other origin or asset combination is not considered trusted and will return `false`.
+			// Any other origin or asset combination is not considered a trusted reserve asset and will return `false`.
 			_ => false,
 		}
 	}
@@ -229,11 +211,28 @@ parameter_types! {
 	pub const MaxAssetsIntoHolding: u32 = 64;
 }
 
-pub struct ParentOrParentsExecutivePlurality;
-impl Contains<Location> for ParentOrParentsExecutivePlurality {
-	fn contains(location: &Location) -> bool {
-		matches!(location.unpack(), (1, []) | (1, [Plurality { id: BodyId::Executive, .. }]))
-	}
+/// This struct defines a filter that matches the parent (relay chain) or its executive plurality.
+/// It is used to allow XCM operations from the parent chain or its executive body.
+pub struct ParentOrSiblings;
+
+impl Contains<Location> for ParentOrSiblings {
+    fn contains(location: &Location) -> bool {
+		log::trace!(target: "xcm::contains", "ParentOrSiblings: Location: {:?}", location);
+
+		match location.unpack() {
+			// Parent (relay chain)
+			(1, []) => true,
+
+			// Parent's executive plurality
+			(1, [Junction::Plurality { id, .. }]) if *id == BodyId::Executive => true,
+
+			// Any sibling parachain (1 parent + parachain junction)
+			(1, [Junction::Parachain(_)]) => true,
+
+			// Otherwise, no match
+			_ => false,
+		}
+    }
 }
 
 pub type Barrier = TrailingSetTopicAsId<
@@ -244,8 +243,16 @@ pub type Barrier = TrailingSetTopicAsId<
 			WithComputedOrigin<
 				(
 					AllowTopLevelPaidExecutionFrom<Everything>,
-					AllowExplicitUnpaidExecutionFrom<ParentOrParentsExecutivePlurality>,
-					// ^^^ Parent and its exec plurality get free execution
+
+					// Old: Only Parent and its exec plurality get free execution
+					// AllowExplicitUnpaidExecutionFrom<ParentOrParentsExecutivePlurality>,
+
+					// New: Enables XCM execution requests from sibling parachains.
+					AllowExplicitUnpaidExecutionFrom<ParentOrSiblings>,
+
+					// New: Enables XCM subscription requests from any origin.
+					// This is useful for allowing remote chains to subscribe to events or updates from this chain.
+					AllowSubscriptionsFrom<Everything>,
 				),
 				UniversalLocation,
 				ConstU32<8>,
