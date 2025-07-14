@@ -12,7 +12,7 @@ pub struct AssetMatcher;
 impl MatchesFungibles<u32, Balance> for AssetMatcher {
     fn matches_fungibles(asset: &Asset) -> Result<(u32, Balance), MatchError> {
         let match_result = match asset {
-            // XCM Inbound - Relay Chain native asset (e.g., KSM)
+            // Match the relay chain (parent)
             Asset {
                 id:
                     AssetId(Location {
@@ -25,7 +25,7 @@ impl MatchesFungibles<u32, Balance> for AssetMatcher {
                 Ok((100_000_000, *amount))
             }
 
-            // XCM Inbound - Sibling parachain asset (e.g., AssetHub)
+            // Match a sibling parachain (e.g., AssetHub with ParaId 1000)
             Asset {
                 id:
                     AssetId(Location {
@@ -37,22 +37,6 @@ impl MatchesFungibles<u32, Balance> for AssetMatcher {
                 [Junction::Parachain(1000), Junction::PalletInstance(50), Junction::GeneralIndex(asset_id)] =>
                 {
                     log::trace!(target: "xcm::matches_fungibles", "AssetMatcher: Matched AssetHub asset → asset_id: {:?}, amount: {:?}", asset_id, amount);
-                    Ok((*asset_id as u32, *amount))
-                }
-                _ => Err(MatchError::AssetNotHandled),
-            },
-
-            // XCM Outbound - Local parachain asset (e.g., Xode)
-            Asset {
-                id:
-                    AssetId(Location {
-                        parents: 0,
-                        interior: Junctions::X2(junctions),
-                    }),
-                fun: Fungibility::Fungible(amount),
-            } => match junctions.as_ref() {
-                [Junction::PalletInstance(50), Junction::GeneralIndex(asset_id)] => {
-                    log::trace!(target: "xcm::matches_fungibles", "AssetMatcher: Matched local parachain asset → asset_id: {:?}, amount: {:?}", asset_id, amount);
                     Ok((*asset_id as u32, *amount))
                 }
                 _ => Err(MatchError::AssetNotHandled),
