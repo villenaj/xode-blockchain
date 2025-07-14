@@ -213,11 +213,11 @@ parameter_types! {
 
 /// This struct defines a filter that matches the parent (relay chain) or its executive plurality.
 /// It is used to allow XCM operations from the parent chain or its executive body.
-pub struct ParentOrSiblings;
+pub struct ParentOrTrustedSiblings;
 
-impl Contains<Location> for ParentOrSiblings {
+impl Contains<Location> for ParentOrTrustedSiblings {
     fn contains(location: &Location) -> bool {
-		log::trace!(target: "xcm::contains", "ParentOrSiblings: Location: {:?}", location);
+		log::trace!(target: "xcm::contains", "ParentOrTrustedSiblings: Location: {:?}", location);
 
 		match location.unpack() {
 			// Parent (relay chain)
@@ -227,7 +227,7 @@ impl Contains<Location> for ParentOrSiblings {
 			(1, [Junction::Plurality { id, .. }]) if *id == BodyId::Executive => true,
 
 			// Any sibling parachain (1 parent + parachain junction)
-			(1, [Junction::Parachain(_)]) => true,
+			(1, [Junction::Parachain(id)]) => matches!(id, 1000),
 
 			// Otherwise, no match
 			_ => false,
@@ -248,7 +248,7 @@ pub type Barrier = TrailingSetTopicAsId<
 					// AllowExplicitUnpaidExecutionFrom<ParentOrParentsExecutivePlurality>,
 
 					// New: Enables XCM execution requests from sibling parachains.
-					AllowExplicitUnpaidExecutionFrom<ParentOrSiblings>,
+					AllowExplicitUnpaidExecutionFrom<ParentOrTrustedSiblings>,
 
 					// New: Enables XCM subscription requests from any origin.
 					// This is useful for allowing remote chains to subscribe to events or updates from this chain.
@@ -275,8 +275,7 @@ impl xcm_executor::Config for XcmConfig {
 	type UniversalLocation = UniversalLocation;
 	type Barrier = Barrier;
 	type Weigher = FixedWeightBounds<UnitWeightCost, RuntimeCall, MaxInstructions>;
-	type Trader =
-		UsingComponents<WeightToFee, RelayLocation, AccountId, Balances, ToAuthor<Runtime>>;
+	type Trader = UsingComponents<WeightToFee, RelayLocation, AccountId, Balances, ToAuthor<Runtime>>;
 	type ResponseHandler = PolkadotXcm;
 	type AssetTrap = PolkadotXcm;
 	type AssetClaims = PolkadotXcm;
