@@ -22,7 +22,12 @@ use xcm_builder::{
 	TrailingSetTopicAsId, UsingComponents, WithComputedOrigin, WithUniqueTopic,
 	FungiblesAdapter, LocalMint, AllowSubscriptionsFrom
 };
-use xcm_executor::{traits::{MatchesFungibles, Error as MatchError}, XcmExecutor};
+use xcm_executor::{
+	traits::{Error as MatchError, MatchesFungibles, WeightTrader}, 
+	XcmExecutor, AssetsInHolding
+};
+use sp_core::Get;
+use alloc::sync::Arc;
 
 parameter_types! {
 	pub const RelayLocation: Location = Location::parent();
@@ -31,12 +36,8 @@ parameter_types! {
 	// For the real deployment, it is recommended to set `RelayNetwork` according to the relay chain
 	// and prepend `UniversalLocation` with `GlobalConsensus(RelayNetwork::get())`.
 	pub UniversalLocation: InteriorLocation = Parachain(ParachainInfo::parachain_id().into()).into();
-
 	/// The account used to perform checks or hold assets during XCM execution,
 	/// such as temporary crediting/debiting when receiving or sending assets.
-	/// 
-	/// This is typically a system-level account provided by the XCM pallet (PolkadotXcm),
-	/// used internally to avoid uncontrolled account creation.
 	pub CheckingAccount: AccountId = PolkadotXcm::check_account();
 }
 
@@ -54,15 +55,12 @@ pub type LocationToAccountId = (
 
 /// A custom matcher that converts an incoming `Asset` from an XCM message into a local asset ID (`u32`) and amount (`Balance`).
 /// 
-/// This matcher is used by the XCM asset transactor to interpret multi-location `Asset` objects 
+/// This matcher is used by the XCM asset transactor to interpret location `Asset` objects 
 /// and translate them to known local assets that can be used within the chain’s runtime.
 pub struct AssetMatcher;
-
 impl MatchesFungibles<u32, Balance> for AssetMatcher {
     fn matches_fungibles(asset: &Asset) -> Result<(u32, Balance), xcm_executor::traits::Error> {
-		log::trace!(target: "xcm::matches_fungibles", "AssetMatcher: Asset: {:?}", asset);
-
-		match asset {
+		let match_result = match asset {
 			// XCM Inbound - Relay Chain native asset (e.g., KSM)
             Asset {
                 id: AssetId(Location {
@@ -70,7 +68,10 @@ impl MatchesFungibles<u32, Balance> for AssetMatcher {
                     interior: Junctions::Here,
                 }),
                 fun: Fungibility::Fungible(amount),
-            } => Ok((100_000_000, *amount)),
+            } => {
+                log::trace!(target: "xcm::matches_fungibles", "AssetMatcher: Matched Relay Chain native asset: amount = {:?}", amount);
+				Ok((100_000_000, *amount))
+			},
 
 			// XCM Inbound - Sibling parachain asset (e.g., AssetHub)
             Asset {
@@ -82,6 +83,7 @@ impl MatchesFungibles<u32, Balance> for AssetMatcher {
             } => {
 				match junctions.as_ref() {
 					[Junction::Parachain(1000), Junction::PalletInstance(50), Junction::GeneralIndex(asset_id)] => {
+						log::trace!(target: "xcm::matches_fungibles", "AssetMatcher: Matched AssetHub asset → asset_id: {:?}, amount: {:?}", asset_id, amount);
 						Ok((*asset_id as u32, *amount))
 					},
 					_ => Err(MatchError::AssetNotHandled),
@@ -98,14 +100,19 @@ impl MatchesFungibles<u32, Balance> for AssetMatcher {
             } => {
 				match junctions.as_ref() {
 					[Junction::PalletInstance(50), Junction::GeneralIndex(asset_id)] => {
+						log::trace!(target: "xcm::matches_fungibles", "AssetMatcher: Matched local parachain asset → asset_id: {:?}, amount: {:?}", asset_id, amount);
 						Ok((*asset_id as u32, *amount))
 					},
 					_ => Err(MatchError::AssetNotHandled),
 				}
 			},
 
+			// Otherwise, mismatched asset type
             _ => Err(MatchError::AssetNotHandled),
-        }
+        };
+
+		log::trace!(target: "xcm::matches_fungibles", "AssetMatcher: Final result for asset {:?} → {:?}", asset, match_result);
+		match_result
     }
 }
 
@@ -122,7 +129,7 @@ pub type AssetTransactor = FungiblesAdapter<
     // Custom matcher for converting incoming `Asset` to local (asset ID, balance) pairs.
     // This supports Relay Chain, sibling parachains, or AssetHub assets.
     AssetMatcher,
-    // Resolves `MultiLocation` origin accounts into native `AccountId`s.
+    // Resolves `Location` origin accounts into native `AccountId`s.
     LocationToAccountId,
     // Native account identifier type used by the runtime.
     AccountId,
@@ -137,21 +144,24 @@ pub type AssetTransactor = FungiblesAdapter<
 /// This filter determines whether a given asset and its origin location are considered "trusted reserve assets"
 /// for XCM reserve operations. Only assets and origins that match the trusted patterns will be treated as reserves.
 pub struct TrustedReserveAssets;
-
 impl ContainsPair<Asset, Location> for TrustedReserveAssets {
 	fn contains(asset: &Asset, origin: &Location) -> bool {
-		log::trace!(target: "xcm::contains", "TrustedReserveAssets: Asset: {:?}, origin: {:?}", asset, origin);
-
 		match &origin {
 			// Match the relay chain (parent) as a trusted reserve asset.
 			Location { 
 				parents: 1, 
 				interior: Junctions::Here 
 			} => {
-				return &asset.id == &AssetId(Location {
-					parents: 1,
-					interior: Junctions::Here,
-				});
+				let result = matches!(
+					&asset.id,
+					AssetId(Location { 
+						parents: 1, 
+						interior: Junctions::Here
+					})
+				);
+				log::trace!(target: "xcm::contains_pair", "TrustedReserveAssets::contains - RelayChain → asset: {:?}, origin: {:?}, result: {:?}", asset, origin, result);
+				
+				result
 			},
 
 			// Match a sibling parachain (e.g., AssetHub with ParaId 1000) as a trusted reserve asset.
@@ -165,20 +175,23 @@ impl ContainsPair<Asset, Location> for TrustedReserveAssets {
 							parents: 1, 
 							interior: Junctions::X3(asset_junctions) 
 						}) = &asset.id {
-							return matches!(
+							let result = matches!(
 								asset_junctions.as_ref(),
 								[Junction::Parachain(1000), Junction::PalletInstance(50), Junction::GeneralIndex(_)]
 							);
+							log::trace!(target: "xcm::contains_pair", "TrustedReserveAssets::contains - AssetHub → asset: {:?}, origin: {:?}, result: {:?}", asset, origin, result);
+							
+							result
 						} else {
-							return false;
+							false
 						}
 					},
-					_ => return false,
+					_ => false
 				}
 			},
 
 			// Any other origin or asset combination is not considered a trusted reserve asset and will return `false`.
-			_ => false,
+			_ => false
 		}
 	}
 }
@@ -214,23 +227,29 @@ parameter_types! {
 /// This struct defines a filter that matches the parent (relay chain) or its executive plurality.
 /// It is used to allow XCM operations from the parent chain or its executive body.
 pub struct ParentOrTrustedSiblings;
-
 impl Contains<Location> for ParentOrTrustedSiblings {
     fn contains(location: &Location) -> bool {
-		log::trace!(target: "xcm::contains", "ParentOrTrustedSiblings: Location: {:?}", location);
-
 		match location.unpack() {
 			// Parent (relay chain)
-			(1, []) => true,
+			(1, []) => {
+				log::trace!(target: "xcm::contains", "ParentOrTrustedSiblings: Matched parent | location: {:?}", location);
+				true
+			},
 
 			// Parent's executive plurality
-			(1, [Junction::Plurality { id, .. }]) if *id == BodyId::Executive => true,
+			(1, [Junction::Plurality { id, .. }]) if *id == BodyId::Executive => {
+				log::trace!(target: "xcm::contains", "ParentOrTrustedSiblings: Matched executive plurality | location: {:?}", location);
+				true
+			},
 
-			// Any sibling parachain (1 parent + parachain junction)
-			(1, [Junction::Parachain(id)]) => matches!(id, 1000),
-
-			// Otherwise, no match
-			_ => false,
+			// Any sibling parachain
+			(1, [Junction::Parachain(id)]) => {
+				log::trace!(target: "xcm::contains", "ParentOrTrustedSiblings: Matched sibling parachain {:?} | location: {:?}", id, location);
+				true
+			},
+			
+			// Fallback
+			_ => false
 		}
     }
 }
@@ -243,13 +262,8 @@ pub type Barrier = TrailingSetTopicAsId<
 			WithComputedOrigin<
 				(
 					AllowTopLevelPaidExecutionFrom<Everything>,
-
-					// Old: Only Parent and its exec plurality get free execution
-					// AllowExplicitUnpaidExecutionFrom<ParentOrParentsExecutivePlurality>,
-
 					// New: Enables XCM execution requests from sibling parachains.
 					AllowExplicitUnpaidExecutionFrom<ParentOrTrustedSiblings>,
-
 					// New: Enables XCM subscription requests from any origin.
 					// This is useful for allowing remote chains to subscribe to events or updates from this chain.
 					AllowSubscriptionsFrom<Everything>,
@@ -260,6 +274,123 @@ pub type Barrier = TrailingSetTopicAsId<
 		),
 	>,
 >;
+
+/// A location representing the AssetHub USDT asset, which is used for weight purchasing.
+pub struct AssethubUsdtLocation;
+impl Get<Location> for AssethubUsdtLocation {
+    fn get() -> Location {
+        Location {
+            parents: 1,
+            interior: Junctions::X3(Arc::from([
+                Junction::Parachain(1000),
+                Junction::PalletInstance(50),
+                Junction::GeneralIndex(1984),
+            ])),
+        }
+    }
+}
+
+/// A location representing the local USDT asset, which is used for weight purchasing.
+pub struct LocalUsdtLocation;
+impl Get<Location> for LocalUsdtLocation {
+    fn get() -> Location {
+        Location {
+            parents: 0,
+            interior: Junctions::X2(Arc::from([
+                Junction::PalletInstance(50),
+                Junction::GeneralIndex(1984),
+            ])),
+        }
+    }
+}
+
+/// A dynamic weight trader that can handle different asset types for weight purchasing.
+/// It uses the `UsingComponents` trait to determine which asset to use based on the
+/// asset ID provided in the payment.
+/// 
+/// This allows for flexible weight purchasing based on the available assets in the holding register.
+pub struct DynamicWeightTrader;
+impl WeightTrader for DynamicWeightTrader {
+	fn new() -> Self {
+		Self
+	}
+
+	fn buy_weight(
+		&mut self,
+		weight: Weight,
+		payment: AssetsInHolding,
+		context: &XcmContext,
+	) -> Result<AssetsInHolding, XcmError> {
+		// Determine the asset ID to use for weight purchasing.
+		let asset_id = payment.fungible.iter().find_map(|(id, _balance)| Some(id.clone()));
+
+		match asset_id {
+			// Match Relay Chain native token (e.g., DOT) for weight purchase.
+			Some(AssetId(Location {
+				parents: 1, 
+				interior: Junctions::Here 
+			})) => {
+				log::trace!(target: "xcm::weight_trader", "DynamicWeightTrader::buy_weight - Relay Chain native asset junctions: {:?}", RelayLocation::get());
+				UsingComponents::<
+					WeightToFee, 
+					RelayLocation, 
+					AccountId, 
+					Balances, 
+					ToAuthor<Runtime>
+				>::new().buy_weight(weight, payment, context)
+			}
+
+			// Match AssetHub asset junctions (Parachain 1000, PalletInstance 50, GeneralIndex) → treat as USDT
+			Some(AssetId(Location {
+				parents: 1,
+				interior: Junctions::X3(junctions),
+			})) => {
+				match junctions.as_ref() {
+					[Junction::Parachain(1000), Junction::PalletInstance(50), Junction::GeneralIndex(_)] => {
+						log::trace!(target: "xcm::weight_trader", "DynamicWeightTrader::buy_weight - AssetHub asset junctions: {:?}", junctions);
+						UsingComponents::<
+							WeightToFee,
+							AssethubUsdtLocation,
+							AccountId,
+							Balances,
+							ToAuthor<Runtime>
+						>::new().buy_weight(weight, payment, context)
+					},
+					_ => Err(XcmError::InvalidLocation),
+				}
+			}
+			
+			// Match local asset junctions (PalletInstance 50, GeneralIndex) → treat as USDT
+			Some(AssetId(Location {
+				parents: 0,
+				interior: Junctions::X2(junctions),
+			})) => {
+				match junctions.as_ref() {
+					[Junction::PalletInstance(50), Junction::GeneralIndex(_)] => {
+						log::trace!(target: "xcm::weight_trader", "DynamicWeightTrader::buy_weight - Local asset junctions: {:?}", junctions);
+						UsingComponents::<
+							WeightToFee,
+							LocalUsdtLocation,
+							AccountId,
+							Balances,
+							ToAuthor<Runtime>
+						>::new().buy_weight(weight, payment, context)
+					},
+					_ => Err(XcmError::InvalidLocation),
+				}
+			}
+			
+			// No match: asset not supported
+			_ => {
+				Err(XcmError::TooExpensive)
+			}
+		}
+	}
+
+	fn refund_weight(&mut self, _weight: Weight, _context: &XcmContext) -> Option<Asset> {
+		None
+	}
+}
 
 pub struct XcmConfig;
 impl xcm_executor::Config for XcmConfig {
@@ -275,7 +406,8 @@ impl xcm_executor::Config for XcmConfig {
 	type UniversalLocation = UniversalLocation;
 	type Barrier = Barrier;
 	type Weigher = FixedWeightBounds<UnitWeightCost, RuntimeCall, MaxInstructions>;
-	type Trader = UsingComponents<WeightToFee, RelayLocation, AccountId, Balances, ToAuthor<Runtime>>;
+	// type Trader = UsingComponents<WeightToFee, RelayLocation, AccountId, Balances, ToAuthor<Runtime>>;
+	type Trader = DynamicWeightTrader;
 	type ResponseHandler = PolkadotXcm;
 	type AssetTrap = PolkadotXcm;
 	type AssetClaims = PolkadotXcm;
