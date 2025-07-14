@@ -12,7 +12,7 @@ use crate::{
     RuntimeOrigin,
     XcmpQueue,
 
-    // XCM Config modules
+    // XCM config modules
     configs::xcm_config::asset_matcher::{AssetMatcher, TrustedReserveAssets},
     configs::xcm_config::origin_filters::ParentOrTrustedSiblings,
     configs::xcm_config::weight_trader::DynamicWeightTrader,
@@ -61,12 +61,8 @@ pub type LocationToAccountId = (
 );
 
 /// The `AssetTransactor` defines how the runtime handles fungible assets received or sent via XCM.
-///
 /// It interprets incoming `Asset` locations, resolves them to local asset IDs and balances,
 /// and executes operations such as minting, burning, or transferring tokens.
-///
-/// This implementation uses a custom `AssetMatcher` and supports parachain or AssetHub assets,
-/// but not native Relay Chain tokens (handled by a separate transactor if needed).
 pub type AssetTransactor = FungiblesAdapter<
     // The asset handler used to inspect, mint, and burn tokens (e.g., orml-tokens or pallet-assets).
     Assets,
@@ -139,7 +135,6 @@ impl xcm_executor::Config for XcmConfig {
     type RuntimeCall = RuntimeCall;
     type XcmSender = XcmRouter;
     // How to withdraw and deposit an asset.
-    // type AssetTransactor = LocalAssetTransactor;
     type AssetTransactor = AssetTransactor;
     type OriginConverter = XcmOriginToTransactDispatchOrigin;
     type IsReserve = TrustedReserveAssets;
