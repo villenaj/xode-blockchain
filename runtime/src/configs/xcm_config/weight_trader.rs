@@ -15,11 +15,19 @@ parameter_types! {
 	pub const RelayLocation: Location = Location::parent();
 }
 
-// Weight to fee conversion for USDT
-/// This implementation assumes that 1 unit of weight corresponds to 1_000 micro-USDT
-/// (or 0.001 USDT). Adjust this based on your actual fee structure.
+/// A weight to fee implementation for USDT, which is used to convert weight into a fee
+/// that can be paid in USDT. This implementation is specifically designed to handle
+/// the conversion of weight into a fee amount that can be used for weight purchasing
+/// in the context of XCM transactions.
 /// 
-/// This is used in the `DynamicWeightTrader` to convert weight to a fee in US
+/// The fee is calculated based on the weight's reference time, divided by a scaling factor
+/// to convert it into a fee amount in USDT.
+/// 
+/// The scaling factor is set to 1,000,000 to ensure that the fee is reasonable and
+/// can be handled by the USDT asset.
+/// 
+/// This implementation is useful for scenarios where USDT is used as the asset for weight purchasing,
+/// allowing for dynamic handling of weight purchasing based on the available assets in the `AssetsInHolding`.
 pub struct UsdtWeightToFee;
 
 impl WeightToFeeT for UsdtWeightToFee {
