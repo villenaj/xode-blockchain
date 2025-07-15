@@ -26,7 +26,7 @@ impl WeightToFeeT for UsdtWeightToFee {
 	type Balance = u128;
 
 	fn weight_to_fee(weight: &Weight) -> Self::Balance {
-		weight.ref_time().saturating_div(1_000_000).into()
+		weight.ref_time().saturating_div(1_000_000).max(1).into()
 	}
 }
 
