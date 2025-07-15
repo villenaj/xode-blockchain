@@ -15,19 +15,26 @@ parameter_types! {
 	pub const RelayLocation: Location = Location::parent();
 }
 
-// Weight to fee conversion for USDT
-/// This implementation assumes that 1 unit of weight corresponds to 1_000 micro-USDT
-/// (or 0.001 USDT). Adjust this based on your actual fee structure.
+/// A weight to fee implementation for USDT, which is used to convert weight into a fee
+/// that can be paid in USDT. This implementation is specifically designed to handle
+/// the conversion of weight into a fee amount that can be used for weight purchasing
+/// in the context of XCM transactions.
 /// 
-/// This is used in the `DynamicWeightTrader` to convert weight to a fee in US
+/// The fee is calculated based on the weight's reference time, divided by a scaling factor
+/// to convert it into a fee amount in USDT.
+/// 
+/// The scaling factor is set to 1,000,000 to ensure that the fee is reasonable and
+/// can be handled by the USDT asset.
+/// 
+/// This implementation is useful for scenarios where USDT is used as the asset for weight purchasing,
+/// allowing for dynamic handling of weight purchasing based on the available assets in the `AssetsInHolding`.
 pub struct UsdtWeightToFee;
 
 impl WeightToFeeT for UsdtWeightToFee {
 	type Balance = u128;
 
 	fn weight_to_fee(weight: &Weight) -> Self::Balance {
-		// Conversion: 1 unit of weight = 1_000 micro-USDT (or 0.001 USDT)
-		weight.ref_time().saturating_mul(1_000).into()
+		weight.ref_time().saturating_div(1_000_000).max(1).into()
 	}
 }
 
@@ -83,12 +90,11 @@ impl WeightTrader for DynamicWeightTrader {
 						log::trace!(target: "xcm::weight_trader", "DynamicWeightTrader::buy_weight - AssetHub asset junctions: {:?}", junctions);
 
 						let usdt = 1984u32;
-						let origin = context.origin.clone().ok_or(XcmError::BadOrigin)?;
 						let fee_amount = UsdtWeightToFee::weight_to_fee(&weight);
 
-						log::trace!(target: "xcm::weight_trader", "DynamicWeightTrader::buy_weight - Using USDT for weight purchase: {:?} from {:?}", fee_amount, origin);
-						
-						let required_asset: Asset = (
+    					log::trace!(target: "xcm::weight_trader", "DynamicWeightTrader::buy_weight - Using USDT for weight purchase: {:?}", fee_amount);
+    
+						let required_asset_payment: Asset = (
 							AssetId(Location {
 								parents: 1,
 								interior: Junctions::X3(Arc::from([
@@ -99,7 +105,9 @@ impl WeightTrader for DynamicWeightTrader {
 							}),
 							fee_amount,
 						).into();
-						let unused = payment.checked_sub(required_asset).map_err(|_| XcmError::TooExpensive)?;
+						let unused = payment.checked_sub(required_asset_payment).map_err(|_| XcmError::TooExpensive)?;
+
+						log::trace!(target: "xcm::weight_trader", "DynamicWeightTrader::buy_weight - Successfully purchased weight with USDT: {:?}", fee_amount);
 
 						Ok(unused)
 					},
