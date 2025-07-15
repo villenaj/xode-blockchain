@@ -83,12 +83,11 @@ impl WeightTrader for DynamicWeightTrader {
 						log::trace!(target: "xcm::weight_trader", "DynamicWeightTrader::buy_weight - AssetHub asset junctions: {:?}", junctions);
 
 						let usdt = 1984u32;
-						let origin = context.origin.clone().ok_or(XcmError::BadOrigin)?;
 						let fee_amount = UsdtWeightToFee::weight_to_fee(&weight);
 
-						log::trace!(target: "xcm::weight_trader", "DynamicWeightTrader::buy_weight - Using USDT for weight purchase: {:?} from {:?}", fee_amount, origin);
-						
-						let required_asset: Asset = (
+    					log::trace!(target: "xcm::weight_trader", "DynamicWeightTrader::buy_weight - Using USDT for weight purchase: {:?}", fee_amount);
+    
+						let required_asset_payment: Asset = (
 							AssetId(Location {
 								parents: 1,
 								interior: Junctions::X3(Arc::from([
@@ -99,7 +98,9 @@ impl WeightTrader for DynamicWeightTrader {
 							}),
 							fee_amount,
 						).into();
-						let unused = payment.checked_sub(required_asset).map_err(|_| XcmError::TooExpensive)?;
+						let unused = payment.checked_sub(required_asset_payment).map_err(|_| XcmError::TooExpensive)?;
+
+						log::trace!(target: "xcm::weight_trader", "DynamicWeightTrader::buy_weight - Successfully purchased weight with USDT: {:?}", fee_amount);
 
 						Ok(unused)
 					},
