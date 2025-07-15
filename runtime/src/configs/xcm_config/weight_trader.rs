@@ -26,8 +26,7 @@ impl WeightToFeeT for UsdtWeightToFee {
 	type Balance = u128;
 
 	fn weight_to_fee(weight: &Weight) -> Self::Balance {
-		// Conversion: 1 unit of weight = 1_000 micro-USDT (or 0.001 USDT)
-		weight.ref_time().saturating_mul(1_000).into()
+		weight.ref_time().saturating_div(1_000_000).into()
 	}
 }
 
