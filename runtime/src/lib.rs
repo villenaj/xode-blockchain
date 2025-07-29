@@ -198,7 +198,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	spec_name: create_runtime_str!("xode-runtime"),
 	impl_name: create_runtime_str!("xode-runtime"),
 	authoring_version: 1,
-	spec_version: 1,
+	spec_version: 10,
 	impl_version: 0,
 	apis: apis::RUNTIME_API_VERSIONS,
 	transaction_version: 1,
@@ -336,32 +336,38 @@ mod runtime {
 	pub type MessageQueue = pallet_message_queue;
 
 	// Frames (Xode Blockchain)
-	#[runtime::pallet_index(40)]
-	pub type Assets = pallet_assets;
-	#[runtime::pallet_index(41)]
-	pub type Contracts = pallet_contracts;
-	#[runtime::pallet_index(42)]
-	pub type Indices = pallet_indices;
-	#[runtime::pallet_index(43)]
-	pub type AssetRate = pallet_asset_rate;
-	#[runtime::pallet_index(44)]
-	pub type Treasury = pallet_treasury;
-	#[runtime::pallet_index(45)]
-	pub type TechnicalCommittee = pallet_collective::Pallet<Runtime, Instance1>;
-	#[runtime::pallet_index(46)]
-	pub type TechnicalCommitteeMembership = pallet_membership::Pallet<Runtime, Instance1>;
-	#[runtime::pallet_index(47)]
-	pub type TreasuryCouncil = pallet_collective::Pallet<Runtime, Instance2>;
-	#[runtime::pallet_index(48)]
-	pub type TreasuryCouncilMembership = pallet_membership::Pallet<Runtime, Instance2>;
-	#[runtime::pallet_index(49)]
-    pub type Preimage = pallet_preimage;
 	#[runtime::pallet_index(50)]
+	pub type Assets = pallet_assets;
+	#[runtime::pallet_index(51)]
+	pub type Contracts = pallet_contracts;
+	#[runtime::pallet_index(52)]
+	pub type Indices = pallet_indices;
+	#[runtime::pallet_index(53)]
+	pub type AssetRate = pallet_asset_rate;
+	#[runtime::pallet_index(54)]
+	pub type Treasury = pallet_treasury;
+	#[runtime::pallet_index(55)]
+	pub type TechnicalCommittee = pallet_collective::Pallet<Runtime, Instance1>;
+	#[runtime::pallet_index(56)]
+	pub type TechnicalCommitteeMembership = pallet_membership::Pallet<Runtime, Instance1>;
+	#[runtime::pallet_index(57)]
+	pub type TreasuryCouncil = pallet_collective::Pallet<Runtime, Instance2>;
+	#[runtime::pallet_index(58)]
+	pub type TreasuryCouncilMembership = pallet_membership::Pallet<Runtime, Instance2>;
+	#[runtime::pallet_index(59)]
+    pub type Preimage = pallet_preimage;
+	#[runtime::pallet_index(60)]
     pub type Whitelist = pallet_whitelist;
 
 	// Pallet (Xode Blockchain)
-	#[runtime::pallet_index(60)]
+	#[runtime::pallet_index(70)]
 	pub type XodeStaking = pallet_xode_staking;
+
+	// Utility
+	#[runtime::pallet_index(80)]	
+	pub type Utility = pallet_utility;
+	#[runtime::pallet_index(81)]	
+	pub type RootTesting = pallet_root_testing;
 	
 }
 
