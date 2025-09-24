@@ -15445,7 +15445,7 @@ dependencies = [
 
 [[package]]
 name = "xode-node"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "clap",
  "color-print",
@@ -15505,7 +15505,7 @@ dependencies = [
 
 [[package]]
 name = "xode-runtime"
-version = "0.1.0"
+version = "0.1.2"
 dependencies = [
  "cumulus-pallet-aura-ext",
  "cumulus-pallet-parachain-system",
