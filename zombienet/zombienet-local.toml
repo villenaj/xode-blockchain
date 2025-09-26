@@ -23,15 +23,15 @@ chain = "rococo-local"
   name = "dave"
   validator = true
 
-[[parachains]]
-id = 1000
-cumulus_based = true
+# [[parachains]]
+# id = 1000
+# cumulus_based = true
 
-  [[parachains.collators]]
-  name = "assethub-collator"
-  command = "./bin/polkadot-parachain"
-  args = ["-lxcmp=trace", "-lxcm=trace", "-lruntime=debug"]
-  ws_port = 9988
+#   [[parachains.collators]]
+#   name = "assethub-collator"
+#   command = "./bin/polkadot-parachain"
+#   args = ["-lxcmp=trace", "-lxcm=trace", "-lruntime=debug"]
+#   ws_port = 9988
 
 [[parachains]]
 id = 4607
