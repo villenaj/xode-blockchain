@@ -63,6 +63,7 @@ polkadot-runtime-common.workspace = true
 xcm.workspace = true
 xcm-builder.workspace = true
 xcm-executor.workspace = true
+xcm-runtime-apis.workspace = true
 cumulus-pallet-aura-ext.workspace = true
 cumulus-pallet-parachain-system.workspace = true
 cumulus-pallet-session-benchmarking.workspace = true
@@ -147,6 +148,7 @@ std = [
 	"substrate-wasm-builder",
 	"xcm-builder/std",
 	"xcm-executor/std",
+	"xcm-runtime-apis/std",
 	"xcm/std",
 	"pallet-assets/std",
 	"pallet-contracts/std",
@@ -183,6 +185,7 @@ runtime-benchmarks = [
 	"sp-runtime/runtime-benchmarks",
 	"xcm-builder/runtime-benchmarks",
 	"xcm-executor/runtime-benchmarks",
+	"xcm-runtime-apis/runtime-benchmarks",
 	"pallet-assets/runtime-benchmarks",
 	"pallet-contracts/runtime-benchmarks",
 	"pallet-treasury/runtime-benchmarks",

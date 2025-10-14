@@ -15,7 +15,7 @@ pallet-xode-staking = { path = "./pallets/staking", default-features = false }
 clap = { version = "4.5.10" }
 codec = { version = "3.6.12", default-features = false, package = "parity-scale-codec" }
 color-print = { version = "0.3.4" }
-hex = { version = "0.4.3", default-features = false }
+hex = { version = "0.4.3", default-features = false, features = ["alloc"] }
 cumulus-client-cli = { version = "0.18.0", default-features = false }
 cumulus-client-collator = { version = "0.18.0", default-features = false }
 cumulus-client-consensus-aura = { version = "0.18.0", default-features = false }
@@ -93,7 +93,7 @@ pallet-sudo = { version = "38.0.0", default-features = false }
 pallet-timestamp = { version = "37.0.0", default-features = false }
 pallet-transaction-payment = { version = "38.0.0", default-features = false }
 pallet-transaction-payment-rpc-runtime-api = { version = "38.0.0", default-features = false }
-pallet-xcm = { version = "17.0.0", default-features = false }
+pallet-xcm = { version = "17.0.5", default-features = false }
 parachain-info = { version = "0.17.0", default-features = false, package = "staging-parachain-info" }
 parachains-common = { version = "18.0.0", default-features = false }
 polkadot-parachain-primitives = { version = "14.0.0", default-features = false }
@@ -107,6 +107,7 @@ sp-transaction-pool = { version = "34.0.0", default-features = false }
 sp-version = { version = "37.0.0", default-features = false }
 xcm-builder = { version = "17.0.0", default-features = false, package = "staging-xcm-builder" }
 xcm-executor = { version = "17.0.0", default-features = false, package = "staging-xcm-executor" }
+xcm-runtime-apis = { version = "0.4.0", default-features = false }
 substrate-wasm-builder = { version = "24.0.1", default-features = false }
 # Assets
 pallet-assets = { version = "40.0.0", default-features = false }

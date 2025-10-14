@@ -39,7 +39,7 @@ mod genesis_config_presets;
 mod weights;
 
 extern crate alloc;
-use alloc::vec::Vec;
+use alloc::{vec::Vec, sync::Arc};
 use smallvec::smallvec;
 
 #[cfg(any(feature = "std", test))]
@@ -74,7 +74,31 @@ use weights::ExtrinsicBaseWeight;
 use sp_api::impl_runtime_apis;
 use sp_core::{crypto::KeyTypeId, OpaqueMetadata};
 
-use configs::RuntimeBlockWeights;
+use configs::{
+	RuntimeBlockWeights,
+	xcm_config::{
+		RelayLocation, XcmConfig, XcmRouter, LocationToAccountId,
+		weight_trader::DynamicWeightTrader
+	}
+};
+
+use xcm::{
+	latest::prelude::{
+		Asset, AssetId, Junctions, Junction, Location,
+		XcmContext, XcmHash, 
+	},
+	Version as XcmVersion, VersionedAssetId, VersionedAssets, VersionedLocation,
+	VersionedXcm,
+};
+use xcm_executor::{traits::WeightTrader, AssetsInHolding};
+use xcm_runtime_apis::{
+	dry_run::{
+		CallDryRunEffects as ApiCallDryRunEffects, 
+		XcmDryRunEffects as ApiXcmDryRunEffects,
+		Error as XcmDryRunApiError,
+	},
+	fees::Error as XcmPaymentApiError,
+};
 
 /// Alias to 512-bit hash when used in the context of a transaction signature on the chain.
 pub type Signature = MultiSignature;
@@ -724,6 +748,93 @@ impl_runtime_apis! {
 
 		fn preset_names() -> Vec<sp_genesis_builder::PresetId> {
 			crate::genesis_config_presets::preset_names()
+		}
+	}
+
+	impl xcm_runtime_apis::fees::XcmPaymentApi<Block> for Runtime {
+		fn query_acceptable_payment_assets(xcm_version: xcm::Version) -> Result<Vec<VersionedAssetId>, XcmPaymentApiError> {
+			let mut acceptable_assets: Vec<AssetId> = Vec::new();
+			acceptable_assets.push(AssetId(RelayLocation::get()));
+			acceptable_assets.push(AssetId(Location {
+				parents: 1,
+				interior: Junctions::X3(Arc::from([
+					Junction::Parachain(1000),
+					Junction::PalletInstance(50),
+					Junction::GeneralIndex(1984u128),
+				])),
+			}));
+
+			pallet_xcm::Pallet::<Runtime>::query_acceptable_payment_assets(xcm_version, acceptable_assets)
+            	.map_err(|_| XcmPaymentApiError::AssetNotFound)
+		}
+
+		fn query_xcm_weight(message: VersionedXcm<()>) -> Result<Weight, XcmPaymentApiError> {
+			pallet_xcm::Pallet::<Runtime>::query_xcm_weight(message)
+				.map_err(|_| XcmPaymentApiError::WeightNotComputable)
+		}
+
+		// This implementation is based on the approach taken in the latest version of pallet-xcm.
+		// Reference: https://docs.rs/pallet-xcm/22.0.1/src/pallet_xcm/lib.rs.html#3223
+		//
+		// The version of pallet-xcm currently used in this chain is outdated and does not yet
+		// provide this functionality. To bridge the gap, we implemented `query_weight_to_asset_fee`
+		// in our runtime by following the design from `xcm-runtime-apis` and aligning it with the
+		// approach used upstream.
+		//
+		// Once the chain upgrades to a newer release of pallet-xcm, this implementation can be
+		// revisited to determine whether it should be replaced with the upstream version.
+		fn query_weight_to_asset_fee(weight: Weight, asset: VersionedAssetId) -> Result<u128, XcmPaymentApiError> {
+			let asset: AssetId = asset.clone().try_into()
+        		.map_err(|_| XcmPaymentApiError::VersionedConversionFailed)?;
+
+			let max_amount = u128::MAX / 2;
+			let max_payment: Asset = (asset.clone(), max_amount).into();
+    		let payment = AssetsInHolding::from(max_payment);
+			let context = XcmContext::with_message_id(XcmHash::default());
+
+			let mut trader = DynamicWeightTrader::new();
+			let unspent_assets = trader
+				.buy_weight(weight, payment, &context)
+				.map_err(|_| XcmPaymentApiError::WeightNotComputable)?;
+
+			let Some(unspent) = unspent_assets.fungible.get(&asset) else {
+				return Err(XcmPaymentApiError::AssetNotFound);
+			};
+
+			let paid = max_amount - unspent;
+
+			Ok(paid)
+		}
+
+		fn query_delivery_fees(destination: VersionedLocation, message: VersionedXcm<()>) -> Result<VersionedAssets, XcmPaymentApiError> {
+			pallet_xcm::Pallet::<Runtime>::query_delivery_fees(destination, message)
+				.map_err(|_| XcmPaymentApiError::Unimplemented)
+		}
+	}
+
+	impl xcm_runtime_apis::dry_run::DryRunApi<Block, RuntimeCall, <Runtime as frame_system::Config>::RuntimeEvent, crate::OriginCaller> for Runtime {
+		fn dry_run_call(origin: crate::OriginCaller, call: RuntimeCall, result_xcms_version: XcmVersion) -> Result<ApiCallDryRunEffects<<Runtime as frame_system::Config>::RuntimeEvent>, XcmDryRunApiError> {
+			pallet_xcm::Pallet::<Runtime>::dry_run_call::<Runtime, XcmRouter, crate::OriginCaller, RuntimeCall>(origin, call, result_xcms_version)
+				.map_err(|_| XcmDryRunApiError::Unimplemented)
+				.map(|effects| effects.into()) 
+		}
+
+		fn dry_run_xcm(origin_location: VersionedLocation, xcm: VersionedXcm<RuntimeCall>) -> Result<ApiXcmDryRunEffects<<Runtime as frame_system::Config>::RuntimeEvent>, XcmDryRunApiError> {
+			pallet_xcm::Pallet::<Runtime>::dry_run_xcm::<Runtime, XcmRouter, RuntimeCall, XcmConfig>(origin_location, xcm)
+				.map_err(|_| XcmDryRunApiError::Unimplemented)
+				.map(|effects| effects.into()) 
+		}
+	}
+
+	impl xcm_runtime_apis::conversions::LocationToAccountApi<Block, AccountId> for Runtime {
+		fn convert_location(location: VersionedLocation) -> Result<
+			AccountId,
+			xcm_runtime_apis::conversions::Error
+		> {
+			xcm_runtime_apis::conversions::LocationToAccountHelper::<
+				AccountId,
+				LocationToAccountId,
+			>::convert_location(location)
 		}
 	}
 }
