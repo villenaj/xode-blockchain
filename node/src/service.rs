@@ -6,7 +6,7 @@ use std::{sync::Arc, time::Duration};
 use cumulus_client_cli::CollatorOptions;
 // Local Runtime Types
 use xode_runtime::{
-	apis::RuntimeApi,
+	RuntimeApi,
 	opaque::{Block, Hash},
 };
 
