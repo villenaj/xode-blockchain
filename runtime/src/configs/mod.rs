@@ -78,16 +78,12 @@ use super::{
 use xcm_config::{RelayLocation, XcmOriginToTransactDispatchOrigin};
 
 use pallet_balances::Call as BalancesCall;
-use pallet_assets::Call as AssetsCall;
-pub enum FilterRuntimeCall {}
-impl frame_support::traits::Contains<RuntimeCall> for FilterRuntimeCall {
+pub enum AllowBalancesCall {}
+impl frame_support::traits::Contains<RuntimeCall> for AllowBalancesCall {
     fn contains(call: &RuntimeCall) -> bool {
         matches!(
             call,
             RuntimeCall::Balances(BalancesCall::transfer_allow_death { .. })
-                | RuntimeCall::Assets(AssetsCall::transfer { .. })
-                | RuntimeCall::Assets(AssetsCall::freeze { .. }) 
-                | RuntimeCall::Assets(AssetsCall::thaw { .. })
         )
     }
 }
@@ -492,7 +488,7 @@ impl pallet_contracts::Config for Runtime {
     /// and make sure they are stable. Dispatchables exposed to contracts are not allowed to
     /// change because that would break already deployed contracts. The `RuntimeCall` structure
     /// itself is not allowed to change the indices of existing pallets, too.
-    type CallFilter = FilterRuntimeCall;
+    type CallFilter = AllowBalancesCall;
     type DepositPerItem = DepositPerItem;
     type DepositPerByte = DepositPerByte;
     type CallStack = [pallet_contracts::Frame<Self>; 23];
