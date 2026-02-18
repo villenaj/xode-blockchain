@@ -21,6 +21,12 @@ pub mod block_weights;
 pub mod extrinsic_weights;
 pub mod paritydb_weights;
 pub mod rocksdb_weights;
+pub mod pallet_asset_conversion_ops;
+pub mod pallet_asset_conversion_tx_payment;
+pub mod pallet_asset_conversion;
+pub mod pallet_assets_foreign;
+pub mod pallet_assets_local;
+pub mod pallet_assets_pool;
 
 pub use block_weights::constants::BlockExecutionWeight;
 pub use extrinsic_weights::constants::ExtrinsicBaseWeight;

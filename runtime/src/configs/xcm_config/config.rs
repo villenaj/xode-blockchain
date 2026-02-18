@@ -11,6 +11,7 @@ use crate::{
     RuntimeEvent,
     RuntimeOrigin,
     XcmpQueue,
+    PoolAssets,
 
     // XCM config modules
     configs::xcm_config::asset_matcher::{NativeAssetMatcher, MultiAssetMatcher},
@@ -20,7 +21,7 @@ use crate::{
 };
 use frame_support::{
     parameter_types,
-    traits::{ConstU32, Everything, Nothing},
+    traits::{ConstU32, Everything, Nothing, PalletInfoAccess},
     weights::Weight,
 };
 use frame_system::EnsureRoot;
@@ -47,6 +48,14 @@ parameter_types! {
     /// The account used to perform checks or hold assets during XCM execution,
     /// such as temporary crediting/debiting when receiving or sending assets.
     pub CheckingAccount: AccountId = PolkadotXcm::check_account();
+    pub const TokenLocation: Location = Location::parent();
+    pub TrustBackedAssetsPalletLocation: Location =
+		PalletInstance(TrustBackedAssetsPalletIndex::get()).into();
+	pub TrustBackedAssetsPalletIndex: u8 = <Assets as PalletInfoAccess>::index() as u8;
+	pub TrustBackedAssetsPalletLocationV3: xcm::v3::Location =
+		xcm::v3::Junction::PalletInstance(<Assets as PalletInfoAccess>::index() as u8).into();
+    pub PoolAssetsPalletLocation: Location =
+		PalletInstance(<PoolAssets as PalletInfoAccess>::index() as u8).into();
 }
 
 /// Type for specifying how a `Location` can be converted into an `AccountId`. This is used

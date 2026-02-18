@@ -98,6 +98,13 @@ pallet-utility.workspace = true
 cumulus-pallet-weight-reclaim.workspace = true
 pallet-assets-precompiles.workspace = true
 pallet-revive.workspace = true
+# Asset Conversion
+assets-common = { workspace = true }
+pallet-asset-conversion = { workspace = true }
+pallet-asset-conversion-ops = { workspace = true }
+pallet-asset-conversion-tx-payment = { workspace = true }
+pallet-assets-freezer = { workspace = true }
+pallet-xcm-precompiles = { workspace = true }
 
 [features]
 default = ["std"]
@@ -125,6 +132,12 @@ std = [
 	"pallet-authorship/std",
 	"pallet-balances/std",
 	"pallet-collator-selection/std",
+	"assets-common/std",
+	"pallet-asset-conversion-ops/std",
+	"pallet-asset-conversion-tx-payment/std",
+	"pallet-asset-conversion/std",
+	"pallet-assets-freezer/std",
+	"pallet-xcm-precompiles/std",
 	"pallet-message-queue/std",
 	"pallet-xode-staking/std",
 	"pallet-session/std",
@@ -196,6 +209,12 @@ runtime-benchmarks = [
 	"xcm-executor/runtime-benchmarks",
 	"xcm-runtime-apis/runtime-benchmarks",
 	"pallet-assets/runtime-benchmarks",
+	"assets-common/runtime-benchmarks",
+	"pallet-asset-conversion/runtime-benchmarks",
+	"pallet-assets-freezer/runtime-benchmarks",
+	"pallet-asset-conversion-ops/runtime-benchmarks",
+	"pallet-asset-conversion-tx-payment/runtime-benchmarks",
+	"pallet-xcm-precompiles/runtime-benchmarks",
 	"pallet-contracts/runtime-benchmarks",
 	"pallet-treasury/runtime-benchmarks",
 	"pallet-collective/runtime-benchmarks",
@@ -229,6 +248,12 @@ try-runtime = [
 	"polkadot-runtime-common/try-runtime",
 	"sp-runtime/try-runtime",
 	"pallet-assets/try-runtime",
+	"assets-common/try-runtime",
+	"pallet-asset-conversion-ops/try-runtime",
+	"pallet-asset-conversion-tx-payment/try-runtime",
+	"pallet-asset-conversion/try-runtime",
+	"pallet-assets-freezer/try-runtime",
+	"pallet-xcm-precompiles/try-runtime",
 	"pallet-contracts/try-runtime",
 	"pallet-treasury/try-runtime",
 	"pallet-collective/try-runtime",
