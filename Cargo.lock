@@ -1026,35 +1026,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9b34d609dfbaf33d6889b2b7106d3ca345eacad44200913df5ba02bfd31d2ba9"
 
 [[package]]
-name = "assets-common"
-version = "0.27.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7669aa4fc76e66f59e5dde1187b90dad60a8fd9de072f48e0d2949b139f366c2"
-dependencies = [
- "cumulus-primitives-core",
- "ethereum-standards",
- "frame-support",
- "frame-system",
- "impl-trait-for-tuples",
- "pallet-asset-conversion",
- "pallet-assets",
- "pallet-revive",
- "pallet-revive-uapi",
- "pallet-xcm",
- "parachains-common",
- "parity-scale-codec",
- "scale-info",
- "serde",
- "sp-api",
- "sp-core",
- "sp-runtime",
- "staging-xcm",
- "staging-xcm-builder",
- "staging-xcm-executor",
- "tracing",
-]
-
-[[package]]
 name = "async-channel"
 version = "1.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -7792,57 +7763,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "pallet-asset-conversion-ops"
-version = "0.13.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "32ba05646f311a8722dd55a6f2d28185d36e3f203ca71a52b4b16f2b5af336fa"
-dependencies = [
- "frame-benchmarking",
- "frame-support",
- "frame-system",
- "log",
- "pallet-asset-conversion",
- "parity-scale-codec",
- "scale-info",
- "sp-arithmetic",
- "sp-core",
- "sp-io",
- "sp-runtime",
-]
-
-[[package]]
-name = "pallet-asset-conversion-tx-payment"
-version = "27.0.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a718a6b19c51a5461897ee048b7d9ae4740c8c68ca0e8fbacf22f4e80fa86d6f"
-dependencies = [
- "frame-benchmarking",
- "frame-support",
- "frame-system",
- "pallet-asset-conversion",
- "pallet-transaction-payment",
- "parity-scale-codec",
- "scale-info",
- "sp-runtime",
-]
-
-[[package]]
-name = "pallet-asset-mapping"
-version = "0.1.0"
-dependencies = [
- "frame-benchmarking",
- "frame-support",
- "frame-system",
- "parity-scale-codec",
- "scale-info",
- "sp-core",
- "sp-io",
- "sp-runtime",
- "sp-std",
- "staging-xcm",
-]
-
-[[package]]
 name = "pallet-asset-rate"
 version = "24.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -7889,19 +7809,6 @@ dependencies = [
  "scale-info",
  "sp-core",
  "sp-runtime",
-]
-
-[[package]]
-name = "pallet-assets-freezer"
-version = "0.13.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c2c250704c4bb7fa64df6a7f088d819ea73b1a331f1f1ec6df6bc81f257715ba"
-dependencies = [
- "log",
- "pallet-assets",
- "parity-scale-codec",
- "polkadot-sdk-frame",
- "scale-info",
 ]
 
 [[package]]
@@ -8771,7 +8678,6 @@ dependencies = [
  "polkavm 0.30.0",
  "polkavm-common 0.30.0",
  "rand 0.8.5",
- "rand_pcg",
  "revm",
  "ripemd",
  "rlp 0.6.1",
@@ -9266,21 +9172,6 @@ dependencies = [
  "staging-xcm",
  "staging-xcm-builder",
  "staging-xcm-executor",
-]
-
-[[package]]
-name = "pallet-xcm-precompiles"
-version = "0.3.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3049f7fe616c5e3400e74ba62e887c03efbf7637730cf1bff1767984a2dab865"
-dependencies = [
- "frame-support",
- "pallet-revive",
- "pallet-xcm",
- "parity-scale-codec",
- "staging-xcm",
- "staging-xcm-executor",
- "tracing",
 ]
 
 [[package]]
@@ -18301,7 +18192,6 @@ dependencies = [
 name = "xode-runtime"
 version = "0.2.0"
 dependencies = [
- "assets-common",
  "cumulus-pallet-aura-ext",
  "cumulus-pallet-parachain-system",
  "cumulus-pallet-session-benchmarking",
@@ -18323,13 +18213,8 @@ dependencies = [
  "frame-try-runtime",
  "hex-literal 1.1.0",
  "log",
- "pallet-asset-conversion",
- "pallet-asset-conversion-ops",
- "pallet-asset-conversion-tx-payment",
- "pallet-asset-mapping",
  "pallet-asset-rate",
  "pallet-assets",
- "pallet-assets-freezer",
  "pallet-assets-precompiles",
  "pallet-aura",
  "pallet-authorship",
@@ -18352,7 +18237,6 @@ dependencies = [
  "pallet-utility",
  "pallet-whitelist",
  "pallet-xcm",
- "pallet-xcm-precompiles",
  "pallet-xode-staking",
  "parachains-common",
  "parity-scale-codec",

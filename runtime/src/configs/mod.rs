@@ -25,53 +25,47 @@
 #![allow(unused_doc_comments)]
 
 pub mod xcm_config;
-use alloc::vec;
+
 // Substrate and Polkadot dependencies
-use crate::{Timestamp, XodeStaking, Preimage, AssetsFreezer, PoolAssetsFreezer, Assets, ForeignAssets, ForeignAssetsFreezer, PoolAssets, LocationToAccountId};
+use crate::{Timestamp, XodeStaking, Preimage};
 use cumulus_pallet_parachain_system::RelayNumberMonotonicallyIncreases;
 use cumulus_primitives_core::{AggregateMessageOrigin, ParaId};
 use frame_support::{
 	derive_impl,
 	dispatch::DispatchClass,
-	ord_parameter_types,
 	parameter_types,
 	traits::{
-		ConstBool, ConstU32, ConstU64, ConstU128, ConstU8, EitherOfDiverse, TransformOrigin, VariantCountOf,
+		ConstBool, ConstU32, ConstU64, ConstU8, EitherOfDiverse, TransformOrigin, VariantCountOf,
 		AsEnsureOriginWithArg,Randomness, LinearStoragePrice,
 		fungible::{Balanced, Credit, HoldConsideration},
-		fungible,
-		fungibles,
 		OnUnbalanced,Imbalance,
-		tokens::imbalance::{ResolveTo, ResolveAssetTo},
+		tokens::imbalance::ResolveTo,
 	},
 	weights::{ConstantMultiplier, Weight},
 	PalletId,
 };
 use frame_system::{
 	limits::{BlockLength, BlockWeights},
-	EnsureSigned, EnsureSignedBy, pallet_prelude::BlockNumberFor,
+	EnsureSigned,pallet_prelude::BlockNumberFor,
 	EnsureWithSuccess,
 };
 use pallet_xcm::{EnsureXcm, IsVoiceOfBody};
-use parachains_common::{message_queue::{NarrowOriginToSibling, ParaIdToSibling}, AssetIdForTrustBackedAssets};
+use parachains_common::message_queue::{NarrowOriginToSibling, ParaIdToSibling};
 use polkadot_runtime_common::{
 	xcm_sender::NoPriceForMessageDelivery, BlockHashCount, SlowAdjustingFeeUpdate,
 };
 use sp_consensus_aura::sr25519::AuthorityId as AuraId;
 use sp_runtime:: {
-	// generic,
-	Permill, Perbill, Percent,
+	Perbill, Percent,
 	traits::{ AccountIdConversion, Zero },
 	FixedU128,
 };
 use sp_version::RuntimeVersion;
 use xcm::latest::prelude::BodyId;
 use pallet_collective::{EnsureProportionAtLeast, EnsureProportionMoreThan};
-use pallet_xcm_precompiles::XcmPrecompile;
 
 // Local module imports
 use super::{
-	weights,
 	weights::{BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight},
 	AccountId, Aura, Balance, Balances, Block, BlockNumber, CollatorSelection, ConsensusHook, Hash,
 	MessageQueue, Nonce, PalletInfo, ParachainSystem, Runtime, RuntimeCall, RuntimeEvent,
@@ -81,14 +75,8 @@ use super::{
 	// Governance
 	TechnicalCommittee, TreasuryCouncil,
 };
-use xcm_config::{RelayLocation, XcmOriginToTransactDispatchOrigin, TrustBackedAssetsPalletLocation, TokenLocation, PoolAssetsPalletLocation};
+use xcm_config::{RelayLocation, XcmOriginToTransactDispatchOrigin};
 
-use assets_common::{
-	foreign_creators::ForeignCreators,
-	local_and_foreign_assets::{LocalFromLeft, TargetFromLeft, ForeignAssetReserveData},
-	matching::FromSiblingParachain,
-	AssetIdForPoolAssets, AssetIdForPoolAssetsConvert, AssetIdForTrustBackedAssetsConvert,
-};
 use pallet_assets::Call as AssetsCall;
 use pallet_balances::Call as BalancesCall;
 pub enum FilterRuntimeCall {}
@@ -457,272 +445,35 @@ parameter_types! {
 	pub const AssetDeposit: Balance = 10_000 * UNIT;
 	pub const AssetAccountDeposit: Balance = deposit(1, 16);
 	pub const ApprovalDeposit: Balance = EXISTENTIAL_DEPOSIT;
-	pub const AssetsStringLimit: u32 = 50;
+	pub const StringLimit: u32 = 50;
 	pub const MetadataDepositBase: Balance = deposit(1, 68);
 	pub const MetadataDepositPerByte: Balance = deposit(0, 1);
 }
 
-/// We allow root to execute privileged asset operations.
-pub type AssetsForceOrigin = EnsureTwoThirdsTreasuryCouncil;
-
-// Called "Trust Backed" assets because these are generally registered by some account, and users of
-// the asset assume it has some claimed backing. The pallet is called `Assets` in
-// `construct_runtime` to avoid breaking changes on storage reads.
-pub type TrustBackedAssetsInstance = pallet_assets::Instance1;
-type TrustBackedAssetsCall = pallet_assets::Call<Runtime, TrustBackedAssetsInstance>;
-impl pallet_assets::Config<TrustBackedAssetsInstance> for Runtime {
+impl pallet_assets::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type Balance = Balance;
 	type RemoveItemsLimit = ConstU32<1_000>;
-	type AssetId = AssetIdForTrustBackedAssets;
-	type AssetIdParameter = codec::Compact<AssetIdForTrustBackedAssets>;
-	type ReserveData = ();
+	type AssetId = u32;
+	type AssetIdParameter = codec::Compact<u32>;
 	type Currency = Balances;
 	type CreateOrigin = AsEnsureOriginWithArg<EnsureSigned<AccountId>>;
-	type ForceOrigin = AssetsForceOrigin;
+	type ForceOrigin = EnsureTwoThirdsTreasuryCouncil;
 	type AssetDeposit = AssetDeposit;
 	type AssetAccountDeposit = AssetAccountDeposit;
 	type MetadataDepositBase = MetadataDepositBase;
 	type MetadataDepositPerByte = MetadataDepositPerByte;
 	type ApprovalDeposit = ApprovalDeposit;
-	type StringLimit = AssetsStringLimit;
-	type Freezer = AssetsFreezer;
-	type Holder = ();
+	type StringLimit = StringLimit;
+	type Freezer = ();
 	type Extra = ();
-	type CallbackHandle = pallet_assets::AutoIncAssetId<Runtime, TrustBackedAssetsInstance>;
-	type WeightInfo = weights::pallet_assets_local::WeightInfo<Runtime>;
+	type CallbackHandle = ();
+	type WeightInfo = pallet_assets::weights::SubstrateWeight<Runtime>;
 	#[cfg(feature = "runtime-benchmarks")]
 	type BenchmarkHelper = ();
-}
-
-// Allow Freezes for the `Assets` pallet
-pub type AssetsFreezerInstance = pallet_assets_freezer::Instance1;
-impl pallet_assets_freezer::Config<AssetsFreezerInstance> for Runtime {
-	type RuntimeFreezeReason = RuntimeFreezeReason;
-	type RuntimeEvent = RuntimeEvent;
-}
-
-parameter_types! {
-	pub const AssetConversionPalletId: PalletId = PalletId(*b"py/ascon");
-	pub const LiquidityWithdrawalFee: Permill = Permill::from_percent(0);
-}
-
-ord_parameter_types! {
-	pub const AssetConversionOrigin: sp_runtime::AccountId32 =
-		AccountIdConversion::<sp_runtime::AccountId32>::into_account_truncating(&AssetConversionPalletId::get());
-}
-
-pub type PoolAssetsInstance = pallet_assets::Instance3;
-impl pallet_assets::Config<PoolAssetsInstance> for Runtime {
-	type RuntimeEvent = RuntimeEvent;
-	type Balance = Balance;
-	type RemoveItemsLimit = ConstU32<1000>;
-	type AssetId = AssetIdForPoolAssets;
-	type AssetIdParameter = u32;
+	// Stable 2512 Update
 	type ReserveData = ();
-	type Currency = Balances;
-	type CreateOrigin =
-		AsEnsureOriginWithArg<EnsureSignedBy<AssetConversionOrigin, sp_runtime::AccountId32>>;
-	type ForceOrigin = AssetsForceOrigin;
-	// Deposits are zero because creation/admin is limited to Asset Conversion pallet.
-	type AssetDeposit = ConstU128<0>;
-	type AssetAccountDeposit = ConstU128<0>;
-	type MetadataDepositBase = ConstU128<0>;
-	type MetadataDepositPerByte = ConstU128<0>;
-	type ApprovalDeposit = ApprovalDeposit;
-	type StringLimit = ConstU32<50>;
 	type Holder = ();
-	type Freezer = PoolAssetsFreezer;
-	type Extra = ();
-	type WeightInfo = weights::pallet_assets_pool::WeightInfo<Runtime>;
-	type CallbackHandle = ();
-	#[cfg(feature = "runtime-benchmarks")]
-	type BenchmarkHelper = ();
-}
-
-// Allow Freezes for the `PoolAssets` pallet
-pub type PoolAssetsFreezerInstance = pallet_assets_freezer::Instance3;
-impl pallet_assets_freezer::Config<PoolAssetsFreezerInstance> for Runtime {
-	type RuntimeFreezeReason = RuntimeFreezeReason;
-	type RuntimeEvent = RuntimeEvent;
-}
-
-/// Union fungibles implementation for `Assets` and `ForeignAssets`.
-pub type LocalAndForeignAssets = fungibles::UnionOf<
-	Assets,
-	ForeignAssets,
-	LocalFromLeft<
-		AssetIdForTrustBackedAssetsConvert<TrustBackedAssetsPalletLocation, xcm::v5::Location>,
-		AssetIdForTrustBackedAssets,
-		xcm::v5::Location,
-	>,
-	xcm::v5::Location,
-	AccountId,
->;
-
-/// Union fungibles implementation for `AssetsFreezer` and `ForeignAssetsFreezer`.
-pub type LocalAndForeignAssetsFreezer = fungibles::UnionOf<
-	AssetsFreezer,
-	ForeignAssetsFreezer,
-	LocalFromLeft<
-		AssetIdForTrustBackedAssetsConvert<TrustBackedAssetsPalletLocation, xcm::v5::Location>,
-		AssetIdForTrustBackedAssets,
-		xcm::v5::Location,
-	>,
-	xcm::v5::Location,
-	AccountId,
->;
-
-/// Union fungibles implementation for [`LocalAndForeignAssets`] and [`Balances`].
-pub type NativeAndNonPoolAssets = fungible::UnionOf<
-	Balances,
-	LocalAndForeignAssets,
-	TargetFromLeft<TokenLocation, xcm::v5::Location>,
-	xcm::v5::Location,
-	AccountId,
->;
-
-/// Union fungibles implementation for [`LocalAndForeignAssetsFreezer`] and [`Balances`].
-pub type NativeAndNonPoolAssetsFreezer = fungible::UnionOf<
-	Balances,
-	LocalAndForeignAssetsFreezer,
-	TargetFromLeft<TokenLocation, xcm::v5::Location>,
-	xcm::v5::Location,
-	AccountId,
->;
-
-/// Union fungibles implementation for [`PoolAssets`] and [`NativeAndNonPoolAssets`].
-///
-/// NOTE: Should be kept updated to include ALL balances and assets in the runtime.
-pub type NativeAndAllAssets = fungibles::UnionOf<
-	PoolAssets,
-	NativeAndNonPoolAssets,
-	LocalFromLeft<
-		AssetIdForPoolAssetsConvert<PoolAssetsPalletLocation, xcm::v5::Location>,
-		AssetIdForPoolAssets,
-		xcm::v5::Location,
-	>,
-	xcm::v5::Location,
-	AccountId,
->;
-
-/// Union fungibles implementation for [`PoolAssetsFreezer`] and [`NativeAndNonPoolAssetsFreezer`].
-///
-/// NOTE: Should be kept updated to include ALL balances and assets in the runtime.
-pub type NativeAndAllAssetsFreezer = fungibles::UnionOf<
-	PoolAssetsFreezer,
-	NativeAndNonPoolAssetsFreezer,
-	LocalFromLeft<
-		AssetIdForPoolAssetsConvert<PoolAssetsPalletLocation, xcm::v5::Location>,
-		AssetIdForPoolAssets,
-		xcm::v5::Location,
-	>,
-	xcm::v5::Location,
-	AccountId,
->;
-
-pub type PoolIdToAccountId = pallet_asset_conversion::AccountIdConverter<
-	AssetConversionPalletId,
-	(xcm::v5::Location, xcm::v5::Location),
->;
-
-impl pallet_asset_conversion::Config for Runtime {
-	type RuntimeEvent = RuntimeEvent;
-	type Balance = Balance;
-	type HigherPrecisionBalance = sp_core::U256;
-	type AssetKind = xcm::v5::Location;
-	type Assets = NativeAndNonPoolAssets;
-	type PoolId = (Self::AssetKind, Self::AssetKind);
-	type PoolLocator = pallet_asset_conversion::WithFirstAsset<
-		TokenLocation,
-		AccountId,
-		Self::AssetKind,
-		PoolIdToAccountId,
-	>;
-	type PoolAssetId = u32;
-	type PoolAssets = PoolAssets;
-	type PoolSetupFee = ConstU128<0>; // Asset class deposit fees are sufficient to prevent spam
-	type PoolSetupFeeAsset = TokenLocation;
-	type PoolSetupFeeTarget = ResolveAssetTo<AssetConversionOrigin, Self::Assets>;
-	type LiquidityWithdrawalFee = LiquidityWithdrawalFee;
-	type LPFee = ConstU32<3>;
-	type PalletId = AssetConversionPalletId;
-	type MaxSwapPathLength = ConstU32<3>;
-	type MintMinLiquidity = ConstU128<100>;
-	type WeightInfo = weights::pallet_asset_conversion::WeightInfo<Runtime>;
-	#[cfg(feature = "runtime-benchmarks")]
-	type BenchmarkHelper = assets_common::benchmarks::AssetPairFactory<
-		TokenLocation,
-		parachain_info::Pallet<Runtime>,
-		xcm_config::TrustBackedAssetsPalletIndex,
-		xcm::v5::Location,
-	>;
-}
-
-impl pallet_asset_conversion_ops::Config for Runtime {
-	type RuntimeEvent = RuntimeEvent;
-	type PriorAccountIdConverter = pallet_asset_conversion::AccountIdConverterNoSeed<
-		<Runtime as pallet_asset_conversion::Config>::PoolId,
-	>;
-	type AssetsRefund = <Runtime as pallet_asset_conversion::Config>::Assets;
-	type PoolAssetsRefund = <Runtime as pallet_asset_conversion::Config>::PoolAssets;
-	type PoolAssetsTeam = <Runtime as pallet_asset_conversion::Config>::PoolAssets;
-	type DepositAsset = Balances;
-	type WeightInfo = weights::pallet_asset_conversion_ops::WeightInfo<Runtime>;
-}
-
-parameter_types! {
-	pub const CreateForeignAssetDeposit: Balance = 100 * UNIT;
-	pub const ForeignAssetsAssetDeposit: Balance = CreateForeignAssetDeposit::get();
-	pub const ForeignAssetsAssetAccountDeposit: Balance = AssetAccountDeposit::get();
-	pub const ForeignAssetsApprovalDeposit: Balance = ApprovalDeposit::get();
-	pub const ForeignAssetsAssetsStringLimit: u32 = AssetsStringLimit::get();
-	pub const ForeignAssetsMetadataDepositBase: Balance = MetadataDepositBase::get();
-	pub const ForeignAssetsMetadataDepositPerByte: Balance = MetadataDepositPerByte::get();
-}
-
-/// Assets managed by some foreign location. Note: we do not declare a `ForeignAssetsCall` type, as
-/// this type is used in proxy definitions. We assume that a foreign location would not want to set
-/// an individual, local account as a proxy for the issuance of their assets. This issuance should
-/// be managed by the foreign location's governance.
-pub type ForeignAssetsInstance = pallet_assets::Instance2;
-impl pallet_assets::Config<ForeignAssetsInstance> for Runtime {
-	type RuntimeEvent = RuntimeEvent;
-	type Balance = Balance;
-	type AssetId = xcm::v5::Location;
-	type AssetIdParameter = xcm::v5::Location;
-	type ReserveData = ForeignAssetReserveData;
-	type Currency = Balances;
-	type CreateOrigin = ForeignCreators<
-		(
-			FromSiblingParachain<parachain_info::Pallet<Runtime>, xcm::v5::Location>,
-		),
-		LocationToAccountId,
-		AccountId,
-		xcm::v5::Location,
-	>;
-	type ForceOrigin = AssetsForceOrigin;
-	type AssetDeposit = ForeignAssetsAssetDeposit;
-	type MetadataDepositBase = ForeignAssetsMetadataDepositBase;
-	type MetadataDepositPerByte = ForeignAssetsMetadataDepositPerByte;
-	type ApprovalDeposit = ForeignAssetsApprovalDeposit;
-	type StringLimit = ForeignAssetsAssetsStringLimit;
-	type Holder = ();
-	type Freezer = ForeignAssetsFreezer;
-	type Extra = ();
-	type WeightInfo = weights::pallet_assets_foreign::WeightInfo<Runtime>;
-	type CallbackHandle = ();
-	type AssetAccountDeposit = ForeignAssetsAssetAccountDeposit;
-	type RemoveItemsLimit = frame_support::traits::ConstU32<1000>;
-	#[cfg(feature = "runtime-benchmarks")]
-	type BenchmarkHelper = assets_common::benchmarks::LocationAssetsBenchmarkHelper;
-}
-
-// Allow Freezes for the `ForeignAssets` pallet
-pub type ForeignAssetsFreezerInstance = pallet_assets_freezer::Instance2;
-impl pallet_assets_freezer::Config<ForeignAssetsFreezerInstance> for Runtime {
-	type RuntimeFreezeReason = RuntimeFreezeReason;
-	type RuntimeEvent = RuntimeEvent;
 }
 
 /// =========
@@ -825,7 +576,7 @@ impl pallet_asset_rate::Config for Runtime {
 	type RemoveOrigin = EnsureTwoThirdsTreasuryCouncil;
 	type UpdateOrigin = EnsureTwoThirdsTreasuryCouncil;
 	type Currency = Balances;
-	type AssetKind = xcm::v5::Location;
+	type AssetKind = u32;
 	type RuntimeEvent = RuntimeEvent;
 	type WeightInfo = pallet_asset_rate::weights::SubstrateWeight<Runtime>;
 	#[cfg(feature = "runtime-benchmarks")]
@@ -853,13 +604,10 @@ impl pallet_treasury::Config for Runtime {
 	type SpendFunds = ();  
     type WeightInfo = pallet_treasury::weights::SubstrateWeight<Runtime>;
     type MaxApprovals = MaxApprovals;
-	type AssetKind = xcm::v5::Location;
+	type AssetKind = u32;
 	type Beneficiary = AccountId;
 	type BeneficiaryLookup = pallet_indices::Pallet<Runtime>;
-	type Paymaster = frame_support::traits::tokens::pay::PayAssetFromAccount<
-        LocalAndForeignAssets, 
-        XodeTreasuryAccount
-    >;
+	type Paymaster = frame_support::traits::tokens::pay::PayAssetFromAccount<pallet_assets::Pallet<Runtime>, XodeTreasuryAccount>;
 	type BalanceConverter = pallet_asset_rate::Pallet<Runtime>;
 	type PayoutPeriod = SpendPayoutPeriod;
 	#[cfg(feature = "runtime-benchmarks")]
@@ -1095,10 +843,6 @@ impl pallet_revive::Config for Runtime {
 	type DepositPerChildTrieItem = DepositPerChildTrieItem;
 	type AllowEVMBytecode = ConstBool<true>;
 	type MaxEthExtrinsicWeight = MaxEthExtrinsicWeight;
-	type FeeInfo = pallet_revive::evm::fees::Info<Address, Signature, EthExtraImpl>;
-	type Precompiles = (
-		ERC20<Self, InlineIdConfig<0x120>, TrustBackedAssetsInstance>,
-		ERC20<Self, InlineIdConfig<0x320>, PoolAssetsInstance>,
-		XcmPrecompile<Self>,
-	);
+	type FeeInfo = ();
+	type Precompiles = ();
 }
