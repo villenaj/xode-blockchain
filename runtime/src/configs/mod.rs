@@ -27,7 +27,7 @@
 pub mod xcm_config;
 use alloc::vec;
 // Substrate and Polkadot dependencies
-use crate::{Timestamp, XodeStaking, Preimage, AssetsFreezer, PoolAssetsFreezer, Assets, ForeignAssets, ForeignAssetsFreezer, PoolAssets, LocationToAccountId};
+use crate::{Timestamp, XodeStaking, Preimage, AssetsFreezer, PoolAssetsFreezer, Assets, PoolAssets};
 use cumulus_pallet_parachain_system::RelayNumberMonotonicallyIncreases;
 use cumulus_primitives_core::{AggregateMessageOrigin, ParaId};
 use frame_support::{
@@ -38,7 +38,7 @@ use frame_support::{
 	traits::{
 		ConstBool, ConstU32, ConstU64, ConstU128, ConstU8, EitherOfDiverse, TransformOrigin, VariantCountOf,
 		AsEnsureOriginWithArg,Randomness, LinearStoragePrice,
-		fungible::{Balanced, Credit, HoldConsideration},
+		fungible::{Balanced, Credit, HoldConsideration, NativeOrWithId, NativeFromLeft},
 		fungible,
 		fungibles,
 		OnUnbalanced,Imbalance,
@@ -84,14 +84,14 @@ use super::{
 	// Revive
 	Address, Signature, EthExtraImpl
 };
-use xcm_config::{RelayLocation, XcmOriginToTransactDispatchOrigin, TrustBackedAssetsPalletLocation, TokenLocation, PoolAssetsPalletLocation};
+use xcm_config::{RelayLocation, XcmOriginToTransactDispatchOrigin, PoolAssetsPalletLocation};
 
 use assets_common::{
-	foreign_creators::ForeignCreators,
-	local_and_foreign_assets::{LocalFromLeft, TargetFromLeft, ForeignAssetReserveData},
-	matching::FromSiblingParachain,
-	AssetIdForPoolAssets, AssetIdForPoolAssetsConvert, AssetIdForTrustBackedAssetsConvert,
+	local_and_foreign_assets::LocalFromLeft,
+	AssetIdForPoolAssets, AssetIdForPoolAssetsConvert,
 };
+use pallet_asset_conversion::{AccountIdConverter, WithFirstAsset, Ascending, Chain, AccountIdConverterNoSeed};
+
 use pallet_assets::Call as AssetsCall;
 use pallet_balances::Call as BalancesCall;
 pub enum FilterRuntimeCall {}
@@ -509,6 +509,7 @@ impl pallet_assets_freezer::Config<AssetsFreezerInstance> for Runtime {
 parameter_types! {
 	pub const AssetConversionPalletId: PalletId = PalletId(*b"py/ascon");
 	pub const LiquidityWithdrawalFee: Permill = Permill::from_percent(0);
+	pub const Native: NativeOrWithId<u32> = NativeOrWithId::Native;
 }
 
 ord_parameter_types! {
@@ -516,7 +517,7 @@ ord_parameter_types! {
 		AccountIdConversion::<sp_runtime::AccountId32>::into_account_truncating(&AssetConversionPalletId::get());
 }
 
-pub type PoolAssetsInstance = pallet_assets::Instance3;
+pub type PoolAssetsInstance = pallet_assets::Instance2;
 impl pallet_assets::Config<PoolAssetsInstance> for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type Balance = Balance;
@@ -545,108 +546,90 @@ impl pallet_assets::Config<PoolAssetsInstance> for Runtime {
 }
 
 // Allow Freezes for the `PoolAssets` pallet
-pub type PoolAssetsFreezerInstance = pallet_assets_freezer::Instance3;
+pub type PoolAssetsFreezerInstance = pallet_assets_freezer::Instance2;
 impl pallet_assets_freezer::Config<PoolAssetsFreezerInstance> for Runtime {
 	type RuntimeFreezeReason = RuntimeFreezeReason;
 	type RuntimeEvent = RuntimeEvent;
 }
 
-/// Union fungibles implementation for `Assets` and `ForeignAssets`.
-pub type LocalAndForeignAssets = fungibles::UnionOf<
+/// Union fungibles implementation for [`LocalAssets`] and [`Balances`].
+pub type NativeAndLocalAssets = fungible::UnionOf<
+	Balances,
 	Assets,
-	ForeignAssets,
-	LocalFromLeft<
-		AssetIdForTrustBackedAssetsConvert<TrustBackedAssetsPalletLocation, xcm::v5::Location>,
-		AssetIdForTrustBackedAssets,
-		xcm::v5::Location,
-	>,
-	xcm::v5::Location,
+	NativeFromLeft,
+	NativeOrWithId<AssetIdForTrustBackedAssets>,
 	AccountId,
 >;
 
-/// Union fungibles implementation for `AssetsFreezer` and `ForeignAssetsFreezer`.
-pub type LocalAndForeignAssetsFreezer = fungibles::UnionOf<
+/// Union fungibles implementation for [`LocalAssetsFreezer`] and [`Balances`].
+pub type NativeAndLocalAssetsFreezer = fungible::UnionOf<
+	Balances,
 	AssetsFreezer,
-	ForeignAssetsFreezer,
-	LocalFromLeft<
-		AssetIdForTrustBackedAssetsConvert<TrustBackedAssetsPalletLocation, xcm::v5::Location>,
-		AssetIdForTrustBackedAssets,
-		xcm::v5::Location,
-	>,
-	xcm::v5::Location,
+	NativeFromLeft,
+	NativeOrWithId<AssetIdForTrustBackedAssets>,
 	AccountId,
 >;
 
-/// Union fungibles implementation for [`LocalAndForeignAssets`] and [`Balances`].
-pub type NativeAndNonPoolAssets = fungible::UnionOf<
-	Balances,
-	LocalAndForeignAssets,
-	TargetFromLeft<TokenLocation, xcm::v5::Location>,
-	xcm::v5::Location,
-	AccountId,
->;
-
-/// Union fungibles implementation for [`LocalAndForeignAssetsFreezer`] and [`Balances`].
-pub type NativeAndNonPoolAssetsFreezer = fungible::UnionOf<
-	Balances,
-	LocalAndForeignAssetsFreezer,
-	TargetFromLeft<TokenLocation, xcm::v5::Location>,
-	xcm::v5::Location,
-	AccountId,
->;
-
-/// Union fungibles implementation for [`PoolAssets`] and [`NativeAndNonPoolAssets`].
+/// Union fungibles implementation for [`PoolAssets`] and [`NativeAndLocalAssets`].
 ///
 /// NOTE: Should be kept updated to include ALL balances and assets in the runtime.
 pub type NativeAndAllAssets = fungibles::UnionOf<
 	PoolAssets,
-	NativeAndNonPoolAssets,
+	NativeAndLocalAssets,
 	LocalFromLeft<
 		AssetIdForPoolAssetsConvert<PoolAssetsPalletLocation, xcm::v5::Location>,
 		AssetIdForPoolAssets,
-		xcm::v5::Location,
+		NativeOrWithId<AssetIdForTrustBackedAssets>,
 	>,
-	xcm::v5::Location,
+	NativeOrWithId<AssetIdForTrustBackedAssets>,
 	AccountId,
 >;
 
-/// Union fungibles implementation for [`PoolAssetsFreezer`] and [`NativeAndNonPoolAssetsFreezer`].
+/// Union fungibles implementation for [`PoolAssetsFreezer`] and [`NativeAndLocalAssetsFreezer`].
 ///
 /// NOTE: Should be kept updated to include ALL balances and assets in the runtime.
 pub type NativeAndAllAssetsFreezer = fungibles::UnionOf<
 	PoolAssetsFreezer,
-	NativeAndNonPoolAssetsFreezer,
+	NativeAndLocalAssetsFreezer,
 	LocalFromLeft<
 		AssetIdForPoolAssetsConvert<PoolAssetsPalletLocation, xcm::v5::Location>,
 		AssetIdForPoolAssets,
-		xcm::v5::Location,
+		NativeOrWithId<AssetIdForTrustBackedAssets>,
 	>,
-	xcm::v5::Location,
+	NativeOrWithId<AssetIdForTrustBackedAssets>,
 	AccountId,
 >;
 
-pub type PoolIdToAccountId = pallet_asset_conversion::AccountIdConverter<
+pub type PoolIdToAccountId = AccountIdConverter<
 	AssetConversionPalletId,
-	(xcm::v5::Location, xcm::v5::Location),
+	(NativeOrWithId<AssetIdForTrustBackedAssets>, NativeOrWithId<AssetIdForTrustBackedAssets>),
+>;
+
+pub type WithFirstAssetLocator = WithFirstAsset<
+	Native,
+	AccountId,
+	NativeOrWithId<AssetIdForTrustBackedAssets>,
+	PoolIdToAccountId,
+>;
+
+pub type AscendingLocator = Ascending<
+	AccountId,
+	NativeOrWithId<AssetIdForTrustBackedAssets>,
+	PoolIdToAccountId
 >;
 
 impl pallet_asset_conversion::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type Balance = Balance;
 	type HigherPrecisionBalance = sp_core::U256;
-	type AssetKind = xcm::v5::Location;
-	type Assets = NativeAndNonPoolAssets;
+	type AssetKind = NativeOrWithId<AssetIdForTrustBackedAssets>;
+	type Assets = NativeAndLocalAssets;
 	type PoolId = (Self::AssetKind, Self::AssetKind);
-	type PoolLocator = pallet_asset_conversion::WithFirstAsset<
-		TokenLocation,
-		AccountId,
-		Self::AssetKind,
-		PoolIdToAccountId,
-	>;
+	type PoolLocator = Chain<WithFirstAssetLocator, AscendingLocator>;
 	type PoolAssetId = u32;
 	type PoolAssets = PoolAssets;
 	type PoolSetupFee = ConstU128<0>; // Asset class deposit fees are sufficient to prevent spam
-	type PoolSetupFeeAsset = TokenLocation;
+	type PoolSetupFeeAsset = Native;
 	type PoolSetupFeeTarget = ResolveAssetTo<AssetConversionOrigin, Self::Assets>;
 	type LiquidityWithdrawalFee = LiquidityWithdrawalFee;
 	type LPFee = ConstU32<3>;
@@ -656,7 +639,7 @@ impl pallet_asset_conversion::Config for Runtime {
 	type WeightInfo = weights::pallet_asset_conversion::WeightInfo<Runtime>;
 	#[cfg(feature = "runtime-benchmarks")]
 	type BenchmarkHelper = assets_common::benchmarks::AssetPairFactory<
-		TokenLocation,
+		Native,
 		parachain_info::Pallet<Runtime>,
 		xcm_config::TrustBackedAssetsPalletIndex,
 		xcm::v5::Location,
@@ -665,7 +648,7 @@ impl pallet_asset_conversion::Config for Runtime {
 
 impl pallet_asset_conversion_ops::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
-	type PriorAccountIdConverter = pallet_asset_conversion::AccountIdConverterNoSeed<
+	type PriorAccountIdConverter = AccountIdConverterNoSeed<
 		<Runtime as pallet_asset_conversion::Config>::PoolId,
 	>;
 	type AssetsRefund = <Runtime as pallet_asset_conversion::Config>::Assets;
@@ -673,60 +656,6 @@ impl pallet_asset_conversion_ops::Config for Runtime {
 	type PoolAssetsTeam = <Runtime as pallet_asset_conversion::Config>::PoolAssets;
 	type DepositAsset = Balances;
 	type WeightInfo = weights::pallet_asset_conversion_ops::WeightInfo<Runtime>;
-}
-
-parameter_types! {
-	pub const CreateForeignAssetDeposit: Balance = 100 * UNIT;
-	pub const ForeignAssetsAssetDeposit: Balance = CreateForeignAssetDeposit::get();
-	pub const ForeignAssetsAssetAccountDeposit: Balance = AssetAccountDeposit::get();
-	pub const ForeignAssetsApprovalDeposit: Balance = ApprovalDeposit::get();
-	pub const ForeignAssetsAssetsStringLimit: u32 = AssetsStringLimit::get();
-	pub const ForeignAssetsMetadataDepositBase: Balance = MetadataDepositBase::get();
-	pub const ForeignAssetsMetadataDepositPerByte: Balance = MetadataDepositPerByte::get();
-}
-
-/// Assets managed by some foreign location. Note: we do not declare a `ForeignAssetsCall` type, as
-/// this type is used in proxy definitions. We assume that a foreign location would not want to set
-/// an individual, local account as a proxy for the issuance of their assets. This issuance should
-/// be managed by the foreign location's governance.
-pub type ForeignAssetsInstance = pallet_assets::Instance2;
-impl pallet_assets::Config<ForeignAssetsInstance> for Runtime {
-	type RuntimeEvent = RuntimeEvent;
-	type Balance = Balance;
-	type AssetId = xcm::v5::Location;
-	type AssetIdParameter = xcm::v5::Location;
-	type ReserveData = ForeignAssetReserveData;
-	type Currency = Balances;
-	type CreateOrigin = ForeignCreators<
-		(
-			FromSiblingParachain<parachain_info::Pallet<Runtime>, xcm::v5::Location>,
-		),
-		LocationToAccountId,
-		AccountId,
-		xcm::v5::Location,
-	>;
-	type ForceOrigin = AssetsForceOrigin;
-	type AssetDeposit = ForeignAssetsAssetDeposit;
-	type MetadataDepositBase = ForeignAssetsMetadataDepositBase;
-	type MetadataDepositPerByte = ForeignAssetsMetadataDepositPerByte;
-	type ApprovalDeposit = ForeignAssetsApprovalDeposit;
-	type StringLimit = ForeignAssetsAssetsStringLimit;
-	type Holder = ();
-	type Freezer = ForeignAssetsFreezer;
-	type Extra = ();
-	type WeightInfo = weights::pallet_assets_foreign::WeightInfo<Runtime>;
-	type CallbackHandle = ();
-	type AssetAccountDeposit = ForeignAssetsAssetAccountDeposit;
-	type RemoveItemsLimit = frame_support::traits::ConstU32<1000>;
-	#[cfg(feature = "runtime-benchmarks")]
-	type BenchmarkHelper = assets_common::benchmarks::LocationAssetsBenchmarkHelper;
-}
-
-// Allow Freezes for the `ForeignAssets` pallet
-pub type ForeignAssetsFreezerInstance = pallet_assets_freezer::Instance2;
-impl pallet_assets_freezer::Config<ForeignAssetsFreezerInstance> for Runtime {
-	type RuntimeFreezeReason = RuntimeFreezeReason;
-	type RuntimeEvent = RuntimeEvent;
 }
 
 /// =========
@@ -829,7 +758,7 @@ impl pallet_asset_rate::Config for Runtime {
 	type RemoveOrigin = EnsureTwoThirdsTreasuryCouncil;
 	type UpdateOrigin = EnsureTwoThirdsTreasuryCouncil;
 	type Currency = Balances;
-	type AssetKind = xcm::v5::Location;
+	type AssetKind = NativeOrWithId<AssetIdForTrustBackedAssets>;
 	type RuntimeEvent = RuntimeEvent;
 	type WeightInfo = pallet_asset_rate::weights::SubstrateWeight<Runtime>;
 	#[cfg(feature = "runtime-benchmarks")]
@@ -857,11 +786,11 @@ impl pallet_treasury::Config for Runtime {
 	type SpendFunds = ();  
     type WeightInfo = pallet_treasury::weights::SubstrateWeight<Runtime>;
     type MaxApprovals = MaxApprovals;
-	type AssetKind = xcm::v5::Location;
+	type AssetKind = NativeOrWithId<AssetIdForTrustBackedAssets>;
 	type Beneficiary = AccountId;
 	type BeneficiaryLookup = pallet_indices::Pallet<Runtime>;
 	type Paymaster = frame_support::traits::tokens::pay::PayAssetFromAccount<
-        LocalAndForeignAssets, 
+				NativeAndLocalAssets,
         XodeTreasuryAccount
     >;
 	type BalanceConverter = pallet_asset_rate::Pallet<Runtime>;

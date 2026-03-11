@@ -64,7 +64,10 @@ use frame_support::{
 		constants::WEIGHT_REF_TIME_PER_SECOND, Weight, WeightToFeeCoefficient, WeightToFeeCoefficients,
 		WeightToFeePolynomial, WeightToFee as WeightToFeeConversion,
 	},
+	traits::fungible::NativeOrWithId,
 };
+
+use parachains_common::AssetIdForTrustBackedAssets;
 
 pub use sp_consensus_aura::sr25519::AuthorityId as AuraId;
 use pallet_aura::Authorities;
@@ -181,7 +184,8 @@ impl EthExtra for EthExtraImpl {
             frame_system::CheckWeight::<Runtime>::new(),
             pallet_transaction_payment::ChargeTransactionPayment::<Runtime>::from(tip),
             frame_metadata_hash_extension::CheckMetadataHash::<Runtime>::new(false),
-			pallet_revive::evm::tx_extension::SetOrigin::<Runtime>::new_from_eth_transaction(),
+						pallet_revive::evm::tx_extension::SetOrigin::<Runtime>::new_from_eth_transaction(),
+						// pallet_asset_conversion_tx_payment::ChargeAssetTxPayment::<Runtime>::new(),
 		)
 			.into()
 	}
@@ -439,18 +443,16 @@ mod runtime {
 	// Asset Conversion
 	#[runtime::pallet_index(100)]
   pub type AssetConversion = pallet_asset_conversion;
-	#[runtime::pallet_index(101)]
-  pub type ForeignAssets = pallet_assets::Pallet<Runtime, Instance2>;
 	#[runtime::pallet_index(102)]
-  pub type PoolAssets = pallet_assets::Pallet<Runtime, Instance3>;
+  pub type PoolAssets = pallet_assets::Pallet<Runtime, Instance2>;
 	#[runtime::pallet_index(103)]
   pub type AssetsFreezer = pallet_assets_freezer::Pallet<Runtime, Instance1>;
-	#[runtime::pallet_index(104)]
-  pub type ForeignAssetsFreezer = pallet_assets_freezer::Pallet<Runtime, Instance2>;
 	#[runtime::pallet_index(105)]
-  pub type PoolAssetsFreezer = pallet_assets_freezer::Pallet<Runtime, Instance3>;
+  pub type PoolAssetsFreezer = pallet_assets_freezer::Pallet<Runtime, Instance2>;
 	#[runtime::pallet_index(106)] 
   pub type AssetConversionOps = pallet_asset_conversion_ops;
+	// #[runtime::pallet_index(107)] 
+  // pub type AssetConversionTxPayment = pallet_asset_conversion_tx_payment;
 }
 
 #[docify::export(register_validate_block)]
@@ -653,18 +655,18 @@ pallet_revive::impl_runtime_apis_plus_revive_traits! (
 	impl pallet_asset_conversion::AssetConversionApi<
 		Block,
 		Balance,
-		xcm::v5::Location,
+		NativeOrWithId<AssetIdForTrustBackedAssets>,
 	> for Runtime
 	{
-		fn quote_price_exact_tokens_for_tokens(asset1: xcm::v5::Location, asset2: xcm::v5::Location, amount: Balance, include_fee: bool) -> Option<Balance> {
+		fn quote_price_exact_tokens_for_tokens(asset1: NativeOrWithId<AssetIdForTrustBackedAssets>, asset2: NativeOrWithId<AssetIdForTrustBackedAssets>, amount: Balance, include_fee: bool) -> Option<Balance> {
 			AssetConversion::quote_price_exact_tokens_for_tokens(asset1, asset2, amount, include_fee)
 		}
 
-		fn quote_price_tokens_for_exact_tokens(asset1: xcm::v5::Location, asset2: xcm::v5::Location, amount: Balance, include_fee: bool) -> Option<Balance> {
+		fn quote_price_tokens_for_exact_tokens(asset1: NativeOrWithId<AssetIdForTrustBackedAssets>, asset2: NativeOrWithId<AssetIdForTrustBackedAssets>, amount: Balance, include_fee: bool) -> Option<Balance> {
 			AssetConversion::quote_price_tokens_for_exact_tokens(asset1, asset2, amount, include_fee)
 		}
 
-		fn get_reserves(asset1: xcm::v5::Location, asset2: xcm::v5::Location) -> Option<(Balance, Balance)> {
+		fn get_reserves(asset1: NativeOrWithId<AssetIdForTrustBackedAssets>, asset2: NativeOrWithId<AssetIdForTrustBackedAssets>) -> Option<(Balance, Balance)> {
 			AssetConversion::get_reserves(asset1, asset2).ok()
 		}
 	}
