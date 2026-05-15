@@ -53,7 +53,6 @@ pub mod pallet {
 	use sp_runtime::traits::Zero;
 	use sp_runtime::Saturating;
 	use scale_info::prelude::vec::Vec;
-	use scale_info::prelude::vec;
 	use hex::decode;
 	use frame_support::PalletId;
 	
@@ -73,9 +72,6 @@ pub mod pallet {
 		pallet_session::Config + 
 		frame_system::Config 
 	{
-		/// Because this pallet emits events, it depends on the runtime's definition of an event.
-		type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
-
 		/// A type representing the weights required by the dispatchables of this pallet.
 		type WeightInfo: WeightInfo;
 
@@ -360,7 +356,7 @@ pub mod pallet {
 
 			// Minimum bond checked
 			ensure!(
-                new_bond > T::MinProposedCandidateBond::get(),
+                new_bond >= T::MinProposedCandidateBond::get(),
                 Error::<T>::ProposedCandidateInsufficientBond
             );
 

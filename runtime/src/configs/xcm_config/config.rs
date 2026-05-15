@@ -11,6 +11,7 @@ use crate::{
     RuntimeEvent,
     RuntimeOrigin,
     XcmpQueue,
+    PoolAssets,
 
     // XCM config modules
     configs::xcm_config::asset_matcher::{NativeAssetMatcher, MultiAssetMatcher},
@@ -20,7 +21,7 @@ use crate::{
 };
 use frame_support::{
     parameter_types,
-    traits::{ConstU32, Everything, Nothing},
+    traits::{ConstU32, Everything, Nothing, PalletInfoAccess},
     weights::Weight,
 };
 use frame_system::EnsureRoot;
@@ -47,6 +48,14 @@ parameter_types! {
     /// The account used to perform checks or hold assets during XCM execution,
     /// such as temporary crediting/debiting when receiving or sending assets.
     pub CheckingAccount: AccountId = PolkadotXcm::check_account();
+    pub const TokenLocation: Location = Location::parent();
+    pub TrustBackedAssetsPalletLocation: Location =
+		PalletInstance(TrustBackedAssetsPalletIndex::get()).into();
+	pub TrustBackedAssetsPalletIndex: u8 = <Assets as PalletInfoAccess>::index() as u8;
+	pub TrustBackedAssetsPalletLocationV3: xcm::v3::Location =
+		xcm::v3::Junction::PalletInstance(<Assets as PalletInfoAccess>::index() as u8).into();
+    pub PoolAssetsPalletLocation: Location =
+		PalletInstance(<PoolAssets as PalletInfoAccess>::index() as u8).into();
 }
 
 /// Type for specifying how a `Location` can be converted into an `AccountId`. This is used
@@ -187,6 +196,8 @@ impl xcm_executor::Config for XcmConfig {
     type HrmpChannelAcceptedHandler = ();
     type HrmpChannelClosingHandler = ();
     type XcmRecorder = PolkadotXcm;
+    // Stable 2512 Update
+    type XcmEventEmitter = PolkadotXcm;
 }
 
 /// No local origins on this chain are allowed to dispatch XCM sends/executions.
@@ -229,6 +240,8 @@ impl pallet_xcm::Config for Runtime {
     type AdminOrigin = EnsureRoot<AccountId>;
     type MaxRemoteLockConsumers = ConstU32<0>;
     type RemoteLockConsumerIdentifier = ();
+    // Stable 2512 Update
+    type AuthorizedAliasConsideration = ();
 }
 
 impl cumulus_pallet_xcm::Config for Runtime {

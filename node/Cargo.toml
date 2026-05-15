@@ -1,8 +1,8 @@
 [package]
 name = "xode-node"
 description = "A Xode Blockchain node."
-version = "0.1.1"
-license = "Unlicense"
+version = "0.2.0"
+license = "MIT-0"
 authors.workspace = true
 homepage.workspace = true
 repository.workspace = true

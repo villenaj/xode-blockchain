@@ -8,14 +8,19 @@ use crate::{
 	TreasuryCouncilMembershipConfig,configs::TreasuryMembershipMaxMembers,
 };
 use alloc::{vec, vec::Vec};
-use parachains_common::{genesis_config_helpers::*, AuraId};
+//use parachains_common::{genesis_config_helpers::*, AuraId};
+use sp_consensus_aura::sr25519::AuthorityId as AuraId;
 use serde_json::Value;
-use sp_core::sr25519;
-use sp_genesis_builder::PresetId;
+//use sp_genesis_builder::PresetId;
+use sp_genesis_builder::{self, PresetId};
 use sp_runtime::{BoundedVec, AccountId32};
+use sp_keyring::Sr25519Keyring;
 
 /// The default XCM version to set in genesis config.
 const SAFE_XCM_VERSION: u32 = xcm::prelude::XCM_VERSION;
+
+#[docify::export_content]
+pub const PARACHAIN_ID: u32 = 3417;
 
 /// Generate the session keys from individual elements.
 ///
@@ -51,6 +56,7 @@ fn testnet_genesis(
 				.cloned()
 				.map(|k| (k, 1u128 << 60))
 				.collect::<Vec<_>>(),
+			dev_accounts: None,
 		},
 		parachain_info: ParachainInfoConfig { parachain_id: id, ..Default::default() },
 		collator_selection: CollatorSelectionConfig {
@@ -94,39 +100,33 @@ fn local_testnet_genesis() -> Value {
 		// initial collators.
 		vec![
 			(
-				get_account_id_from_seed::<sr25519::Public>("Alice"),
-				get_collator_keys_from_seed::<AuraId>("Alice"),
+				Sr25519Keyring::Alice.to_account_id(),
+				Sr25519Keyring::Alice.public().into(),
 			),
 			(
-				get_account_id_from_seed::<sr25519::Public>("Bob"),
-				get_collator_keys_from_seed::<AuraId>("Bob"),
+				Sr25519Keyring::Bob.to_account_id(),
+				Sr25519Keyring::Bob.public().into(),
 			),
 		],
 		vec![
-			get_account_id_from_seed::<sr25519::Public>("Alice"),
-			get_account_id_from_seed::<sr25519::Public>("Bob"),
-			get_account_id_from_seed::<sr25519::Public>("Charlie"),
-			get_account_id_from_seed::<sr25519::Public>("Dave"),
-			get_account_id_from_seed::<sr25519::Public>("Eve"),
-			get_account_id_from_seed::<sr25519::Public>("Ferdie"),
-			get_account_id_from_seed::<sr25519::Public>("Alice//stash"),
-			get_account_id_from_seed::<sr25519::Public>("Bob//stash"),
-			get_account_id_from_seed::<sr25519::Public>("Charlie//stash"),
-			get_account_id_from_seed::<sr25519::Public>("Dave//stash"),
-			get_account_id_from_seed::<sr25519::Public>("Eve//stash"),
-			get_account_id_from_seed::<sr25519::Public>("Ferdie//stash"),
+			Sr25519Keyring::Alice.to_account_id(),
+			Sr25519Keyring::Bob.to_account_id(),
+			Sr25519Keyring::Charlie.to_account_id(),
+			Sr25519Keyring::Dave.to_account_id(),
+			Sr25519Keyring::Eve.to_account_id(),
+			Sr25519Keyring::Ferdie.to_account_id(),
 		],
 		vec![
-			get_account_id_from_seed::<sr25519::Public>("Alice"),
-			get_account_id_from_seed::<sr25519::Public>("Bob"),
-			get_account_id_from_seed::<sr25519::Public>("Charlie"),
+			Sr25519Keyring::Alice.to_account_id(),
+			Sr25519Keyring::Bob.to_account_id(),
+			Sr25519Keyring::Charlie.to_account_id(),
 		],
 		vec![
-			get_account_id_from_seed::<sr25519::Public>("Dave"),
-			get_account_id_from_seed::<sr25519::Public>("Eve"),
-			get_account_id_from_seed::<sr25519::Public>("Ferdie"),
+			Sr25519Keyring::Dave.to_account_id(),
+			Sr25519Keyring::Eve.to_account_id(),
+			Sr25519Keyring::Ferdie.to_account_id(),
 		],
-		4607.into(),
+		PARACHAIN_ID.into(),
 	)
 }
 
@@ -135,47 +135,41 @@ fn development_config_genesis() -> Value {
 		// initial collators.
 		vec![
 			(
-				get_account_id_from_seed::<sr25519::Public>("Alice"),
-				get_collator_keys_from_seed::<AuraId>("Alice"),
+				Sr25519Keyring::Alice.to_account_id(),
+				Sr25519Keyring::Alice.public().into(),
 			),
 			(
-				get_account_id_from_seed::<sr25519::Public>("Bob"),
-				get_collator_keys_from_seed::<AuraId>("Bob"),
+				Sr25519Keyring::Bob.to_account_id(),
+				Sr25519Keyring::Bob.public().into(),
 			),
 		],
 		vec![
-			get_account_id_from_seed::<sr25519::Public>("Alice"),
-			get_account_id_from_seed::<sr25519::Public>("Bob"),
-			get_account_id_from_seed::<sr25519::Public>("Charlie"),
-			get_account_id_from_seed::<sr25519::Public>("Dave"),
-			get_account_id_from_seed::<sr25519::Public>("Eve"),
-			get_account_id_from_seed::<sr25519::Public>("Ferdie"),
-			get_account_id_from_seed::<sr25519::Public>("Alice//stash"),
-			get_account_id_from_seed::<sr25519::Public>("Bob//stash"),
-			get_account_id_from_seed::<sr25519::Public>("Charlie//stash"),
-			get_account_id_from_seed::<sr25519::Public>("Dave//stash"),
-			get_account_id_from_seed::<sr25519::Public>("Eve//stash"),
-			get_account_id_from_seed::<sr25519::Public>("Ferdie//stash"),
+			Sr25519Keyring::Alice.to_account_id(),
+			Sr25519Keyring::Bob.to_account_id(),
+			Sr25519Keyring::Charlie.to_account_id(),
+			Sr25519Keyring::Dave.to_account_id(),
+			Sr25519Keyring::Eve.to_account_id(),
+			Sr25519Keyring::Ferdie.to_account_id(),
 		],
 		vec![
-			get_account_id_from_seed::<sr25519::Public>("Alice"),
-			get_account_id_from_seed::<sr25519::Public>("Bob"),
-			get_account_id_from_seed::<sr25519::Public>("Charlie"),
+			Sr25519Keyring::Alice.to_account_id(),
+			Sr25519Keyring::Bob.to_account_id(),
+			Sr25519Keyring::Charlie.to_account_id(),
 		],
 		vec![
-			get_account_id_from_seed::<sr25519::Public>("Dave"),
-			get_account_id_from_seed::<sr25519::Public>("Eve"),
-			get_account_id_from_seed::<sr25519::Public>("Ferdie"),
+			Sr25519Keyring::Dave.to_account_id(),
+			Sr25519Keyring::Eve.to_account_id(),
+			Sr25519Keyring::Ferdie.to_account_id(),
 		],
-		4607.into(),
+		PARACHAIN_ID.into(),
 	)
 }
 
 /// Provides the JSON representation of predefined genesis config for given `id`.
 pub fn get_preset(id: &PresetId) -> Option<vec::Vec<u8>> {
-	let patch = match id.try_into() {
-		Ok(sp_genesis_builder::LOCAL_TESTNET_RUNTIME_PRESET) => local_testnet_genesis(),
-		Ok(sp_genesis_builder::DEV_RUNTIME_PRESET) => development_config_genesis(),
+	let patch = match id.as_ref() {
+		sp_genesis_builder::LOCAL_TESTNET_RUNTIME_PRESET => local_testnet_genesis(),
+		sp_genesis_builder::DEV_RUNTIME_PRESET => development_config_genesis(),
 		_ => return None,
 	};
 	Some(

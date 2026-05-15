@@ -38,3 +38,68 @@ Governance and treasury on Xode Blockchain are handled through the Xode Foundati
 
 #### [Block scanner](https://node.xode.net/)
 Xode Blockchain integrates indexing and block scanning utilities through Subsquid, providing efficient data indexing and querying capabilities. This allows developers and users to easily access and analyze blockchain data, improving the overall user experience and enabling more advanced applications and analytics on the network.
+
+## Ethereum Support
+
+This guide walks you through setting up the Ethereum JSON-RPC adapter for pallet-revive, which allows Ethereum tooling (MetaMask, Remix, Web3.js) to interact with your Xode chain.
+
+### Prerequisites
+
+- Rust toolchain installed via `rustup`
+- A running Substrate node with `pallet-revive` configured
+- Rust version 1.91 or higher (required for eth-rpc dependencies)
+
+### Installation Steps
+
+#### 1. Install the latest Rust
+
+```bash
+# Update stable toolchain to the latest version
+rustup update stable
+rustup default stable
+
+# Verify your Rust version is >= 1.91
+rustc --version
+```
+#### 2. Install pallet-revive-eth-rpc
+
+```bash
+cargo install pallet-revive-eth-rpc --locked
+```
+#### 3. Start Xode RPC Node
+
+```bash
+# Navigate to your node directory
+cd /path/to/xode-blockchain
+
+# Run in development mode
+./target/release/xode-node --dev --rpc-port 9944
+```
+#### 4. Start Xode Ethereum RPC Node
+
+```bash
+# Connect to custom node RPC port and listen on custom port
+eth-rpc --node-rpc-url ws://127.0.0.1:9944 --rpc-port 8545
+```
+#### 5. Test Xode Ethereum RPC Endpoint
+
+```bash
+curl -X POST http://127.0.0.1:8545 \
+  -H "Content-Type: application/json" \
+  -d '{
+    "jsonrpc":"2.0",
+    "method":"eth_getBlockByNumber",
+    "params":["latest", false],
+    "id":1
+  }'
+```
+#### 6. Connecting MetaMask
+
+1. Open MetaMask → Settings → Networks → Add Network
+2. Configure:
+   - **Network Name**: `Xode Local`
+   - **RPC URL**: `http://127.0.0.1:8545`
+   - **Chain ID**: Your parachain ID (e.g., `3417`)
+   - **Currency Symbol**: `XON` (or your token symbol)
+
+

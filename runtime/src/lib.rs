@@ -39,14 +39,14 @@ mod genesis_config_presets;
 mod weights;
 
 extern crate alloc;
-use alloc::{vec::Vec, sync::Arc};
+use alloc::{vec, vec::Vec, sync::Arc};
 use smallvec::smallvec;
 
 #[cfg(any(feature = "std", test))]
 pub use sp_runtime::BuildStorage;
 
 use sp_runtime::{
-	create_runtime_str, generic, impl_opaque_keys,
+	generic, impl_opaque_keys,
 	traits::{BlakeTwo256, IdentifyAccount, Verify},
 	MultiSignature, MultiAddress, Perbill,
 	traits::Block as BlockT,
@@ -98,6 +98,11 @@ use xcm_runtime_apis::{
 	fees::Error as XcmPaymentApiError,
 };
 
+/// Revive
+use pallet_revive::evm::runtime::EthExtra;
+
+use sp_std::borrow::Cow;
+
 /// Alias to 512-bit hash when used in the context of a transaction signature on the chain.
 pub type Signature = MultiSignature;
 
@@ -134,18 +139,21 @@ pub type BlockId = generic::BlockId<Block>;
 
 /// The SignedExtension to the basic transaction logic.
 #[docify::export(template_signed_extra)]
-pub type SignedExtra = (
-	frame_system::CheckNonZeroSender<Runtime>,
-	frame_system::CheckSpecVersion<Runtime>,
-	frame_system::CheckTxVersion<Runtime>,
-	frame_system::CheckGenesis<Runtime>,
-	frame_system::CheckEra<Runtime>,
-	frame_system::CheckNonce<Runtime>,
-	frame_system::CheckWeight<Runtime>,
-	pallet_transaction_payment::ChargeTransactionPayment<Runtime>,
-	cumulus_primitives_storage_weight_reclaim::StorageWeightReclaim<Runtime>,
-	frame_metadata_hash_extension::CheckMetadataHash<Runtime>,
-);
+pub type TxExtension = cumulus_pallet_weight_reclaim::StorageWeightReclaim<
+    Runtime,
+    (
+        frame_system::CheckNonZeroSender<Runtime>,
+        frame_system::CheckSpecVersion<Runtime>,
+        frame_system::CheckTxVersion<Runtime>,
+        frame_system::CheckGenesis<Runtime>,
+        frame_system::CheckEra<Runtime>,
+        frame_system::CheckNonce<Runtime>,
+        frame_system::CheckWeight<Runtime>,
+        pallet_transaction_payment::ChargeTransactionPayment<Runtime>,
+        frame_metadata_hash_extension::CheckMetadataHash<Runtime>,
+		pallet_revive::evm::tx_extension::SetOrigin<Runtime>,
+    ),
+>;
 
 /// Pallet contracts
 const CONTRACTS_DEBUG_OUTPUT: pallet_contracts::DebugInfo =
@@ -153,15 +161,35 @@ const CONTRACTS_DEBUG_OUTPUT: pallet_contracts::DebugInfo =
 const CONTRACTS_EVENTS: pallet_contracts::CollectEvents =
     pallet_contracts::CollectEvents::UnsafeCollect;
 	
+/// EthExtra converts an unsigned Call::eth_transact into a CheckedExtrinsic.
+/// Default extensions applied to Ethereum transactions.
+#[derive(Clone, PartialEq, Eq, Debug)]
+pub struct EthExtraImpl;
+
+impl EthExtra for EthExtraImpl {
+	type Config = Runtime;
+	type Extension = TxExtension;
+
+	fn get_eth_extension(nonce: u32, tip: Balance) -> Self::Extension {
+		(
+            frame_system::CheckNonZeroSender::<Runtime>::new(),
+            frame_system::CheckSpecVersion::<Runtime>::new(),
+            frame_system::CheckTxVersion::<Runtime>::new(),
+            frame_system::CheckGenesis::<Runtime>::new(),
+            frame_system::CheckMortality::from(generic::Era::Immortal),
+            frame_system::CheckNonce::<Runtime>::from(nonce),
+            frame_system::CheckWeight::<Runtime>::new(),
+            pallet_transaction_payment::ChargeTransactionPayment::<Runtime>::from(tip),
+            frame_metadata_hash_extension::CheckMetadataHash::<Runtime>::new(false),
+			pallet_revive::evm::tx_extension::SetOrigin::<Runtime>::new_from_eth_transaction(),
+		)
+			.into()
+	}
+}
+
 /// Unchecked extrinsic type as expected by this runtime.
 pub type UncheckedExtrinsic =
-	generic::UncheckedExtrinsic<Address, RuntimeCall, Signature, SignedExtra>;
-
-/// All migrations of the runtime, aside from the ones declared in the pallets.
-///
-/// This can be a tuple of types, each implementing `OnRuntimeUpgrade`.
-#[allow(unused_parens)]
-type Migrations = ();
+	pallet_revive::evm::runtime::UncheckedExtrinsic<Address, Signature, EthExtraImpl>;
 
 /// Executive: handles dispatch to the various modules.
 pub type Executive = frame_executive::Executive<
@@ -170,7 +198,6 @@ pub type Executive = frame_executive::Executive<
 	frame_system::ChainContext<Runtime>,
 	Runtime,
 	AllPalletsWithSystem,
-	Migrations,
 >;
 
 /// Handles converting a weight scalar to a fee value, based on the scale and granularity of the
@@ -231,14 +258,14 @@ impl_opaque_keys! {
 
 #[sp_version::runtime_version]
 pub const VERSION: RuntimeVersion = RuntimeVersion {
-	spec_name: create_runtime_str!("xode-runtime"),
-	impl_name: create_runtime_str!("xode-runtime"),
+	spec_name: Cow::Borrowed("xode-runtime"),
+	impl_name: Cow::Borrowed("xode-runtime"),
 	authoring_version: 1,
-	spec_version: 12,
+	spec_version: 13,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
 	transaction_version: 1,
-	state_version: 1,
+	system_version: 1,
 };
 
 #[docify::export]
@@ -373,7 +400,7 @@ mod runtime {
 
 	// Frames (Xode Blockchain)
 	#[runtime::pallet_index(50)]
-	pub type Assets = pallet_assets;
+	pub type Assets = pallet_assets::Pallet<Runtime, Instance1>;
 	#[runtime::pallet_index(51)]
 	pub type Contracts = pallet_contracts;
 	#[runtime::pallet_index(52)]
@@ -404,7 +431,26 @@ mod runtime {
 	pub type Utility = pallet_utility;
 	#[runtime::pallet_index(81)]	
 	pub type RootTesting = pallet_root_testing;
-	
+
+	// Revive
+    #[runtime::pallet_index(90)]
+    pub type Revive = pallet_revive;
+
+	// Asset Conversion
+	#[runtime::pallet_index(100)]
+  pub type AssetConversion = pallet_asset_conversion;
+	#[runtime::pallet_index(101)]
+  pub type ForeignAssets = pallet_assets::Pallet<Runtime, Instance2>;
+	#[runtime::pallet_index(102)]
+  pub type PoolAssets = pallet_assets::Pallet<Runtime, Instance3>;
+	#[runtime::pallet_index(103)]
+  pub type AssetsFreezer = pallet_assets_freezer::Pallet<Runtime, Instance1>;
+	#[runtime::pallet_index(104)]
+  pub type ForeignAssetsFreezer = pallet_assets_freezer::Pallet<Runtime, Instance2>;
+	#[runtime::pallet_index(105)]
+  pub type PoolAssetsFreezer = pallet_assets_freezer::Pallet<Runtime, Instance3>;
+	#[runtime::pallet_index(106)] 
+  pub type AssetConversionOps = pallet_asset_conversion_ops;
 }
 
 #[docify::export(register_validate_block)]
@@ -429,6 +475,13 @@ type EventRecord = frame_system::EventRecord<
     <Runtime as frame_system::Config>::Hash,
 >;
 
+// Stable 2512 Update
+type LazyBlockOf<T> =
+    sp_runtime::generic::LazyBlock<
+        <T as sp_runtime::traits::Block>::Header,
+        <T as sp_runtime::traits::Block>::Extrinsic,
+    >;
+
 // we move some impls outside so we can easily use them with `docify`.
 impl Runtime {
 	#[docify::export]
@@ -445,7 +498,12 @@ impl Runtime {
 	}
 }
 
-impl_runtime_apis! {
+pallet_revive::impl_runtime_apis_plus_revive_traits! (
+	Runtime,
+	Revive,
+	Executive,
+	EthExtraImpl,
+
 	impl sp_consensus_aura::AuraApi<Block, AuraId> for Runtime {
 		fn slot_duration() -> sp_consensus_aura::SlotDuration {
 			Runtime::impl_slot_duration()
@@ -470,7 +528,7 @@ impl_runtime_apis! {
 			VERSION
 		}
 
-		fn execute_block(block: Block) {
+		fn execute_block(block: LazyBlockOf<Block>) {
 			Executive::execute_block(block)
 		}
 
@@ -507,7 +565,7 @@ impl_runtime_apis! {
 		}
 
 		fn check_inherents(
-			block: Block,
+			block: LazyBlockOf<Block>,
 			data: sp_inherents::InherentData,
 		) -> sp_inherents::CheckInherentsResult {
 			data.check_extrinsics(&block)
@@ -589,6 +647,25 @@ impl_runtime_apis! {
 		}
 		fn query_length_to_fee(length: u32) -> Balance {
 			TransactionPayment::length_to_fee(length)
+		}
+	}
+
+	impl pallet_asset_conversion::AssetConversionApi<
+		Block,
+		Balance,
+		xcm::v5::Location,
+	> for Runtime
+	{
+		fn quote_price_exact_tokens_for_tokens(asset1: xcm::v5::Location, asset2: xcm::v5::Location, amount: Balance, include_fee: bool) -> Option<Balance> {
+			AssetConversion::quote_price_exact_tokens_for_tokens(asset1, asset2, amount, include_fee)
+		}
+
+		fn quote_price_tokens_for_exact_tokens(asset1: xcm::v5::Location, asset2: xcm::v5::Location, amount: Balance, include_fee: bool) -> Option<Balance> {
+			AssetConversion::quote_price_tokens_for_exact_tokens(asset1, asset2, amount, include_fee)
+		}
+
+		fn get_reserves(asset1: xcm::v5::Location, asset2: xcm::v5::Location) -> Option<(Balance, Balance)> {
+			AssetConversion::get_reserves(asset1, asset2).ok()
 		}
 	}
 
@@ -824,9 +901,9 @@ impl_runtime_apis! {
             Ok(total_fee)
 		}
 
-		fn query_delivery_fees(destination: VersionedLocation, message: VersionedXcm<()>) -> Result<VersionedAssets, XcmPaymentApiError> {
-			pallet_xcm::Pallet::<Runtime>::query_delivery_fees(destination, message)
-				.map_err(|_| XcmPaymentApiError::Unimplemented)
+		fn query_delivery_fees(destination: VersionedLocation, message: VersionedXcm<()>, asset_id: VersionedAssetId) -> Result<VersionedAssets, XcmPaymentApiError> {
+			type AssetExchanger = <XcmConfig as xcm_executor::Config>::AssetExchanger;
+			pallet_xcm::Pallet::<Runtime>::query_delivery_fees::<AssetExchanger>(destination, message, asset_id)			
 		}
 	}
 
@@ -836,9 +913,9 @@ impl_runtime_apis! {
 				.map_err(|_| XcmDryRunApiError::Unimplemented)
 				.map(|effects| effects.into()) 
 		}
-
+		
 		fn dry_run_xcm(origin_location: VersionedLocation, xcm: VersionedXcm<RuntimeCall>) -> Result<ApiXcmDryRunEffects<<Runtime as frame_system::Config>::RuntimeEvent>, XcmDryRunApiError> {
-			pallet_xcm::Pallet::<Runtime>::dry_run_xcm::<Runtime, XcmRouter, RuntimeCall, XcmConfig>(origin_location, xcm)
+			pallet_xcm::Pallet::<Runtime>::dry_run_xcm::<XcmRouter>(origin_location, xcm)
 				.map_err(|_| XcmDryRunApiError::Unimplemented)
 				.map(|effects| effects.into()) 
 		}
@@ -855,4 +932,4 @@ impl_runtime_apis! {
 			>::convert_location(location)
 		}
 	}
-}
+);

@@ -1,10 +1,11 @@
 [settings]
 timeout = 1000
 node_verifier = "None"
+provider = "native"
 
 [relaychain]
 default_command = "./bin/polkadot"
-default_args = [ "-l=parachain=debug,xcm=trace" ]
+default_args = [ "-l=parachain=debug,xcm=trace", "--workers-path=./bin" ]
 chain = "rococo-local"
 
   [[relaychain.nodes]]

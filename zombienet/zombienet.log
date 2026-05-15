@@ -1,0 +1,12 @@
+@polkadot/util has multiple versions, ensure that there is only one installed.
+Either remove and explicitly install matching versions or dedupe using your package manager.
+The following conflicting packages were found:
+	cjs 13.3.1	node_modules/@polkadot/util/cjs
+	cjs 13.5.9	node_modules/@polkadot/util-crypto/node_modules/@polkadot/util/cjs
+@polkadot/util-crypto has multiple versions, ensure that there is only one installed.
+Either remove and explicitly install matching versions or dedupe using your package manager.
+The following conflicting packages were found:
+	cjs 13.3.1	node_modules/@polkadot/keyring/node_modules/@polkadot/util-crypto/cjs
+	cjs 13.5.9	node_modules/@polkadot/util-crypto/cjs
+Running kubernetes provider:
+[7m[31m  ⚠ I can't find the Creds file: undefined[0m[0m
