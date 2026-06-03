@@ -13,9 +13,10 @@ publish = false
 targets = ["x86_64-unknown-linux-gnu"]
 
 [dependencies]
-codec = { features = [
-	"derive",
-], workspace = true }
+# codec = { features = [
+# 	"derive",
+# ], workspace = true }
+parity-scale-codec = { workspace = true, features = ["derive"] }
 scale-info = { features = [
 	"derive",
 ], workspace = true }
@@ -41,8 +42,8 @@ pallet-timestamp.workspace = true
 xcm.workspace = true
 parachains-common.workspace = true
 pallet-assets.workspace = true
-pallet-asset-rate.workspace = true
-pallet-indices.workspace = true
+# pallet-asset-rate.workspace = true
+# pallet-indices.workspace = true
 pallet-treasury.workspace = true
 pallet-transaction-payment.workspace = true
 smallvec = { workspace = true, default-features = true }
@@ -59,7 +60,8 @@ runtime-benchmarks = [
 	"sp-runtime/runtime-benchmarks",
 ]
 std = [
-	"codec/std",
+	# "codec/std",
+	"parity-scale-codec/std",
 	"scale-info/std",
 
 	"frame-benchmarking?/std",
@@ -78,8 +80,8 @@ std = [
 	"xcm/std",
 	"parachains-common/std",
 	"pallet-assets/std",
-	"pallet-asset-rate/std",
-	"pallet-indices/std",
+	# "pallet-asset-rate/std",
+	# "pallet-indices/std",
 	"pallet-treasury/std",
 	"pallet-transaction-payment/std",
 	"polkadot-runtime-common/std",

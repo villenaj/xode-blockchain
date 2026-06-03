@@ -30,6 +30,8 @@
 #[cfg(feature = "std")]
 include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
+extern crate alloc;
+
 #[cfg(feature = "runtime-benchmarks")]
 mod benchmarks;
 
@@ -38,7 +40,6 @@ pub mod configs;
 mod genesis_config_presets;
 mod weights;
 
-extern crate alloc;
 use alloc::{vec, vec::Vec, sync::Arc};
 use smallvec::smallvec;
 
@@ -65,6 +66,7 @@ use frame_support::{
 		WeightToFeePolynomial, WeightToFee as WeightToFeeConversion,
 	},
 	traits::fungible::NativeOrWithId,
+	construct_runtime,
 };
 
 use parachains_common::AssetIdForTrustBackedAssets;
@@ -79,9 +81,11 @@ use sp_core::{crypto::KeyTypeId, OpaqueMetadata};
 
 use configs::{
 	RuntimeBlockWeights,
+	xcm_config,
 	xcm_config::{
 		XcmConfig, XcmRouter, LocationToAccountId,
-		weight_trader::{WeightToFeeConverter, XonWeightToFeeRate, DotWeightToFeeRate, UsdtWeightToFeeRate}
+		// weight_trader::{WeightToFeeConverter, XonWeightToFeeRate, DotWeightToFeeRate, UsdtWeightToFeeRate},
+		SelfLocation, RelayLocation
 	}
 };
 
@@ -155,6 +159,7 @@ pub type TxExtension = cumulus_pallet_weight_reclaim::StorageWeightReclaim<
         pallet_transaction_payment::ChargeTransactionPayment<Runtime>,
         frame_metadata_hash_extension::CheckMetadataHash<Runtime>,
 		pallet_revive::evm::tx_extension::SetOrigin<Runtime>,
+		pallet_asset_conversion_tx_payment::ChargeAssetTxPayment<Runtime>,
     ),
 >;
 
@@ -185,7 +190,7 @@ impl EthExtra for EthExtraImpl {
             pallet_transaction_payment::ChargeTransactionPayment::<Runtime>::from(tip),
             frame_metadata_hash_extension::CheckMetadataHash::<Runtime>::new(false),
 						pallet_revive::evm::tx_extension::SetOrigin::<Runtime>::new_from_eth_transaction(),
-						// pallet_asset_conversion_tx_payment::ChargeAssetTxPayment::<Runtime>::new(),
+						pallet_asset_conversion_tx_payment::ChargeAssetTxPayment::<Runtime>::new(),
 		)
 			.into()
 	}
@@ -345,115 +350,73 @@ pub fn native_version() -> NativeVersion {
 }
 
 // Create the runtime by composing the FRAME pallets that were previously configured.
-#[frame_support::runtime]
-mod runtime {
-	#[runtime::runtime]
-	#[runtime::derive(
-		RuntimeCall,
-		RuntimeEvent,
-		RuntimeError,
-		RuntimeOrigin,
-		RuntimeFreezeReason,
-		RuntimeHoldReason,
-		RuntimeSlashReason,
-		RuntimeLockId,
-		RuntimeTask
-	)]
-	pub struct Runtime;
+// #[frame_support::runtime]
+construct_runtime!(
+    pub struct Runtime {
+        // System & Core Parachain Pallets
+        System: frame_system = 0,
+        ParachainSystem: cumulus_pallet_parachain_system = 1,
+        Timestamp: pallet_timestamp = 2,
+        ParachainInfo: parachain_info = 3,
+				Identity: pallet_identity = 6,
 
-	#[runtime::pallet_index(0)]
-	pub type System = frame_system;
-	#[runtime::pallet_index(1)]
-	pub type ParachainSystem = cumulus_pallet_parachain_system;
-	#[runtime::pallet_index(2)]
-	pub type Timestamp = pallet_timestamp;
-	#[runtime::pallet_index(3)]
-	pub type ParachainInfo = parachain_info;
+        // Monetary & Fees
+        Balances: pallet_balances = 10,
+        TransactionPayment: pallet_transaction_payment = 11,
 
-	// Monetary stuff.
-	#[runtime::pallet_index(10)]
-	pub type Balances = pallet_balances;
-	#[runtime::pallet_index(11)]
-	pub type TransactionPayment = pallet_transaction_payment;
+        // Collator & Consensus
+        Authorship: pallet_authorship = 20,
+        CollatorSelection: pallet_collator_selection = 21,
+        Session: pallet_session = 22,
+        Aura: pallet_aura = 23,
+        AuraExt: cumulus_pallet_aura_ext = 24,
 
-	// Governance
-	// #[runtime::pallet_index(15)]
-	// pub type Sudo = pallet_sudo;
+        // XCM & Messaging
+        XcmpQueue: cumulus_pallet_xcmp_queue = 30,
+        PolkadotXcm: pallet_xcm = 31,
+        CumulusXcm: cumulus_pallet_xcm = 32,
+        MessageQueue: pallet_message_queue = 33,
 
-	// Collator support. The order of these 4 are important and shall not change.
-	#[runtime::pallet_index(20)]
-	pub type Authorship = pallet_authorship;
-	#[runtime::pallet_index(21)]
-	pub type CollatorSelection = pallet_collator_selection;
-	#[runtime::pallet_index(22)]
-	pub type Session = pallet_session;
-	#[runtime::pallet_index(23)]
-	pub type Aura = pallet_aura;
-	#[runtime::pallet_index(24)]
-	pub type AuraExt = cumulus_pallet_aura_ext;
+        // Assets & Smart Contracts
+        Assets: pallet_assets::<Instance1> = 50,
+        Contracts: pallet_contracts = 51,
+        // Indices: pallet_indices = 52,
+        // AssetRate: pallet_asset_rate = 53,
+        Treasury: pallet_treasury = 54,
+        
+        // Governance (Collectives & Membership)
+        TechnicalCommittee: pallet_collective::<Instance1> = 55,
+        TechnicalCommitteeMembership: pallet_membership::<Instance1> = 56,
+        TreasuryCouncil: pallet_collective::<Instance2> = 57,
+        TreasuryCouncilMembership: pallet_membership::<Instance2> = 58,
+        
+        Preimage: pallet_preimage = 59,
+        Whitelist: pallet_whitelist = 60,
 
-	// XCM helpers.
-	#[runtime::pallet_index(30)]
-	pub type XcmpQueue = cumulus_pallet_xcmp_queue;
-	#[runtime::pallet_index(31)]
-	pub type PolkadotXcm = pallet_xcm;
-	#[runtime::pallet_index(32)]
-	pub type CumulusXcm = cumulus_pallet_xcm;
-	#[runtime::pallet_index(33)]
-	pub type MessageQueue = pallet_message_queue;
+        // Custom Xode Pallets
+        XodeStaking: pallet_xode_staking = 70,
 
-	// Frames (Xode Blockchain)
-	#[runtime::pallet_index(50)]
-	pub type Assets = pallet_assets::Pallet<Runtime, Instance1>;
-	#[runtime::pallet_index(51)]
-	pub type Contracts = pallet_contracts;
-	#[runtime::pallet_index(52)]
-	pub type Indices = pallet_indices;
-	#[runtime::pallet_index(53)]
-	pub type AssetRate = pallet_asset_rate;
-	#[runtime::pallet_index(54)]
-	pub type Treasury = pallet_treasury;
-	#[runtime::pallet_index(55)]
-	pub type TechnicalCommittee = pallet_collective::Pallet<Runtime, Instance1>;
-	#[runtime::pallet_index(56)]
-	pub type TechnicalCommitteeMembership = pallet_membership::Pallet<Runtime, Instance1>;
-	#[runtime::pallet_index(57)]
-	pub type TreasuryCouncil = pallet_collective::Pallet<Runtime, Instance2>;
-	#[runtime::pallet_index(58)]
-	pub type TreasuryCouncilMembership = pallet_membership::Pallet<Runtime, Instance2>;
-	#[runtime::pallet_index(59)]
-    pub type Preimage = pallet_preimage;
-	#[runtime::pallet_index(60)]
-    pub type Whitelist = pallet_whitelist;
+        // Utility
+        Utility: pallet_utility = 80,
+        // RootTesting: pallet_root_testing = 81,
 
-	// Pallet (Xode Blockchain)
-	#[runtime::pallet_index(70)]
-	pub type XodeStaking = pallet_xode_staking;
+        // EVM / Revive
+        Revive: pallet_revive = 90,
 
-	// Utility
-	#[runtime::pallet_index(80)]	
-	pub type Utility = pallet_utility;
-	#[runtime::pallet_index(81)]	
-	pub type RootTesting = pallet_root_testing;
-
-	// Revive
-    #[runtime::pallet_index(90)]
-    pub type Revive = pallet_revive;
-
-	// Asset Conversion
-	#[runtime::pallet_index(100)]
-  pub type AssetConversion = pallet_asset_conversion;
-	#[runtime::pallet_index(102)]
-  pub type PoolAssets = pallet_assets::Pallet<Runtime, Instance2>;
-	#[runtime::pallet_index(103)]
-  pub type AssetsFreezer = pallet_assets_freezer::Pallet<Runtime, Instance1>;
-	#[runtime::pallet_index(105)]
-  pub type PoolAssetsFreezer = pallet_assets_freezer::Pallet<Runtime, Instance2>;
-	#[runtime::pallet_index(106)] 
-  pub type AssetConversionOps = pallet_asset_conversion_ops;
-	// #[runtime::pallet_index(107)] 
-  // pub type AssetConversionTxPayment = pallet_asset_conversion_tx_payment;
-}
+        // Asset Conversion & Liquidity
+        AssetConversion: pallet_asset_conversion = 100,
+        PoolAssets: pallet_assets::<Instance2> = 102,
+        AssetsFreezer: pallet_assets_freezer::<Instance1> = 103,
+        PoolAssetsFreezer: pallet_assets_freezer::<Instance2> = 105,
+        // AssetConversionOps: pallet_asset_conversion_ops = 106,
+        AssetRegistry: pallet_asset_registry = 107,
+        AssetConversionTxPayment: pallet_asset_conversion_tx_payment = 108,
+        
+        // ORML
+        XTokens: orml_xtokens = 109,
+        OrmlXcm: orml_xcm = 110,
+    }
+);
 
 #[docify::export(register_validate_block)]
 cumulus_pallet_parachain_system::register_validate_block! {
@@ -478,11 +441,11 @@ type EventRecord = frame_system::EventRecord<
 >;
 
 // Stable 2512 Update
-type LazyBlockOf<T> =
-    sp_runtime::generic::LazyBlock<
-        <T as sp_runtime::traits::Block>::Header,
-        <T as sp_runtime::traits::Block>::Extrinsic,
-    >;
+// type LazyBlockOf<T> =
+//     sp_runtime::generic::LazyBlock<
+//         <T as sp_runtime::traits::Block>::Header,
+//         <T as sp_runtime::traits::Block>::Extrinsic,
+//     >;
 
 // we move some impls outside so we can easily use them with `docify`.
 impl Runtime {
@@ -530,7 +493,7 @@ pallet_revive::impl_runtime_apis_plus_revive_traits! (
 			VERSION
 		}
 
-		fn execute_block(block: LazyBlockOf<Block>) {
+		fn execute_block(block: Block) {
 			Executive::execute_block(block)
 		}
 
@@ -567,7 +530,7 @@ pallet_revive::impl_runtime_apis_plus_revive_traits! (
 		}
 
 		fn check_inherents(
-			block: LazyBlockOf<Block>,
+			block: Block,
 			data: sp_inherents::InherentData,
 		) -> sp_inherents::CheckInherentsResult {
 			data.check_extrinsics(&block)
@@ -830,96 +793,37 @@ pallet_revive::impl_runtime_apis_plus_revive_traits! (
 
 	impl xcm_runtime_apis::fees::XcmPaymentApi<Block> for Runtime {
 		fn query_acceptable_payment_assets(xcm_version: xcm::Version) -> Result<Vec<VersionedAssetId>, XcmPaymentApiError> {
-			let mut acceptable_assets: Vec<AssetId> = Vec::new();
+			// For now, we only accept the native and the relay token here.
+			let native_asset = SelfLocation::get();
+			let relay_asset = RelayLocation::get();
 
-			// XON: Xode native token
-			acceptable_assets.push(AssetId(Location {
-				parents: 0,
-				interior: Junctions::Here,
-			}));
+			let acceptable_assets = vec![AssetId(native_asset.clone()), AssetId(relay_asset.clone())];
 
-			// DOT: Relay chain native token
-			acceptable_assets.push(AssetId(Location {
-				parents: 1,
-				interior: Junctions::Here,
-			}));
-
-			// USDT: AssetHub parachain asset (1984)
-			acceptable_assets.push(AssetId(Location {
-				parents: 1,
-				interior: Junctions::X3(Arc::from([
-					Junction::Parachain(1000),
-					Junction::PalletInstance(50),
-					Junction::GeneralIndex(1984u128),
-				])),
-			}));
-
-			pallet_xcm::Pallet::<Runtime>::query_acceptable_payment_assets(xcm_version, acceptable_assets)
-            	.map_err(|_| XcmPaymentApiError::AssetNotFound)
+			PolkadotXcm::query_acceptable_payment_assets(xcm_version, acceptable_assets)
 		}
 
 		fn query_xcm_weight(message: VersionedXcm<()>) -> Result<Weight, XcmPaymentApiError> {
-			pallet_xcm::Pallet::<Runtime>::query_xcm_weight(message)
-				.map_err(|_| XcmPaymentApiError::WeightNotComputable)
+			PolkadotXcm::query_xcm_weight(message)
 		}
 
 		fn query_weight_to_asset_fee(weight: Weight, asset: VersionedAssetId) -> Result<u128, XcmPaymentApiError> {
-			// Convert VersionedAssetId to AssetId
-			let asset: AssetId = asset.clone()
-                .try_into()
-                .map_err(|_| XcmPaymentApiError::VersionedConversionFailed)?;
-
-            // Add the fixed fee (0.01 DOT or USDT, depending on asset)
-            let total_fee: u128 = match asset {
-				// XON: local chain (12 decimals -> 0.01 XON = 10_000_000_000)
-                AssetId(Location {
-                    parents: 0,
-                    interior: Junctions::Here,
-                }) => WeightToFeeConverter::<XonWeightToFeeRate>::weight_to_fee(&weight).saturating_add(10_000_000_000u128),
-
-				// DOT: Relay chain (10 decimals -> 0.01 DOT = 100_000_000)
-                AssetId(Location {
-                    parents: 1,
-                    interior: Junctions::Here,
-                }) => WeightToFeeConverter::<DotWeightToFeeRate>::weight_to_fee(&weight).saturating_add(100_000_000u128),
-
-				// USDT: AssetHub parachain asset (1984) (6 decimals -> 0.01 USDT = 10_000)
-                AssetId(Location {
-                    parents: 1,
-                    interior: Junctions::X3(ref junctions),
-                }) if matches!(
-                    junctions.as_ref(),
-                    [
-                        Junction::Parachain(1000),
-                        Junction::PalletInstance(50),
-                        Junction::GeneralIndex(1984)
-                    ]
-                ) => WeightToFeeConverter::<UsdtWeightToFeeRate>::weight_to_fee(&weight).saturating_add(10_000u128),
-
-                _ => return Err(XcmPaymentApiError::AssetNotFound),
-            };
-
-            // Ensure the fee does not exceed the maximum payment
-            Ok(total_fee)
+			// use crate::xcm_config::XcmConfig;
+			type Trader = <XcmConfig as xcm_executor::Config>::Trader;
+			PolkadotXcm::query_weight_to_asset_fee::<Trader>(weight, asset)
 		}
 
-		fn query_delivery_fees(destination: VersionedLocation, message: VersionedXcm<()>, asset_id: VersionedAssetId) -> Result<VersionedAssets, XcmPaymentApiError> {
-			type AssetExchanger = <XcmConfig as xcm_executor::Config>::AssetExchanger;
-			pallet_xcm::Pallet::<Runtime>::query_delivery_fees::<AssetExchanger>(destination, message, asset_id)			
+		fn query_delivery_fees(destination: VersionedLocation, message: VersionedXcm<()>) -> Result<VersionedAssets, XcmPaymentApiError> {
+			PolkadotXcm::query_delivery_fees(destination, message)
 		}
 	}
 
-	impl xcm_runtime_apis::dry_run::DryRunApi<Block, RuntimeCall, <Runtime as frame_system::Config>::RuntimeEvent, crate::OriginCaller> for Runtime {
-		fn dry_run_call(origin: crate::OriginCaller, call: RuntimeCall, result_xcms_version: XcmVersion) -> Result<ApiCallDryRunEffects<<Runtime as frame_system::Config>::RuntimeEvent>, XcmDryRunApiError> {
-			pallet_xcm::Pallet::<Runtime>::dry_run_call::<Runtime, XcmRouter, crate::OriginCaller, RuntimeCall>(origin, call, result_xcms_version)
-				.map_err(|_| XcmDryRunApiError::Unimplemented)
-				.map(|effects| effects.into()) 
+	impl xcm_runtime_apis::dry_run::DryRunApi<Block, RuntimeCall, RuntimeEvent, OriginCaller> for Runtime {
+		fn dry_run_call(origin: OriginCaller, call: RuntimeCall, result_xcms_version: XcmVersion) -> Result<ApiCallDryRunEffects<RuntimeEvent>, XcmPaymentApiError> {
+			PolkadotXcm::dry_run_call::<Runtime, xcm_config::XcmRouter, OriginCaller, RuntimeCall>(origin, call, result_xcms_version)
 		}
-		
-		fn dry_run_xcm(origin_location: VersionedLocation, xcm: VersionedXcm<RuntimeCall>) -> Result<ApiXcmDryRunEffects<<Runtime as frame_system::Config>::RuntimeEvent>, XcmDryRunApiError> {
-			pallet_xcm::Pallet::<Runtime>::dry_run_xcm::<XcmRouter>(origin_location, xcm)
-				.map_err(|_| XcmDryRunApiError::Unimplemented)
-				.map(|effects| effects.into()) 
+
+		fn dry_run_xcm(origin_location: VersionedLocation, xcm: VersionedXcm<RuntimeCall>) -> Result<ApiXcmDryRunEffects<RuntimeEvent>, XcmPaymentApiError> {
+			PolkadotXcm::dry_run_xcm::<Runtime, xcm_config::XcmRouter, RuntimeCall, xcm_config::XcmConfig>(origin_location, xcm)
 		}
 	}
 

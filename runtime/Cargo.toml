@@ -13,26 +13,26 @@ publish = false
 targets = ["x86_64-unknown-linux-gnu"]
 
 [build-dependencies]
-substrate-wasm-builder = { optional = true, workspace = true, default-features = true }
-docify = { workspace = true }
+substrate-wasm-builder 	= { optional = true, workspace = true, default-features = true }
+docify 									= { workspace = true }
 
 [dependencies]
-codec = { features = [
-	"derive",
-], workspace = true }
-hex-literal = { optional = true, workspace = true, default-features = true }
-log = { workspace = true }
-scale-info = { features = [
-	"derive",
-], workspace = true }
-smallvec = { workspace = true, default-features = true }
-docify = { workspace = true }
-serde_json = { workspace = true, default-features = false }
+hex-literal 	= { optional = true, workspace = true, default-features = true }
+log 					= { workspace = true }
+serde       	= { workspace = true, features = [ "derive" ], optional = true }
+serde_json 		= { workspace = true, default-features = false }
+smallvec 			= { workspace = true, default-features = true }
+docify 				= { workspace = true }
+
+# codec = { features = ["derive"], workspace = true }
+parity-scale-codec 	= { workspace = true }
+scale-info 					= { features = ["derive"], workspace = true }
+
 pallet-xode-staking.workspace = true
 frame-benchmarking = { optional = true, workspace = true }
 frame-executive.workspace = true
 frame-metadata-hash-extension.workspace = true
-frame-support = { features = ["experimental"], workspace = true }
+frame-support = { workspace = true }
 frame-system.workspace = true
 frame-system-benchmarking = { optional = true, workspace = true }
 frame-system-rpc-runtime-api.workspace = true
@@ -81,10 +81,11 @@ parachain-info.workspace = true
 pallet-assets.workspace = true
 # WASM Contracts
 sp-std.workspace = true
+sp-io.workspace = true
 pallet-contracts.workspace = true
 # Treasury
-pallet-indices.workspace = true
-pallet-asset-rate.workspace = true
+# pallet-indices.workspace = true
+# pallet-asset-rate.workspace = true
 pallet-treasury.workspace = true
 # Governance
 pallet-collective.workspace = true
@@ -92,7 +93,7 @@ pallet-membership.workspace = true
 pallet-preimage.workspace = true
 pallet-whitelist.workspace = true
 # Utility
-pallet-root-testing.workspace = true
+# pallet-root-testing.workspace = true
 pallet-utility.workspace = true
 # Revive
 cumulus-pallet-weight-reclaim.workspace = true
@@ -101,15 +102,29 @@ pallet-revive.workspace = true
 # Asset Conversion
 assets-common = { workspace = true }
 pallet-asset-conversion = { workspace = true }
-pallet-asset-conversion-ops = { workspace = true }
+# pallet-asset-conversion-ops = { workspace = true }
 pallet-asset-conversion-tx-payment = { workspace = true }
 pallet-assets-freezer = { workspace = true }
 pallet-xcm-precompiles = { workspace = true }
 
+pallet-identity                            = { workspace = true }
+pallet-asset-registry = { workspace = true }
+xcm-primitives = { workspace = true }
+orml-xcm-support = { workspace = true }
+orml-xtokens = { workspace = true }
+orml-xcm = { workspace = true }
+orml-traits = { workspace = true }
+primitive-types = { workspace = true }
+
 [features]
 default = ["std"]
 std = [
-	"codec/std",
+	"assets-common/std",
+	"parity-scale-codec/std",
+	"log/std",
+	"primitive-types/std",
+	"scale-info/std",
+	"serde/std",
 	"cumulus-pallet-aura-ext/std",
 	"cumulus-pallet-parachain-system/std",
 	"cumulus-pallet-session-benchmarking/std",
@@ -117,70 +132,83 @@ std = [
 	"cumulus-pallet-xcmp-queue/std",
 	"cumulus-primitives-aura/std",
 	"cumulus-primitives-core/std",
-	"cumulus-primitives-storage-weight-reclaim/std",
 	"cumulus-primitives-utility/std",
+	# "frame-benchmarking/std",
 	"frame-benchmarking?/std",
 	"frame-executive/std",
 	"frame-metadata-hash-extension/std",
 	"frame-support/std",
+	# "frame-system-benchmarking/std",
 	"frame-system-benchmarking?/std",
 	"frame-system-rpc-runtime-api/std",
 	"frame-system/std",
+	# "frame-try-runtime/std",
 	"frame-try-runtime?/std",
-	"log/std",
+	"orml-traits/std",
+	"orml-xcm/std",
+	"orml-xcm-support/std",
+	"orml-xtokens/std",
+	"pallet-asset-conversion/std",
+	"pallet-asset-conversion-tx-payment/std",
+	"pallet-assets/std",
 	"pallet-aura/std",
 	"pallet-authorship/std",
 	"pallet-balances/std",
+	"pallet-collective/std",
 	"pallet-collator-selection/std",
-	"assets-common/std",
-	"pallet-asset-conversion-ops/std",
-	"pallet-asset-conversion-tx-payment/std",
-	"pallet-asset-conversion/std",
-	"pallet-assets-freezer/std",
-	"pallet-xcm-precompiles/std",
+	"pallet-identity/std",
+	"pallet-membership/std",
 	"pallet-message-queue/std",
-	"pallet-xode-staking/std",
+	"pallet-preimage/std",
 	"pallet-session/std",
-	"pallet-sudo/std",
 	"pallet-timestamp/std",
+	"pallet-treasury/std",
 	"pallet-transaction-payment-rpc-runtime-api/std",
 	"pallet-transaction-payment/std",
+	"pallet-utility/std",
 	"pallet-xcm/std",
-	"parachain-info/std",
 	"parachains-common/std",
+	"parachain-info/std",
 	"polkadot-parachain-primitives/std",
 	"polkadot-runtime-common/std",
-	"scale-info/std",
-	"serde_json/std",
 	"sp-api/std",
 	"sp-block-builder/std",
 	"sp-consensus-aura/std",
 	"sp-core/std",
 	"sp-genesis-builder/std",
 	"sp-inherents/std",
+	"sp-io/std",
 	"sp-offchain/std",
 	"sp-runtime/std",
 	"sp-session/std",
+	"sp-std/std",
 	"sp-transaction-pool/std",
 	"sp-version/std",
-	"sp-keyring/std",
-	"substrate-wasm-builder",
+	"xcm/std",
 	"xcm-builder/std",
 	"xcm-executor/std",
+	"substrate-wasm-builder",
+	"pallet-asset-registry/std",
+	"xcm-primitives/std",
 	"xcm-runtime-apis/std",
-	"xcm/std",
-	"pallet-assets/std",
+
+
+	# "codec/std",
+	"cumulus-primitives-storage-weight-reclaim/std",
+	# "pallet-asset-conversion-ops/std",
+	"pallet-assets-freezer/std",
+	"pallet-xcm-precompiles/std",
+	"pallet-xode-staking/std",
+	"pallet-sudo/std",
+	"serde_json/std",
+	"sp-keyring/std",
 	"pallet-contracts/std",
-	"pallet-treasury/std",
-	"pallet-collective/std",
-	"pallet-membership/std",
-	"pallet-preimage/std",
 	"pallet-whitelist/std",
-	"pallet-root-testing/std",
-	"pallet-utility/std",
+	# "pallet-root-testing/std",
 	"pallet-revive/std",
 	"pallet-assets-precompiles/std",
 	"cumulus-pallet-weight-reclaim/std",
+	# "pallet-indices/std",
 ]
 
 runtime-benchmarks = [
@@ -212,7 +240,7 @@ runtime-benchmarks = [
 	"assets-common/runtime-benchmarks",
 	"pallet-asset-conversion/runtime-benchmarks",
 	"pallet-assets-freezer/runtime-benchmarks",
-	"pallet-asset-conversion-ops/runtime-benchmarks",
+	# "pallet-asset-conversion-ops/runtime-benchmarks",
 	"pallet-asset-conversion-tx-payment/runtime-benchmarks",
 	"pallet-xcm-precompiles/runtime-benchmarks",
 	"pallet-contracts/runtime-benchmarks",
@@ -222,6 +250,9 @@ runtime-benchmarks = [
 	"pallet-preimage/runtime-benchmarks",
 	"pallet-whitelist/runtime-benchmarks",
 	"pallet-utility/runtime-benchmarks",
+	"pallet-asset-registry/runtime-benchmarks",
+	"orml-xtokens/runtime-benchmarks",
+	"pallet-identity/runtime-benchmarks",
 ]
 
 try-runtime = [
@@ -249,7 +280,7 @@ try-runtime = [
 	"sp-runtime/try-runtime",
 	"pallet-assets/try-runtime",
 	"assets-common/try-runtime",
-	"pallet-asset-conversion-ops/try-runtime",
+	# "pallet-asset-conversion-ops/try-runtime",
 	"pallet-asset-conversion-tx-payment/try-runtime",
 	"pallet-asset-conversion/try-runtime",
 	"pallet-assets-freezer/try-runtime",
@@ -260,8 +291,12 @@ try-runtime = [
 	"pallet-membership/try-runtime",
 	"pallet-preimage/try-runtime",
 	"pallet-whitelist/try-runtime",
-	"pallet-root-testing/try-runtime",
+	# "pallet-root-testing/try-runtime",
 	"pallet-utility/try-runtime",
+	"pallet-asset-registry/try-runtime",
+	"orml-xtokens/try-runtime",
+	"orml-xcm/try-runtime",
+	"pallet-identity/try-runtime",
 ]
 
 # Enable the metadata hash generation.

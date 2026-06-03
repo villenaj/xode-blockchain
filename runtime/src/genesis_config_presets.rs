@@ -6,6 +6,7 @@ use crate::{
 	// Membership - Technical council (sudo replacement) and Treasury council
 	TechnicalCommitteeMembershipConfig,configs::TechnicalMembershipMaxMembers,
 	TreasuryCouncilMembershipConfig,configs::TreasuryMembershipMaxMembers,
+	AssetsConfig
 };
 use alloc::{vec, vec::Vec};
 //use parachains_common::{genesis_config_helpers::*, AuraId};
@@ -50,6 +51,13 @@ fn testnet_genesis(
     ).expect("Treasury council members exceed the allowed limit");
 
 	let config = RuntimeGenesisConfig {
+		assets: AssetsConfig {
+            assets: vec![],
+            accounts: vec![],
+            metadata: vec![],
+    next_asset_id: Default::default(),
+    reserves: vec![],
+        },
 		balances: BalancesConfig {
 			balances: endowed_accounts
 				.iter()

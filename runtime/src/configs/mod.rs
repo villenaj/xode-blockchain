@@ -24,12 +24,15 @@
 // For more information, please refer to <http://unlicense.org>
 #![allow(unused_doc_comments)]
 
+#![cfg_attr(not(feature = "std"), no_std)]
+extern crate alloc;
+
 pub mod xcm_config;
 use alloc::vec;
 // Substrate and Polkadot dependencies
-use crate::{Timestamp, XodeStaking, Preimage, AssetsFreezer, PoolAssetsFreezer, Assets, PoolAssets};
+use crate::{Timestamp, XodeStaking, Preimage, AssetsFreezer, PoolAssetsFreezer, Assets, PoolAssets, AssetConversion, Treasury, MultiSignature};
 use cumulus_pallet_parachain_system::RelayNumberMonotonicallyIncreases;
-use cumulus_primitives_core::{AggregateMessageOrigin, ParaId};
+use cumulus_primitives_core::{AggregateMessageOrigin, ParaId, relay_chain::AccountPublic};
 use frame_support::{
 	derive_impl,
 	dispatch::DispatchClass,
@@ -42,7 +45,8 @@ use frame_support::{
 		fungible,
 		fungibles,
 		OnUnbalanced,Imbalance,
-		tokens::imbalance::{ResolveTo, ResolveAssetTo},
+		tokens::{UnityAssetBalanceConversion, imbalance::{ResolveTo, ResolveAssetTo}},
+		Contains
 	},
 	weights::{ConstantMultiplier, Weight},
 	PalletId,
@@ -61,7 +65,7 @@ use sp_consensus_aura::sr25519::AuthorityId as AuraId;
 use sp_runtime:: {
 	// generic,
 	Permill, Perbill, Percent,
-	traits::{ AccountIdConversion, Zero },
+	traits::{ AccountIdConversion, Zero, BlakeTwo256, IdentityLookup, AccountIdLookup },
 	FixedU128,
 };
 use sp_version::RuntimeVersion;
@@ -84,13 +88,15 @@ use super::{
 	// Revive
 	Address, Signature, EthExtraImpl
 };
-use xcm_config::{RelayLocation, XcmOriginToTransactDispatchOrigin, PoolAssetsPalletLocation};
+use xcm_config::{RelayLocation, XcmOriginToTransactDispatchOrigin};
 
 use assets_common::{
 	local_and_foreign_assets::LocalFromLeft,
 	AssetIdForPoolAssets, AssetIdForPoolAssetsConvert,
 };
 use pallet_asset_conversion::{AccountIdConverter, WithFirstAsset, Ascending, Chain, AccountIdConverterNoSeed};
+
+use pallet_identity::legacy::IdentityInfo;
 
 use pallet_assets::Call as AssetsCall;
 use pallet_balances::Call as BalancesCall;
@@ -138,11 +144,54 @@ parameter_types! {
 	pub const SS58Prefix: u16 = 280;
 }
 
+// Allow the following extrinsics only.
+pub struct BaseCallFilter;
+impl Contains<RuntimeCall> for BaseCallFilter {
+	fn contains(call: &RuntimeCall) -> bool {
+		match call {
+    RuntimeCall::System(_) |
+			    RuntimeCall::ParachainSystem(_) |
+			    RuntimeCall::ParachainInfo(_) |
+			    RuntimeCall::Timestamp(_) |
+			    RuntimeCall::Utility(_) |
+			    RuntimeCall::Preimage(_) |
+			    RuntimeCall::Identity(_) |
+			    // monetary
+			    RuntimeCall::Balances(_) |
+			    // collator support
+			    RuntimeCall::CollatorSelection(_) |
+			    RuntimeCall::Session(_) |
+			    // xcm helpers
+			    RuntimeCall::XcmpQueue(_) |
+			    RuntimeCall::PolkadotXcm(_) |
+			    RuntimeCall::MessageQueue(_) |
+			    RuntimeCall::CumulusXcm(_) |
+			    // governance
+			    RuntimeCall::Treasury(_) |
+			    RuntimeCall::TechnicalCommittee(_) |
+			    RuntimeCall::TechnicalCommitteeMembership(_) |
+			    RuntimeCall::XTokens(_) => true,
+					RuntimeCall::OrmlXcm(_) => true,
+					RuntimeCall::Assets(_) => true,
+					RuntimeCall::AssetRegistry(_) => true,
+					RuntimeCall::PoolAssets(_) => true,
+					RuntimeCall::AssetConversion(_) => true,
+					RuntimeCall::Contracts(_) => true,
+					RuntimeCall::TreasuryCouncil(_) => true,
+					RuntimeCall::TreasuryCouncilMembership(_) => true,
+					RuntimeCall::Whitelist(_) => true,
+					RuntimeCall::XodeStaking(_) => true,
+					RuntimeCall::Revive(_) => true,
+			}
+	}
+}
+
 /// The default types are being injected by [`derive_impl`](`frame_support::derive_impl`) from
 /// [`ParaChainDefaultConfig`](`struct@frame_system::config_preludes::ParaChainDefaultConfig`),
 /// but overridden as needed.
-#[derive_impl(frame_system::config_preludes::ParaChainDefaultConfig)]
+// #[derive_impl(frame_system::config_preludes::ParaChainDefaultConfig)]
 impl frame_system::Config for Runtime {
+	type BaseCallFilter = BaseCallFilter;
 	/// The identifier used to distinguish between accounts.
 	type AccountId = AccountId;
 	/// The index type for storing how many extrinsics an account has signed.
@@ -168,6 +217,22 @@ impl frame_system::Config for Runtime {
 	/// The action to take on a Runtime Upgrade
 	type OnSetCode = cumulus_pallet_parachain_system::ParachainSetCode<Self>;
 	type MaxConsumers = frame_support::traits::ConstU32<16>;
+	type RuntimeEvent = RuntimeEvent;
+	type RuntimeOrigin = RuntimeOrigin;
+	type RuntimeCall = RuntimeCall;
+	type RuntimeTask = RuntimeTask;
+	type Hashing = BlakeTwo256;
+	type Lookup = AccountIdLookup<AccountId, ()>;
+	type PalletInfo = PalletInfo;
+	type OnNewAccount = ();
+	type OnKilledAccount = ();
+	type SystemWeightInfo = frame_system::WeightInfo<Runtime>;
+	type ExtensionsWeightInfo = ();
+	type SingleBlockMigrations = ();
+	type MultiBlockMigrator = ();
+	type PreInherents =();
+	type PostInherents = ();
+	type PostTransactions = ();
 }
 
 impl pallet_timestamp::Config for Runtime {
@@ -338,6 +403,7 @@ impl cumulus_pallet_parachain_system::Config for Runtime {
 	type ConsensusHook = ConsensusHook;
 	// Stable 2512 Update
 	type RelayParentOffset = ConstU32<0>;
+	type SelectCore = cumulus_pallet_parachain_system::DefaultCoreSelector<Runtime>;
 }
 
 impl parachain_info::Config for Runtime {}
@@ -371,21 +437,6 @@ impl pallet_message_queue::Config for Runtime {
 
 impl cumulus_pallet_aura_ext::Config for Runtime {}
 
-impl cumulus_pallet_xcmp_queue::Config for Runtime {
-	type RuntimeEvent = RuntimeEvent;
-	type ChannelInfo = ParachainSystem;
-	type VersionWrapper = ();
-	// Enqueue XCMP messages from siblings for later processing.
-	type XcmpQueue = TransformOrigin<MessageQueue, AggregateMessageOrigin, ParaId, ParaIdToSibling>;
-	type MaxInboundSuspended = sp_core::ConstU32<1_000>;
-	type MaxActiveOutboundChannels = ConstU32<128>;
-	type MaxPageSize = ConstU32<{ 1 << 16 }>;
-	type ControllerOrigin = EnsureTwoThirdsTechnicalCommittee;
-	type ControllerOriginConverter = XcmOriginToTransactDispatchOrigin;
-	type WeightInfo = ();
-	type PriceForSiblingDelivery = NoPriceForMessageDelivery<ParaId>;
-}
-
 parameter_types! {
 	pub const Period: u32 = 6 * HOURS;
 	pub const Offset: u32 = 0;
@@ -406,8 +457,8 @@ impl pallet_session::Config for Runtime {
 	type WeightInfo = ();
 	// Stable 2512 Update
 	type DisablingStrategy = ();
-	type Currency = Balances;
-	type KeyDeposit = ();
+	// type Currency = Balances;
+	// type KeyDeposit = ();
 }
 
 #[docify::export(aura_config)]
@@ -479,8 +530,8 @@ impl pallet_assets::Config<TrustBackedAssetsInstance> for Runtime {
 	type Balance = Balance;
 	type RemoveItemsLimit = ConstU32<1_000>;
 	type AssetId = AssetIdForTrustBackedAssets;
-	type AssetIdParameter = codec::Compact<AssetIdForTrustBackedAssets>;
-	type ReserveData = ();
+	type AssetIdParameter = AssetIdForTrustBackedAssets;
+	// type ReserveData = ();
 	type Currency = Balances;
 	type CreateOrigin = AsEnsureOriginWithArg<EnsureSigned<AccountId>>;
 	type ForceOrigin = AssetsForceOrigin;
@@ -524,7 +575,7 @@ impl pallet_assets::Config<PoolAssetsInstance> for Runtime {
 	type RemoveItemsLimit = ConstU32<1000>;
 	type AssetId = AssetIdForPoolAssets;
 	type AssetIdParameter = u32;
-	type ReserveData = ();
+	// type ReserveData = ();
 	type Currency = Balances;
 	type CreateOrigin =
 		AsEnsureOriginWithArg<EnsureSignedBy<AssetConversionOrigin, sp_runtime::AccountId32>>;
@@ -561,44 +612,44 @@ pub type NativeAndLocalAssets = fungible::UnionOf<
 	AccountId,
 >;
 
-/// Union fungibles implementation for [`LocalAssetsFreezer`] and [`Balances`].
-pub type NativeAndLocalAssetsFreezer = fungible::UnionOf<
-	Balances,
-	AssetsFreezer,
-	NativeFromLeft,
-	NativeOrWithId<AssetIdForTrustBackedAssets>,
-	AccountId,
->;
+// /// Union fungibles implementation for [`LocalAssetsFreezer`] and [`Balances`].
+// pub type NativeAndLocalAssetsFreezer = fungible::UnionOf<
+// 	Balances,
+// 	AssetsFreezer,
+// 	NativeFromLeft,
+// 	NativeOrWithId<AssetIdForTrustBackedAssets>,
+// 	AccountId,
+// >;
 
-/// Union fungibles implementation for [`PoolAssets`] and [`NativeAndLocalAssets`].
-///
-/// NOTE: Should be kept updated to include ALL balances and assets in the runtime.
-pub type NativeAndAllAssets = fungibles::UnionOf<
-	PoolAssets,
-	NativeAndLocalAssets,
-	LocalFromLeft<
-		AssetIdForPoolAssetsConvert<PoolAssetsPalletLocation, xcm::v5::Location>,
-		AssetIdForPoolAssets,
-		NativeOrWithId<AssetIdForTrustBackedAssets>,
-	>,
-	NativeOrWithId<AssetIdForTrustBackedAssets>,
-	AccountId,
->;
+// /// Union fungibles implementation for [`PoolAssets`] and [`NativeAndLocalAssets`].
+// ///
+// /// NOTE: Should be kept updated to include ALL balances and assets in the runtime.
+// pub type NativeAndAllAssets = fungibles::UnionOf<
+// 	PoolAssets,
+// 	NativeAndLocalAssets,
+// 	LocalFromLeft<
+// 		AssetIdForPoolAssetsConvert<PoolAssetsPalletLocation, xcm::v5::Location>,
+// 		AssetIdForPoolAssets,
+// 		NativeOrWithId<AssetIdForTrustBackedAssets>,
+// 	>,
+// 	NativeOrWithId<AssetIdForTrustBackedAssets>,
+// 	AccountId,
+// >;
 
-/// Union fungibles implementation for [`PoolAssetsFreezer`] and [`NativeAndLocalAssetsFreezer`].
-///
-/// NOTE: Should be kept updated to include ALL balances and assets in the runtime.
-pub type NativeAndAllAssetsFreezer = fungibles::UnionOf<
-	PoolAssetsFreezer,
-	NativeAndLocalAssetsFreezer,
-	LocalFromLeft<
-		AssetIdForPoolAssetsConvert<PoolAssetsPalletLocation, xcm::v5::Location>,
-		AssetIdForPoolAssets,
-		NativeOrWithId<AssetIdForTrustBackedAssets>,
-	>,
-	NativeOrWithId<AssetIdForTrustBackedAssets>,
-	AccountId,
->;
+// /// Union fungibles implementation for [`PoolAssetsFreezer`] and [`NativeAndLocalAssetsFreezer`].
+// ///
+// /// NOTE: Should be kept updated to include ALL balances and assets in the runtime.
+// pub type NativeAndAllAssetsFreezer = fungibles::UnionOf<
+// 	PoolAssetsFreezer,
+// 	NativeAndLocalAssetsFreezer,
+// 	LocalFromLeft<
+// 		AssetIdForPoolAssetsConvert<PoolAssetsPalletLocation, xcm::v5::Location>,
+// 		AssetIdForPoolAssets,
+// 		NativeOrWithId<AssetIdForTrustBackedAssets>,
+// 	>,
+// 	NativeOrWithId<AssetIdForTrustBackedAssets>,
+// 	AccountId,
+// >;
 
 pub type PoolIdToAccountId = AccountIdConverter<
 	AssetConversionPalletId,
@@ -638,24 +689,68 @@ impl pallet_asset_conversion::Config for Runtime {
 	type MintMinLiquidity = ConstU128<100>;
 	type WeightInfo = weights::pallet_asset_conversion::WeightInfo<Runtime>;
 	#[cfg(feature = "runtime-benchmarks")]
-	type BenchmarkHelper = assets_common::benchmarks::AssetPairFactory<
-		Native,
-		parachain_info::Pallet<Runtime>,
-		xcm_config::TrustBackedAssetsPalletIndex,
-		xcm::v5::Location,
-	>;
+	type BenchmarkHelper = ();
+	// type BenchmarkHelper = assets_common::benchmarks::AssetPairFactory<
+	// 	Native,
+	// 	parachain_info::Pallet<Runtime>,
+	// 	xcm_config::TrustBackedAssetsPalletIndex,
+	// 	xcm::v5::Location,
+	// >;
 }
 
-impl pallet_asset_conversion_ops::Config for Runtime {
+// impl pallet_asset_conversion_ops::Config for Runtime {
+// 	type RuntimeEvent = RuntimeEvent;
+// 	type PriorAccountIdConverter = AccountIdConverterNoSeed<
+// 		<Runtime as pallet_asset_conversion::Config>::PoolId,
+// 	>;
+// 	type AssetsRefund = <Runtime as pallet_asset_conversion::Config>::Assets;
+// 	type PoolAssetsRefund = <Runtime as pallet_asset_conversion::Config>::PoolAssets;
+// 	type PoolAssetsTeam = <Runtime as pallet_asset_conversion::Config>::PoolAssets;
+// 	type DepositAsset = Balances;
+// 	type WeightInfo = weights::pallet_asset_conversion_ops::WeightInfo<Runtime>;
+// }
+
+impl pallet_asset_registry::Config for Runtime {
+	type ReserveAssetModifierOrigin = EnsureTwoThirdsTechnicalCommittee;
+	type Assets = Assets;
+	type WeightInfo = ();
+	// type WeightInfo = weights::pallet_asset_registry::WeightInfo<Runtime>;
+	#[cfg(feature = "runtime-benchmarks")]
+	type BenchmarkHelper = AssetRegistryBenchmarkHelper;
+}
+
+#[cfg(feature = "runtime-benchmarks")]
+pub struct AssetRegistryBenchmarkHelper;
+#[cfg(feature = "runtime-benchmarks")]
+impl pallet_asset_registry::BenchmarkHelper<AssetIdForTrustBackedAssets>
+	for AssetRegistryBenchmarkHelper
+{
+	fn get_registered_asset() -> AssetIdForTrustBackedAssets {
+		use sp_runtime::traits::StaticLookup;
+
+		let root = frame_system::RawOrigin::Root.into();
+		let asset_id = 1;
+		let caller = frame_benchmarking::whitelisted_caller();
+		let caller_lookup = <Runtime as frame_system::Config>::Lookup::unlookup(caller);
+		Assets::force_create(root, asset_id.into(), caller_lookup, true, 1)
+			.expect("Should have been able to force create asset");
+		asset_id
+	}
+}
+
+
+impl pallet_asset_conversion_tx_payment::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
-	type PriorAccountIdConverter = AccountIdConverterNoSeed<
-		<Runtime as pallet_asset_conversion::Config>::PoolId,
+	type AssetId = NativeOrWithId<AssetIdForTrustBackedAssets>;
+	type OnChargeAssetTransaction = pallet_asset_conversion_tx_payment::SwapAssetAdapter<
+		Native,
+		NativeAndLocalAssets,
+		AssetConversion,
+		ResolveAssetTo<XodeTreasuryAccount, NativeAndLocalAssets>,
 	>;
-	type AssetsRefund = <Runtime as pallet_asset_conversion::Config>::Assets;
-	type PoolAssetsRefund = <Runtime as pallet_asset_conversion::Config>::PoolAssets;
-	type PoolAssetsTeam = <Runtime as pallet_asset_conversion::Config>::PoolAssets;
-	type DepositAsset = Balances;
-	type WeightInfo = weights::pallet_asset_conversion_ops::WeightInfo<Runtime>;
+	type WeightInfo = ();
+	#[cfg(feature = "runtime-benchmarks")]
+	type BenchmarkHelper = ();
 }
 
 /// =========
@@ -745,25 +840,25 @@ parameter_types! {
 	pub const IndexDeposit: Balance = 100 * UNIT;
 }
 
-impl pallet_indices::Config for Runtime {
-	type AccountIndex = u32;
-	type Currency = Balances;
-	type Deposit = IndexDeposit;
-	type RuntimeEvent = RuntimeEvent;
-	type WeightInfo = pallet_indices::weights::SubstrateWeight<Runtime>;
-}
+// impl pallet_indices::Config for Runtime {
+// 	type AccountIndex = u32;
+// 	type Currency = Balances;
+// 	type Deposit = IndexDeposit;
+// 	type RuntimeEvent = RuntimeEvent;
+// 	type WeightInfo = pallet_indices::weights::SubstrateWeight<Runtime>;
+// }
 
-impl pallet_asset_rate::Config for Runtime {
-	type CreateOrigin = EnsureTwoThirdsTreasuryCouncil;
-	type RemoveOrigin = EnsureTwoThirdsTreasuryCouncil;
-	type UpdateOrigin = EnsureTwoThirdsTreasuryCouncil;
-	type Currency = Balances;
-	type AssetKind = NativeOrWithId<AssetIdForTrustBackedAssets>;
-	type RuntimeEvent = RuntimeEvent;
-	type WeightInfo = pallet_asset_rate::weights::SubstrateWeight<Runtime>;
-	#[cfg(feature = "runtime-benchmarks")]
-	type BenchmarkHelper = ();
-}
+// impl pallet_asset_rate::Config for Runtime {
+// 	type CreateOrigin = EnsureTwoThirdsTreasuryCouncil;
+// 	type RemoveOrigin = EnsureTwoThirdsTreasuryCouncil;
+// 	type UpdateOrigin = EnsureTwoThirdsTreasuryCouncil;
+// 	type Currency = Balances;
+// 	type AssetKind = NativeOrWithId<AssetIdForTrustBackedAssets>;
+// 	type RuntimeEvent = RuntimeEvent;
+// 	type WeightInfo = pallet_asset_rate::weights::SubstrateWeight<Runtime>;
+// 	#[cfg(feature = "runtime-benchmarks")]
+// 	type BenchmarkHelper = ();
+// }
 
 parameter_types! {
     pub const TreasuryPalletId: PalletId = PalletId(*b"py/trsry");
@@ -788,12 +883,12 @@ impl pallet_treasury::Config for Runtime {
     type MaxApprovals = MaxApprovals;
 	type AssetKind = NativeOrWithId<AssetIdForTrustBackedAssets>;
 	type Beneficiary = AccountId;
-	type BeneficiaryLookup = pallet_indices::Pallet<Runtime>;
+	type BeneficiaryLookup = IdentityLookup<Self::Beneficiary>;
 	type Paymaster = frame_support::traits::tokens::pay::PayAssetFromAccount<
 				NativeAndLocalAssets,
         XodeTreasuryAccount
     >;
-	type BalanceConverter = pallet_asset_rate::Pallet<Runtime>;
+	type BalanceConverter = UnityAssetBalanceConversion;
 	type PayoutPeriod = SpendPayoutPeriod;
 	#[cfg(feature = "runtime-benchmarks")]
 	type BenchmarkHelper = ();
@@ -969,9 +1064,9 @@ impl pallet_xode_staking::Config for Runtime {
 /// Utility
 /// =======
 
-impl pallet_root_testing::Config for Runtime {
-	type RuntimeEvent = RuntimeEvent;
-}
+// impl pallet_root_testing::Config for Runtime {
+// 	type RuntimeEvent = RuntimeEvent;
+// }
 
 impl pallet_utility::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
@@ -1034,4 +1129,40 @@ impl pallet_revive::Config for Runtime {
 		ERC20<Self, InlineIdConfig<0x320>, PoolAssetsInstance>,
 		XcmPrecompile<Self>,
 	);
+}
+
+parameter_types! {
+	pub const BasicDeposit: Balance = deposit(1, 258);
+	pub const ByteDeposit: Balance = deposit(0, 66);
+	pub const SubAccountDeposit: Balance = deposit(1, 53);
+	pub const MaxSubAccounts: u32 = 100;
+	pub const MaxAdditionalFields: u32 = 2;
+	pub const MaxRegistrars: u32 = 20;
+	pub const MaxSuffixLength: u32 = 7;
+	pub const MaxUsernameLength: u32 = 32;
+}
+
+impl pallet_identity::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type Currency = Balances;
+	type BasicDeposit = BasicDeposit;
+	type ByteDeposit = ByteDeposit;
+	type SubAccountDeposit = SubAccountDeposit;
+	type MaxSubAccounts = MaxSubAccounts;
+	type IdentityInformation = IdentityInfo<MaxAdditionalFields>;
+	type MaxRegistrars = MaxRegistrars;
+	type Slashed = Treasury;
+	type ForceOrigin = EnsureTwoThirdsTechnicalCommittee;
+	type RegistrarOrigin = EnsureTwoThirdsTechnicalCommittee;
+	type OffchainSignature = MultiSignature;
+	type SigningPublicKey = AccountPublic;
+	type UsernameAuthorityOrigin = EnsureTwoThirdsTechnicalCommittee;
+	type PendingUsernameExpiration = ConstU32<100>;
+	type MaxSuffixLength = MaxSuffixLength;
+	type MaxUsernameLength = MaxUsernameLength;
+	type UsernameDeposit = BasicDeposit;
+	type UsernameGracePeriod = ConstU32<{ 3 * DAYS }>;
+	type WeightInfo = ();
+	#[cfg(feature = "runtime-benchmarks")]
+	type BenchmarkHelper = ();
 }

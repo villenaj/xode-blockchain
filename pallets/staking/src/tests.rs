@@ -1,7 +1,8 @@
 use crate::{mock::*, CandidateInfo, Status,
 	DesiredCandidates, ProposedCandidates, WaitingCandidates,
 };
-use codec::Encode;
+use parity_scale_codec::Encode;
+// use codec::Encode;
 use frame_support::{
 	dispatch::GetDispatchInfo, traits::{Hooks, OnUnbalanced,}
 };

@@ -622,23 +622,23 @@ impl<T: frame_system::Config> pallet_assets::WeightInfo for WeightInfo<T> {
 			.saturating_add(Weight::from_parts(0, 3613))
 			.saturating_add(T::DbWeight::get().reads(1))
 	}
-	/// The range of component `n` is `[0, 5]`.
-	/// The range of component `n` is `[0, 5]`.
-	/// The range of component `n` is `[0, 5]`.
-	fn set_reserves(n: u32) -> Weight {
-		Weight::from_parts(31_972_000, 3675)
-			// Standard Error: 13_748
-			.saturating_add(Weight::from_parts(198_975, 0).saturating_mul(n.into()))
-			.saturating_add(T::DbWeight::get().reads(1_u64))
-			.saturating_add(T::DbWeight::get().writes(1_u64))
-	}
-	fn migration_v2_foreign_asset_set_reserve_weight() -> Weight {
-		// Proof Size summary in bytes:
-		//  Measured:  `256`
-		//  Estimated: `0`
-		// Minimum execution time: 9_596_000 picoseconds.
-		Weight::from_parts(10_031_000, 0)
-	}
+	// /// The range of component `n` is `[0, 5]`.
+	// /// The range of component `n` is `[0, 5]`.
+	// /// The range of component `n` is `[0, 5]`.
+	// fn set_reserves(n: u32) -> Weight {
+	// 	Weight::from_parts(31_972_000, 3675)
+	// 		// Standard Error: 13_748
+	// 		.saturating_add(Weight::from_parts(198_975, 0).saturating_mul(n.into()))
+	// 		.saturating_add(T::DbWeight::get().reads(1_u64))
+	// 		.saturating_add(T::DbWeight::get().writes(1_u64))
+	// }
+	// fn migration_v2_foreign_asset_set_reserve_weight() -> Weight {
+	// 	// Proof Size summary in bytes:
+	// 	//  Measured:  `256`
+	// 	//  Estimated: `0`
+	// 	// Minimum execution time: 9_596_000 picoseconds.
+	// 	Weight::from_parts(10_031_000, 0)
+	// }
 	// fn get_name() -> Weight {
 	// 	// Proof Size summary in bytes:
 	// 	//  Measured:  `344`

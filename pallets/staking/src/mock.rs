@@ -326,7 +326,8 @@ impl pallet_assets::Config for Test {
 	type Balance = Balance;
 	type RemoveItemsLimit = ConstU32<1_000>;
 	type AssetId = u32;
-	type AssetIdParameter = codec::Compact<u32>;
+	type AssetIdParameter = u32;
+	// type AssetIdParameter = codec::Compact<u32>;
 	type Currency = Balances;
 	type CreateOrigin = AsEnsureOriginWithArg<EnsureSigned<AccountId>>;
 	type ForceOrigin = frame_system::EnsureRoot<AccountId>;

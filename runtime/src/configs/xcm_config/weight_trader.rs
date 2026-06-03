@@ -1,4 +1,4 @@
-use crate::{configs::xcm_config::AssetTransactor};
+use crate::{configs::xcm_config::AssetTransactors};
 use frame_support::{
     parameter_types,
     weights::{Weight, WeightToFee as WeightToFeeT},
@@ -56,12 +56,13 @@ impl<T: WeightToFeeAssetParams> WeightToFeeT for WeightToFeeConverter<T> {
 	type Balance = u128;
 
 	fn weight_to_fee(weight: &Weight) -> Self::Balance {
-		let picos_per_second: u64 = 1_000_000_000_000u64;
-		let ref_time_picoseconds = weight.ref_time();
-		let fee = ref_time_picoseconds.saturating_mul(T::FEE_PER_SECOND as u64);
-
-		(fee.saturating_div(picos_per_second)) as u128
-	}
+    let picos_per_second: u128 = 1_000_000_000_000u128;
+    let ref_time = weight.ref_time() as u128;
+    
+    // Perform multiplication in u128 to avoid overflow
+    let total_fee = ref_time.saturating_mul(T::FEE_PER_SECOND) / picos_per_second;
+    total_fee
+  }
 }
 
 /// Dynamic weight trader that calculates fees based on the asset used for payment.
@@ -199,7 +200,7 @@ fn handle_payment(
 
 	// Deposit total fee
 	let fee_asset: Asset = (AssetId(asset_location.clone()), total_fee).into();
-	AssetTransactor::deposit_asset(&fee_asset, &receiver_location, None).map_err(|e| {
+	AssetTransactors::deposit_asset(&fee_asset, &receiver_location, None).map_err(|e| {
 		log::error!(target: "xcm::weight_trader", "Fee deposit failed for {:?}: {:?}", asset_location, e);
 		XcmError::FailedToTransactAsset("Fee deposit failed")
 	})?;
