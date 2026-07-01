@@ -14,6 +14,7 @@ use crate::{
     Runtime,
     RuntimeCall,
     RuntimeEvent,
+    RuntimeHoldReason,
     RuntimeOrigin,
     XcmpQueue,
     PoolAssets,
@@ -25,10 +26,9 @@ use crate::{
     // configs::xcm_config::weight_trader::DynamicWeightTrader,
 
     UNIT,
-    configs::{XodeTreasuryAccount, EnsureTwoThirdsTechnicalCommittee},
+    configs::XodeTreasuryAccount,
     MessageQueue,
 };
-use crate::weights;
 use core::marker::PhantomData;
 use cumulus_primitives_core::{AggregateMessageOrigin, GlobalConsensus, ParaId};
 use cumulus_primitives_utility::XcmFeesTo32ByteAccount;
@@ -134,7 +134,7 @@ parameter_types! {
     /// The account used to perform checks or hold assets during XCM execution,
     /// such as temporary crediting/debiting when receiving or sending assets.
     // pub const TokenLocation: Location = Location::parent();
-    pub TrustBackedAssetsPalletLocation: Location =
+    pub AssetsPalletLocation: Location =
 		PalletInstance(<PoolAssets as PalletInfoAccess>::index() as u8).into();
 	// pub TrustBackedAssetsPalletIndex: u8 = <Assets as PalletInfoAccess>::index() as u8;
     // pub PoolAssetsPalletLocation: Location =
@@ -178,14 +178,14 @@ pub type LocalAssetTransactor = CurrencyAdapter<
 
 /// `AssetId/Balancer` converter for `TrustBackedAssets`
 pub type TrustBackedAssetsConvertedConcreteId =
-	assets_common::TrustBackedAssetsConvertedConcreteId<TrustBackedAssetsPalletLocation, Balance>;
+	assets_common::TrustBackedAssetsConvertedConcreteId<AssetsPalletLocation, Balance>;
 
 
 /// The asset transactor for handling assets via pallet-assets.
 /// 
 /// This supports assets from the Relay Chain, sibling parachains (e.g., AssetHub),
 /// and local pallet-assets defined on this parachain.
-pub type PalletAssetsTransactor = FungiblesAdapter<
+pub type LocalFungiblesTransactor = FungiblesAdapter<
     // The asset handler used to inspect, mint, and burn tokens (pallet-assets).
     Assets,
     // Our custom asset matcher for various fungible assets.
@@ -306,28 +306,6 @@ pub type Traders = (
 	>,
 );
 
-/// The overall asset transactor for XCM, combining local native asset handling
-/// and pallet-assets handling for other fungible assets.
-pub type AssetTransactors = (
-    LocalAssetTransactor,
-    ForeignAssetTransactor,
-    PalletAssetsTransactor,
-);
-
-
-
-parameter_type_with_key! {
-	pub ParachainMinFee: |_location: Location| -> Option<u128> {
-		None
-	};
-}
-
-const fn xon_general_key() -> Junction {
-	const XON_KEY: [u8; 32] = *b"XON\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0";
-	GeneralKey { length: 3, data: XON_KEY }
-}
-const XON_GENERAL_KEY: Junction = xon_general_key();
-
 parameter_types! {
     // One XCM operation is 1_000_000_000 weight - almost certainly a conservative estimate.
     pub UnitWeightCost: Weight = Weight::from_parts(1_000_000_000, 64 * 1024);
@@ -347,6 +325,165 @@ parameter_types! {
 
 
 
+
+/// Means for transacting assets on this chain.
+pub type AssetTransactors =
+	(LocalAssetTransactor, ForeignAssetTransactor, LocalFungiblesTransactor);
+
+// This is only the xcm config. XCMs transferring assets that are not
+// registered in the AssetRegistry will fail and trap the asset.
+pub type Reserves = (
+    Case<RelayChainNativeAssetFromAssetHub>,
+    ReserveAssetsFrom<AssetHubLocation>, 
+);
+
+/// The means for routing XCM messages which are not for local execution into the right message
+/// queues.
+pub type XcmRouter = (
+    // Two routers - use UMP to communicate with the relay chain:
+    cumulus_primitives_utility::ParentAsUmp<ParachainSystem, PolkadotXcm, ()>,
+    // ..and XCMP to communicate with the sibling chains.
+    XcmpQueue,
+);
+
+pub struct SafeCallFilter;
+impl Contains<RuntimeCall> for SafeCallFilter {
+	fn contains(_call: &RuntimeCall) -> bool {
+		// This is safe, as we prevent arbitrary xcm-transact executions.
+		// For rationale, see:https://github.com/paritytech/polkadot/blob/19fdd197aff085f7f66e54942999fd536e7df475/runtime/kusama/src/xcm_config.rs#L171
+		true
+	}
+}
+
+pub struct XcmConfig;
+impl xcm_executor::Config for XcmConfig {
+    type RuntimeCall = RuntimeCall;
+    type XcmSender = XcmRouter;
+    type XcmEventEmitter = PolkadotXcm;
+    // How to withdraw and deposit an asset.
+    type AssetTransactor = AssetTransactors;
+    type OriginConverter = XcmOriginToTransactDispatchOrigin;
+    type IsReserve = Reserves;
+    type IsTeleporter = (); // Teleporting is disabled.
+    type Aliasers = Nothing;
+    type UniversalLocation = UniversalLocation;
+    type Barrier = Barrier;
+    type Weigher = FixedWeightBounds<UnitWeightCost, RuntimeCall, MaxInstructions>;
+    type Trader = Traders;
+    type ResponseHandler = PolkadotXcm;
+    type AssetTrap = PolkadotXcm;
+    type AssetLocker = ();
+    type AssetExchanger = ();
+    type AssetClaims = PolkadotXcm;
+    type SubscriptionService = PolkadotXcm;
+    type PalletInstancesInfo = AllPalletsWithSystem;
+    type MaxAssetsIntoHolding = MaxAssetsIntoHolding;
+    type FeeManager = ();
+    type MessageExporter = ();
+    type UniversalAliases = Nothing;
+    type CallDispatcher = RuntimeCall;
+    type SafeCallFilter = SafeCallFilter;
+    type TransactionalProcessor = FrameTransactionalProcessor;
+    type HrmpNewChannelOpenRequestHandler = ();
+    type HrmpChannelAcceptedHandler = ();
+    type HrmpChannelClosingHandler = ();
+    type XcmRecorder = PolkadotXcm;
+}
+
+/// No local origins on this chain are allowed to dispatch XCM sends/executions.
+pub type LocalOriginToLocation = SignedToAccountId32<RuntimeOrigin, AccountId, RelayNetwork>;
+
+parameter_types! {
+	pub const DepositPerItem: Balance = 10 * UNIT;
+	pub const DepositPerByte: Balance = 10 * UNIT;
+	pub const AuthorizeAliasHoldReason: RuntimeHoldReason =
+		RuntimeHoldReason::PolkadotXcm(pallet_xcm::HoldReason::AuthorizeAlias);
+}
+
+impl pallet_xcm::Config for Runtime {
+    type RuntimeEvent = RuntimeEvent;
+    type Currency = Balances;
+    type CurrencyMatcher = ();
+    type AuthorizedAliasConsideration = HoldConsideration<
+            AccountId,
+            Balances,
+            AuthorizeAliasHoldReason,
+            LinearStoragePrice<DepositPerItem, DepositPerByte, Balance>,
+        >;
+    // Prohibit sending arbitrary XCMs from users of this chain
+    type SendXcmOrigin = EnsureXcmOrigin<RuntimeOrigin, LocalOriginToLocation>;
+    type XcmRouter = XcmRouter;
+	// Allow any local origin in XCM execution.
+    type ExecuteXcmOrigin = EnsureXcmOrigin<RuntimeOrigin, LocalOriginToLocation>;
+	// Disable generic XCM execution. This does not affect Teleport or Reserve Transfer.
+    type XcmExecuteFilter = Nothing;
+    type XcmExecutor = XcmExecutor<XcmConfig>;
+    type XcmTeleportFilter = Everything;
+	// Transfer are allowed
+    type XcmReserveTransferFilter = Everything;
+    type Weigher = FixedWeightBounds<UnitWeightCost, RuntimeCall, MaxInstructions>;
+    type UniversalLocation = UniversalLocation;
+    type RuntimeOrigin = RuntimeOrigin;
+    type RuntimeCall = RuntimeCall;
+    const VERSION_DISCOVERY_QUEUE_SIZE: u32 = 100;
+    type AdvertisedXcmVersion = pallet_xcm::CurrentXcmVersion;
+    type AdminOrigin = EnsureRoot<AccountId>;
+    type TrustedLockers = ();
+    type SovereignAccountOf = LocationToAccountId;
+    type MaxLockers = ConstU32<8>;
+    type MaxRemoteLockConsumers = ConstU32<0>;
+    type RemoteLockConsumerIdentifier = ();
+    type WeightInfo = pallet_xcm::TestWeightInfo;
+}
+
+impl cumulus_pallet_xcm::Config for Runtime {
+    type RuntimeEvent = RuntimeEvent;
+    type XcmExecutor = XcmExecutor<XcmConfig>;
+}
+
+impl cumulus_pallet_xcmp_queue::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type ChannelInfo = ParachainSystem;
+	type VersionWrapper = PolkadotXcm;
+	// Enqueue XCMP messages from siblings for later processing.
+	type XcmpQueue = TransformOrigin<MessageQueue, AggregateMessageOrigin, ParaId, ParaIdToSibling>;
+	type MaxInboundSuspended = ConstU32<1_000>;
+	type MaxActiveOutboundChannels = ConstU32<128>;
+	// Most on-chain HRMP channels are configured to use 102400 bytes of max message size, so we
+	// need to set the page size larger than that until we reduce the channel size on-chain.
+	type MaxPageSize = ConstU32<{ 103 * 1024 }>;
+	type ControllerOrigin = EnsureRoot<AccountId>;
+	type ControllerOriginConverter = XcmOriginToTransactDispatchOrigin;
+	type PriceForSiblingDelivery = NoPriceForMessageDelivery<ParaId>;
+	type WeightInfo = ();
+}
+
+impl cumulus_pallet_xcmp_queue::migration::v5::V5Config for Runtime {
+	// This must be the same as the `ChannelInfo` from the `Config`:
+	type ChannelList = ParachainSystem;
+}
+
+/// Copied from moonbeam: https://github.com/PureStake/moonbeam/blob/095031d171b0c163e5649ee35acbc36eef681a82/primitives/xcm/src/ethereum_xcm.rs#L34
+pub const DEFAULT_PROOF_SIZE: u64 = 1024;
+
+parameter_types! {
+	pub const BaseXcmWeight: Weight= Weight::from_parts(1_000_000u64, DEFAULT_PROOF_SIZE);
+	pub const MaxAssetsForTransfer: usize = 2;
+}
+
+parameter_type_with_key! {
+	pub ParachainMinFee: |_location: Location| -> Option<u128> {
+		None
+	};
+}
+
+const fn xon_general_key() -> Junction {
+	const XON_KEY: [u8; 32] = *b"XON\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0";
+	GeneralKey { length: 3, data: XON_KEY }
+}
+const XON_GENERAL_KEY: Junction = xon_general_key();
+
+
 /// Converts a CurrencyId into a Location, used by xtoken for XCMP.
 pub struct CurrencyIdConvert;
 impl Convert<CurrencyId, Option<Location>> for CurrencyIdConvert {
@@ -358,114 +495,6 @@ impl Convert<CurrencyId, Option<Location>> for CurrencyIdConvert {
 			)),
 		}
 	}
-}
-
-
-
-
-
-
-
-pub type Reserves = (
-    Case<RelayChainNativeAssetFromAssetHub>,
-    ReserveAssetsFrom<AssetHubLocation>, 
-);
-
-
-
-pub struct XcmConfig;
-impl xcm_executor::Config for XcmConfig {
-    type RuntimeCall = RuntimeCall;
-    type XcmSender = XcmRouter;
-    // How to withdraw and deposit an asset.
-    type AssetTransactor = AssetTransactors;
-    type OriginConverter = XcmOriginToTransactDispatchOrigin;
-    type IsReserve = Reserves;
-    // type IsReserve = TrustedReserveAssets;
-    type IsTeleporter = (); // Teleporting is disabled.
-    type UniversalLocation = UniversalLocation;
-    type Barrier = Barrier;
-    type Weigher = FixedWeightBounds<UnitWeightCost, RuntimeCall, MaxInstructions>;
-    type Trader = Traders;
-    // type Trader = DynamicWeightTrader;
-    type ResponseHandler = PolkadotXcm;
-    type AssetTrap = PolkadotXcm;
-    type AssetClaims = PolkadotXcm;
-    type SubscriptionService = PolkadotXcm;
-    type PalletInstancesInfo = AllPalletsWithSystem;
-    type MaxAssetsIntoHolding = MaxAssetsIntoHolding;
-    type AssetLocker = ();
-    type AssetExchanger = ();
-    type FeeManager = ();
-    type MessageExporter = ();
-    type UniversalAliases = Nothing;
-    type CallDispatcher = RuntimeCall;
-    type SafeCallFilter = Everything;
-    type Aliasers = Nothing;
-    type TransactionalProcessor = FrameTransactionalProcessor;
-    type HrmpNewChannelOpenRequestHandler = ();
-    type HrmpChannelAcceptedHandler = ();
-    type HrmpChannelClosingHandler = ();
-    type XcmRecorder = PolkadotXcm;
-    // Stable 2512 Update
-    type XcmEventEmitter = PolkadotXcm;
-}
-
-/// No local origins on this chain are allowed to dispatch XCM sends/executions.
-pub type LocalOriginToLocation = SignedToAccountId32<RuntimeOrigin, AccountId, RelayNetwork>;
-
-/// The means for routing XCM messages which are not for local execution into the right message
-/// queues.
-pub type XcmRouter = (
-    // Two routers - use UMP to communicate with the relay chain:
-    cumulus_primitives_utility::ParentAsUmp<ParachainSystem, PolkadotXcm, ()>,
-    // ..and XCMP to communicate with the sibling chains.
-    XcmpQueue,
-);
-
-impl pallet_xcm::Config for Runtime {
-    type RuntimeEvent = RuntimeEvent;
-    type SendXcmOrigin = EnsureXcmOrigin<RuntimeOrigin, LocalOriginToLocation>;
-    type XcmRouter = XcmRouter;
-    type ExecuteXcmOrigin = EnsureXcmOrigin<RuntimeOrigin, LocalOriginToLocation>;
-    type XcmExecuteFilter = Everything;
-    // ^ Disable dispatchable execute on the XCM pallet.
-    // Needs to be `Everything` for local testing.
-    type XcmExecutor = XcmExecutor<XcmConfig>;
-    type XcmTeleportFilter = Everything;
-    type XcmReserveTransferFilter = Everything;
-    type Weigher = FixedWeightBounds<UnitWeightCost, RuntimeCall, MaxInstructions>;
-    type UniversalLocation = UniversalLocation;
-    type RuntimeOrigin = RuntimeOrigin;
-    type RuntimeCall = RuntimeCall;
-
-    const VERSION_DISCOVERY_QUEUE_SIZE: u32 = 100;
-    // ^ Override for AdvertisedXcmVersion default
-    type AdvertisedXcmVersion = pallet_xcm::CurrentXcmVersion;
-    type Currency = Balances;
-    type CurrencyMatcher = ();
-    type TrustedLockers = ();
-    type SovereignAccountOf = LocationToAccountId;
-    type MaxLockers = ConstU32<8>;
-    type WeightInfo = pallet_xcm::TestWeightInfo;
-    type AdminOrigin = EnsureRoot<AccountId>;
-    type MaxRemoteLockConsumers = ConstU32<0>;
-    type RemoteLockConsumerIdentifier = ();
-    // Stable 2512 Update
-    type AuthorizedAliasConsideration = ();
-}
-
-impl cumulus_pallet_xcm::Config for Runtime {
-    type RuntimeEvent = RuntimeEvent;
-    type XcmExecutor = XcmExecutor<XcmConfig>;
-}
-
-/// Copied from moonbeam: https://github.com/PureStake/moonbeam/blob/095031d171b0c163e5649ee35acbc36eef681a82/primitives/xcm/src/ethereum_xcm.rs#L34
-pub const DEFAULT_PROOF_SIZE: u64 = 1024;
-
-parameter_types! {
-	pub const BaseXcmWeight: Weight= Weight::from_parts(1_000_000u64, DEFAULT_PROOF_SIZE);
-	pub const MaxAssetsForTransfer: usize = 2;
 }
 
 parameter_types! {
@@ -535,17 +564,17 @@ impl orml_xtokens::Config for Runtime {
 	type RateLimiterId = ();
 }
 
-impl cumulus_pallet_xcmp_queue::Config for Runtime {
-	type RuntimeEvent = RuntimeEvent;
-	type ChannelInfo = ParachainSystem;
-	type VersionWrapper = ();
-	// Enqueue XCMP messages from siblings for later processing.
-	type XcmpQueue = TransformOrigin<MessageQueue, AggregateMessageOrigin, ParaId, ParaIdToSibling>;
-	type MaxInboundSuspended = sp_core::ConstU32<1_000>;
-	type MaxActiveOutboundChannels = ConstU32<128>;
-	type MaxPageSize = ConstU32<{ 1 << 16 }>;
-	type ControllerOrigin = EnsureTwoThirdsTechnicalCommittee;
-	type ControllerOriginConverter = XcmOriginToTransactDispatchOrigin;
-	type WeightInfo = ();
-	type PriceForSiblingDelivery = NoPriceForMessageDelivery<ParaId>;
-}
+// impl cumulus_pallet_xcmp_queue::Config for Runtime {
+// 	type RuntimeEvent = RuntimeEvent;
+// 	type ChannelInfo = ParachainSystem;
+// 	type VersionWrapper = ();
+// 	// Enqueue XCMP messages from siblings for later processing.
+// 	type XcmpQueue = TransformOrigin<MessageQueue, AggregateMessageOrigin, ParaId, ParaIdToSibling>;
+// 	type MaxInboundSuspended = sp_core::ConstU32<1_000>;
+// 	type MaxActiveOutboundChannels = ConstU32<128>;
+// 	type MaxPageSize = ConstU32<{ 1 << 16 }>;
+// 	type ControllerOrigin = EnsureTwoThirdsTechnicalCommittee;
+// 	type ControllerOriginConverter = XcmOriginToTransactDispatchOrigin;
+// 	type WeightInfo = ();
+// 	type PriceForSiblingDelivery = NoPriceForMessageDelivery<ParaId>;
+// }

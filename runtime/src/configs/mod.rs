@@ -27,25 +27,22 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 extern crate alloc;
 
+pub mod asset_config;
 pub mod xcm_config;
-use alloc::vec;
+use crate::configs::asset_config::{NativeAndAssets, PoolAssetsInstance};
 // Substrate and Polkadot dependencies
-use crate::{Timestamp, XodeStaking, Preimage, AssetsFreezer, PoolAssetsFreezer, Assets, PoolAssets, AssetConversion, Treasury, MultiSignature};
+use crate::{Timestamp, XodeStaking, Preimage, Treasury, MultiSignature};
 use cumulus_pallet_parachain_system::RelayNumberMonotonicallyIncreases;
-use cumulus_primitives_core::{AggregateMessageOrigin, ParaId, relay_chain::AccountPublic};
+use cumulus_primitives_core::{AggregateMessageOrigin, relay_chain::AccountPublic};
 use frame_support::{
-	derive_impl,
 	dispatch::DispatchClass,
-	ord_parameter_types,
 	parameter_types,
 	traits::{
-		ConstBool, ConstU32, ConstU64, ConstU128, ConstU8, EitherOfDiverse, TransformOrigin, VariantCountOf,
-		AsEnsureOriginWithArg,Randomness, LinearStoragePrice,
-		fungible::{Balanced, Credit, HoldConsideration, NativeOrWithId, NativeFromLeft},
-		fungible,
-		fungibles,
+		ConstBool, ConstU32, ConstU64, ConstU8, EitherOfDiverse, VariantCountOf,
+		Randomness, LinearStoragePrice,
+		fungible::{Balanced, Credit, HoldConsideration, NativeOrWithId},
 		OnUnbalanced,Imbalance,
-		tokens::{UnityAssetBalanceConversion, imbalance::{ResolveTo, ResolveAssetTo}},
+		tokens::{UnityAssetBalanceConversion, imbalance::ResolveTo},
 		Contains
 	},
 	weights::{ConstantMultiplier, Weight},
@@ -53,18 +50,18 @@ use frame_support::{
 };
 use frame_system::{
 	limits::{BlockLength, BlockWeights},
-	EnsureSigned, EnsureSignedBy, pallet_prelude::BlockNumberFor,
+	EnsureSigned, pallet_prelude::BlockNumberFor,
 	EnsureWithSuccess,
 };
 use pallet_xcm::{EnsureXcm, IsVoiceOfBody};
-use parachains_common::{message_queue::{NarrowOriginToSibling, ParaIdToSibling}, AssetIdForTrustBackedAssets};
+use parachains_common::{message_queue::NarrowOriginToSibling, AssetIdForTrustBackedAssets};
 use polkadot_runtime_common::{
-	xcm_sender::NoPriceForMessageDelivery, BlockHashCount, SlowAdjustingFeeUpdate,
+	BlockHashCount, SlowAdjustingFeeUpdate,
 };
 use sp_consensus_aura::sr25519::AuthorityId as AuraId;
 use sp_runtime:: {
 	// generic,
-	Permill, Perbill, Percent,
+	Perbill, Percent,
 	traits::{ AccountIdConversion, Zero, BlakeTwo256, IdentityLookup, AccountIdLookup },
 	FixedU128,
 };
@@ -76,10 +73,9 @@ use pallet_xcm_precompiles::XcmPrecompile;
 
 // Local module imports
 use super::{
-	weights,
 	weights::{BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight},
 	AccountId, Aura, Balance, Balances, Block, BlockNumber, CollatorSelection, ConsensusHook, Hash,
-	MessageQueue, Nonce, PalletInfo, ParachainSystem, Runtime, RuntimeCall, RuntimeEvent,
+	MessageQueue, Nonce, PalletInfo, Runtime, RuntimeCall, RuntimeEvent,
 	RuntimeFreezeReason, RuntimeHoldReason, RuntimeOrigin, RuntimeTask, Session, SessionKeys, OriginCaller, 
 	System, XcmpQueue, AVERAGE_ON_INITIALIZE_RATIO, EXISTENTIAL_DEPOSIT, DAYS, HOURS, MINUTES,
 	MAXIMUM_BLOCK_WEIGHT, UNIT, MICRO_UNIT, NORMAL_DISPATCH_RATIO, SLOT_DURATION, VERSION,
@@ -88,13 +84,7 @@ use super::{
 	// Revive
 	Address, Signature, EthExtraImpl
 };
-use xcm_config::{RelayLocation, XcmOriginToTransactDispatchOrigin};
-
-use assets_common::{
-	local_and_foreign_assets::LocalFromLeft,
-	AssetIdForPoolAssets, AssetIdForPoolAssetsConvert,
-};
-use pallet_asset_conversion::{AccountIdConverter, WithFirstAsset, Ascending, Chain, AccountIdConverterNoSeed};
+use xcm_config::RelayLocation;
 
 use pallet_identity::legacy::IdentityInfo;
 
@@ -191,48 +181,100 @@ impl Contains<RuntimeCall> for BaseCallFilter {
 /// but overridden as needed.
 // #[derive_impl(frame_system::config_preludes::ParaChainDefaultConfig)]
 impl frame_system::Config for Runtime {
+	/// The ubiquitous event type.
+	type RuntimeEvent = RuntimeEvent;
+	/// The basic call filter to use in dispatchable.
 	type BaseCallFilter = BaseCallFilter;
-	/// The identifier used to distinguish between accounts.
-	type AccountId = AccountId;
-	/// The index type for storing how many extrinsics an account has signed.
-	type Nonce = Nonce;
-	/// The type for hashing blocks and tries.
-	type Hash = Hash;
-	/// The block type.
-	type Block = Block;
-	/// Maximum number of block number to block hash mappings to keep (oldest pruned first).
-	type BlockHashCount = BlockHashCount;
-	/// Runtime version.
-	type Version = Version;
-	/// The data to be stored in an account.
-	type AccountData = pallet_balances::AccountData<Balance>;
-	/// The weight of database operations that the runtime can invoke.
-	type DbWeight = RocksDbWeight;
 	/// Block & extrinsics weights: base values and limits.
 	type BlockWeights = RuntimeBlockWeights;
 	/// The maximum length of a block (in bytes).
 	type BlockLength = RuntimeBlockLength;
+	/// The ubiquitous origin type.
+	type RuntimeOrigin = RuntimeOrigin;
+	/// The aggregated dispatch type that is available for extrinsics.
+	type RuntimeCall = RuntimeCall;
+	type RuntimeTask = RuntimeTask;
+	/// The Nonce value type
+	type Nonce = Nonce;
+	/// The type for hashing blocks and tries.
+	type Hash = Hash;
+	/// The hashing algorithm used.
+	type Hashing = BlakeTwo256;
+	/// The identifier used to distinguish between accounts.
+	type AccountId = AccountId;
+	/// The lookup mechanism to get account ID from whatever is passed in dispatchers.
+	type Lookup = AccountIdLookup<AccountId, ()>;
+	/// The Block provider type
+	type Block = Block;
+	/// Maximum number of block number to block hash mappings to keep (oldest pruned first).
+	type BlockHashCount = BlockHashCount;
+	/// The weight of database operations that the runtime can invoke.
+	type DbWeight = RocksDbWeight;
+	/// Runtime version.
+	type Version = Version;
+	/// Converts a module to an index of this module in the runtime.
+	type PalletInfo = PalletInfo;
+	/// The data to be stored in an account.
+	type AccountData = pallet_balances::AccountData<Balance>;
+	/// What to do if a new account is created.
+	type OnNewAccount = ();
+	/// What to do if an account is fully reaped from the system.
+	type OnKilledAccount = ();
+	/// Weight information for the extrinsics of this pallet.
+	type SystemWeightInfo = frame_system::WeightInfo<Runtime>;
 	/// This is used as an identifier of the chain. 42 is the generic substrate prefix.
 	type SS58Prefix = SS58Prefix;
 	/// The action to take on a Runtime Upgrade
 	type OnSetCode = cumulus_pallet_parachain_system::ParachainSetCode<Self>;
 	type MaxConsumers = frame_support::traits::ConstU32<16>;
-	type RuntimeEvent = RuntimeEvent;
-	type RuntimeOrigin = RuntimeOrigin;
-	type RuntimeCall = RuntimeCall;
-	type RuntimeTask = RuntimeTask;
-	type Hashing = BlakeTwo256;
-	type Lookup = AccountIdLookup<AccountId, ()>;
-	type PalletInfo = PalletInfo;
-	type OnNewAccount = ();
-	type OnKilledAccount = ();
-	type SystemWeightInfo = frame_system::WeightInfo<Runtime>;
-	type ExtensionsWeightInfo = ();
 	type SingleBlockMigrations = ();
 	type MultiBlockMigrator = ();
-	type PreInherents =();
+	type PreInherents = ();
 	type PostInherents = ();
 	type PostTransactions = ();
+	type ExtensionsWeightInfo = ();
+	// type BaseCallFilter = BaseCallFilter;
+	// /// The identifier used to distinguish between accounts.
+	// type AccountId = AccountId;
+	// /// The index type for storing how many extrinsics an account has signed.
+	// type Nonce = Nonce;
+	// /// The type for hashing blocks and tries.
+	// type Hash = Hash;
+	// /// The block type.
+	// type Block = Block;
+	// /// Maximum number of block number to block hash mappings to keep (oldest pruned first).
+	// type BlockHashCount = BlockHashCount;
+	// /// Runtime version.
+	// type Version = Version;
+	// /// The data to be stored in an account.
+	// type AccountData = pallet_balances::AccountData<Balance>;
+	// /// The weight of database operations that the runtime can invoke.
+	// type DbWeight = RocksDbWeight;
+	// /// Block & extrinsics weights: base values and limits.
+	// type BlockWeights = RuntimeBlockWeights;
+	// /// The maximum length of a block (in bytes).
+	// type BlockLength = RuntimeBlockLength;
+	// /// This is used as an identifier of the chain. 42 is the generic substrate prefix.
+	// type SS58Prefix = SS58Prefix;
+	// /// The action to take on a Runtime Upgrade
+	// type OnSetCode = cumulus_pallet_parachain_system::ParachainSetCode<Self>;
+	// type MaxConsumers = frame_support::traits::ConstU32<16>;
+	// type RuntimeEvent = RuntimeEvent;
+	// type RuntimeOrigin = RuntimeOrigin;
+	// type RuntimeCall = RuntimeCall;
+	// type RuntimeTask = RuntimeTask;
+	// type Hashing = BlakeTwo256;
+	// type Lookup = AccountIdLookup<AccountId, ()>;
+	// type PalletInfo = PalletInfo;
+	// type OnNewAccount = ();
+	// type OnKilledAccount = ();
+	// type SystemWeightInfo = frame_system::WeightInfo<Runtime>;
+	// type ExtensionsWeightInfo = ();
+	// type SingleBlockMigrations = ();
+	// type MultiBlockMigrator = ();
+	// type PreInherents =();
+	// type PostInherents = ();
+	// type PostTransactions = ();
 }
 
 impl pallet_timestamp::Config for Runtime {
@@ -461,7 +503,6 @@ impl pallet_session::Config for Runtime {
 	// type KeyDeposit = ();
 }
 
-#[docify::export(aura_config)]
 impl pallet_aura::Config for Runtime {
 	type AuthorityId = AuraId;
 	type DisabledValidators = ();
@@ -505,252 +546,6 @@ impl pallet_collator_selection::Config for Runtime {
 /// ======
 pub const fn deposit(items: u32, bytes: u32) -> Balance {
 	(items as Balance * 20 * UNIT + (bytes as Balance) * 100 * MICRO_UNIT) / 100
-}
-
-parameter_types! {
-	pub const AssetDeposit: Balance = 10_000 * UNIT;
-	pub const AssetAccountDeposit: Balance = deposit(1, 16);
-	pub const ApprovalDeposit: Balance = EXISTENTIAL_DEPOSIT;
-	pub const AssetsStringLimit: u32 = 50;
-	pub const MetadataDepositBase: Balance = deposit(1, 68);
-	pub const MetadataDepositPerByte: Balance = deposit(0, 1);
-}
-
-/// We allow root to execute privileged asset operations.
-pub type AssetsForceOrigin = EnsureTwoThirdsTreasuryCouncil;
-
-// Called "Trust Backed" assets because these are generally registered by some account, and users of
-// the asset assume it has some claimed backing. The pallet is called `Assets` in
-// `construct_runtime` to avoid breaking changes on storage reads.
-pub type TrustBackedAssetsInstance = pallet_assets::Instance1;
-// To be used in Proxy
-// type TrustBackedAssetsCall = pallet_assets::Call<Runtime, TrustBackedAssetsInstance>;
-impl pallet_assets::Config<TrustBackedAssetsInstance> for Runtime {
-	type RuntimeEvent = RuntimeEvent;
-	type Balance = Balance;
-	type RemoveItemsLimit = ConstU32<1_000>;
-	type AssetId = AssetIdForTrustBackedAssets;
-	type AssetIdParameter = AssetIdForTrustBackedAssets;
-	// type ReserveData = ();
-	type Currency = Balances;
-	type CreateOrigin = AsEnsureOriginWithArg<EnsureSigned<AccountId>>;
-	type ForceOrigin = AssetsForceOrigin;
-	type AssetDeposit = AssetDeposit;
-	type AssetAccountDeposit = AssetAccountDeposit;
-	type MetadataDepositBase = MetadataDepositBase;
-	type MetadataDepositPerByte = MetadataDepositPerByte;
-	type ApprovalDeposit = ApprovalDeposit;
-	type StringLimit = AssetsStringLimit;
-	type Freezer = AssetsFreezer;
-	type Holder = ();
-	type Extra = ();
-	type CallbackHandle = pallet_assets::AutoIncAssetId<Runtime, TrustBackedAssetsInstance>;
-	type WeightInfo = weights::pallet_assets_local::WeightInfo<Runtime>;
-	#[cfg(feature = "runtime-benchmarks")]
-	type BenchmarkHelper = ();
-}
-
-// Allow Freezes for the `Assets` pallet
-pub type AssetsFreezerInstance = pallet_assets_freezer::Instance1;
-impl pallet_assets_freezer::Config<AssetsFreezerInstance> for Runtime {
-	type RuntimeFreezeReason = RuntimeFreezeReason;
-	type RuntimeEvent = RuntimeEvent;
-}
-
-parameter_types! {
-	pub const AssetConversionPalletId: PalletId = PalletId(*b"py/ascon");
-	pub const LiquidityWithdrawalFee: Permill = Permill::from_percent(0);
-	pub const Native: NativeOrWithId<u32> = NativeOrWithId::Native;
-}
-
-ord_parameter_types! {
-	pub const AssetConversionOrigin: sp_runtime::AccountId32 =
-		AccountIdConversion::<sp_runtime::AccountId32>::into_account_truncating(&AssetConversionPalletId::get());
-}
-
-pub type PoolAssetsInstance = pallet_assets::Instance2;
-impl pallet_assets::Config<PoolAssetsInstance> for Runtime {
-	type RuntimeEvent = RuntimeEvent;
-	type Balance = Balance;
-	type RemoveItemsLimit = ConstU32<1000>;
-	type AssetId = AssetIdForPoolAssets;
-	type AssetIdParameter = u32;
-	// type ReserveData = ();
-	type Currency = Balances;
-	type CreateOrigin =
-		AsEnsureOriginWithArg<EnsureSignedBy<AssetConversionOrigin, sp_runtime::AccountId32>>;
-	type ForceOrigin = AssetsForceOrigin;
-	// Deposits are zero because creation/admin is limited to Asset Conversion pallet.
-	type AssetDeposit = ConstU128<0>;
-	type AssetAccountDeposit = ConstU128<0>;
-	type MetadataDepositBase = ConstU128<0>;
-	type MetadataDepositPerByte = ConstU128<0>;
-	type ApprovalDeposit = ApprovalDeposit;
-	type StringLimit = ConstU32<50>;
-	type Holder = ();
-	type Freezer = PoolAssetsFreezer;
-	type Extra = ();
-	type WeightInfo = weights::pallet_assets_pool::WeightInfo<Runtime>;
-	type CallbackHandle = ();
-	#[cfg(feature = "runtime-benchmarks")]
-	type BenchmarkHelper = ();
-}
-
-// Allow Freezes for the `PoolAssets` pallet
-pub type PoolAssetsFreezerInstance = pallet_assets_freezer::Instance2;
-impl pallet_assets_freezer::Config<PoolAssetsFreezerInstance> for Runtime {
-	type RuntimeFreezeReason = RuntimeFreezeReason;
-	type RuntimeEvent = RuntimeEvent;
-}
-
-/// Union fungibles implementation for [`LocalAssets`] and [`Balances`].
-pub type NativeAndLocalAssets = fungible::UnionOf<
-	Balances,
-	Assets,
-	NativeFromLeft,
-	NativeOrWithId<AssetIdForTrustBackedAssets>,
-	AccountId,
->;
-
-// /// Union fungibles implementation for [`LocalAssetsFreezer`] and [`Balances`].
-// pub type NativeAndLocalAssetsFreezer = fungible::UnionOf<
-// 	Balances,
-// 	AssetsFreezer,
-// 	NativeFromLeft,
-// 	NativeOrWithId<AssetIdForTrustBackedAssets>,
-// 	AccountId,
-// >;
-
-// /// Union fungibles implementation for [`PoolAssets`] and [`NativeAndLocalAssets`].
-// ///
-// /// NOTE: Should be kept updated to include ALL balances and assets in the runtime.
-// pub type NativeAndAllAssets = fungibles::UnionOf<
-// 	PoolAssets,
-// 	NativeAndLocalAssets,
-// 	LocalFromLeft<
-// 		AssetIdForPoolAssetsConvert<PoolAssetsPalletLocation, xcm::v5::Location>,
-// 		AssetIdForPoolAssets,
-// 		NativeOrWithId<AssetIdForTrustBackedAssets>,
-// 	>,
-// 	NativeOrWithId<AssetIdForTrustBackedAssets>,
-// 	AccountId,
-// >;
-
-// /// Union fungibles implementation for [`PoolAssetsFreezer`] and [`NativeAndLocalAssetsFreezer`].
-// ///
-// /// NOTE: Should be kept updated to include ALL balances and assets in the runtime.
-// pub type NativeAndAllAssetsFreezer = fungibles::UnionOf<
-// 	PoolAssetsFreezer,
-// 	NativeAndLocalAssetsFreezer,
-// 	LocalFromLeft<
-// 		AssetIdForPoolAssetsConvert<PoolAssetsPalletLocation, xcm::v5::Location>,
-// 		AssetIdForPoolAssets,
-// 		NativeOrWithId<AssetIdForTrustBackedAssets>,
-// 	>,
-// 	NativeOrWithId<AssetIdForTrustBackedAssets>,
-// 	AccountId,
-// >;
-
-pub type PoolIdToAccountId = AccountIdConverter<
-	AssetConversionPalletId,
-	(NativeOrWithId<AssetIdForTrustBackedAssets>, NativeOrWithId<AssetIdForTrustBackedAssets>),
->;
-
-pub type WithFirstAssetLocator = WithFirstAsset<
-	Native,
-	AccountId,
-	NativeOrWithId<AssetIdForTrustBackedAssets>,
-	PoolIdToAccountId,
->;
-
-pub type AscendingLocator = Ascending<
-	AccountId,
-	NativeOrWithId<AssetIdForTrustBackedAssets>,
-	PoolIdToAccountId
->;
-
-impl pallet_asset_conversion::Config for Runtime {
-	type RuntimeEvent = RuntimeEvent;
-	type Balance = Balance;
-	type HigherPrecisionBalance = sp_core::U256;
-	type AssetKind = NativeOrWithId<AssetIdForTrustBackedAssets>;
-	type Assets = NativeAndLocalAssets;
-	type PoolId = (Self::AssetKind, Self::AssetKind);
-	type PoolLocator = Chain<WithFirstAssetLocator, AscendingLocator>;
-	type PoolAssetId = u32;
-	type PoolAssets = PoolAssets;
-	type PoolSetupFee = ConstU128<0>; // Asset class deposit fees are sufficient to prevent spam
-	type PoolSetupFeeAsset = Native;
-	type PoolSetupFeeTarget = ResolveAssetTo<AssetConversionOrigin, Self::Assets>;
-	type LiquidityWithdrawalFee = LiquidityWithdrawalFee;
-	type LPFee = ConstU32<3>;
-	type PalletId = AssetConversionPalletId;
-	type MaxSwapPathLength = ConstU32<3>;
-	type MintMinLiquidity = ConstU128<100>;
-	type WeightInfo = weights::pallet_asset_conversion::WeightInfo<Runtime>;
-	#[cfg(feature = "runtime-benchmarks")]
-	type BenchmarkHelper = ();
-	// type BenchmarkHelper = assets_common::benchmarks::AssetPairFactory<
-	// 	Native,
-	// 	parachain_info::Pallet<Runtime>,
-	// 	xcm_config::TrustBackedAssetsPalletIndex,
-	// 	xcm::v5::Location,
-	// >;
-}
-
-// impl pallet_asset_conversion_ops::Config for Runtime {
-// 	type RuntimeEvent = RuntimeEvent;
-// 	type PriorAccountIdConverter = AccountIdConverterNoSeed<
-// 		<Runtime as pallet_asset_conversion::Config>::PoolId,
-// 	>;
-// 	type AssetsRefund = <Runtime as pallet_asset_conversion::Config>::Assets;
-// 	type PoolAssetsRefund = <Runtime as pallet_asset_conversion::Config>::PoolAssets;
-// 	type PoolAssetsTeam = <Runtime as pallet_asset_conversion::Config>::PoolAssets;
-// 	type DepositAsset = Balances;
-// 	type WeightInfo = weights::pallet_asset_conversion_ops::WeightInfo<Runtime>;
-// }
-
-impl pallet_asset_registry::Config for Runtime {
-	type ReserveAssetModifierOrigin = EnsureTwoThirdsTechnicalCommittee;
-	type Assets = Assets;
-	type WeightInfo = ();
-	// type WeightInfo = weights::pallet_asset_registry::WeightInfo<Runtime>;
-	#[cfg(feature = "runtime-benchmarks")]
-	type BenchmarkHelper = AssetRegistryBenchmarkHelper;
-}
-
-#[cfg(feature = "runtime-benchmarks")]
-pub struct AssetRegistryBenchmarkHelper;
-#[cfg(feature = "runtime-benchmarks")]
-impl pallet_asset_registry::BenchmarkHelper<AssetIdForTrustBackedAssets>
-	for AssetRegistryBenchmarkHelper
-{
-	fn get_registered_asset() -> AssetIdForTrustBackedAssets {
-		use sp_runtime::traits::StaticLookup;
-
-		let root = frame_system::RawOrigin::Root.into();
-		let asset_id = 1;
-		let caller = frame_benchmarking::whitelisted_caller();
-		let caller_lookup = <Runtime as frame_system::Config>::Lookup::unlookup(caller);
-		Assets::force_create(root, asset_id.into(), caller_lookup, true, 1)
-			.expect("Should have been able to force create asset");
-		asset_id
-	}
-}
-
-
-impl pallet_asset_conversion_tx_payment::Config for Runtime {
-	type RuntimeEvent = RuntimeEvent;
-	type AssetId = NativeOrWithId<AssetIdForTrustBackedAssets>;
-	type OnChargeAssetTransaction = pallet_asset_conversion_tx_payment::SwapAssetAdapter<
-		Native,
-		NativeAndLocalAssets,
-		AssetConversion,
-		ResolveAssetTo<XodeTreasuryAccount, NativeAndLocalAssets>,
-	>;
-	type WeightInfo = ();
-	#[cfg(feature = "runtime-benchmarks")]
-	type BenchmarkHelper = ();
 }
 
 /// =========
@@ -885,7 +680,7 @@ impl pallet_treasury::Config for Runtime {
 	type Beneficiary = AccountId;
 	type BeneficiaryLookup = IdentityLookup<Self::Beneficiary>;
 	type Paymaster = frame_support::traits::tokens::pay::PayAssetFromAccount<
-				NativeAndLocalAssets,
+				NativeAndAssets,
         XodeTreasuryAccount
     >;
 	type BalanceConverter = UnityAssetBalanceConversion;
@@ -1085,7 +880,7 @@ impl cumulus_pallet_weight_reclaim::Config for Runtime {
 const ETH: u128 = 1_000_000_000_000_000_000;
 
 parameter_types! {
-	pub ChainId: u64 = u32::from(crate::genesis_config_presets::PARACHAIN_ID) as u64;
+	pub ChainId: u64 = 5610;
 	pub const NativeToEthRatio: u32 = (ETH/UNIT) as u32;
 	pub const DepositPerChildTrieItem: Balance = deposit(1, 0) / 100;
 	pub const MaxEthExtrinsicWeight: FixedU128 = FixedU128::from_rational(9, 10);
@@ -1125,7 +920,7 @@ impl pallet_revive::Config for Runtime {
 	type MaxEthExtrinsicWeight = MaxEthExtrinsicWeight;
 	type FeeInfo = pallet_revive::evm::fees::Info<Address, Signature, EthExtraImpl>;
 	type Precompiles = (
-		ERC20<Self, InlineIdConfig<0x120>, TrustBackedAssetsInstance>,
+		ERC20<Self, InlineIdConfig<0x120>, AssetIdForTrustBackedAssets>,
 		ERC20<Self, InlineIdConfig<0x320>, PoolAssetsInstance>,
 		XcmPrecompile<Self>,
 	);

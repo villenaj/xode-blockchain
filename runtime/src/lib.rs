@@ -37,10 +37,10 @@ mod benchmarks;
 
 pub mod configs;
 
-mod genesis_config_presets;
+// mod genesis_config_presets;
 mod weights;
 
-use alloc::{vec, vec::Vec, sync::Arc};
+use alloc::{vec, vec::Vec};
 use smallvec::smallvec;
 
 #[cfg(any(feature = "std", test))]
@@ -83,7 +83,7 @@ use configs::{
 	RuntimeBlockWeights,
 	xcm_config,
 	xcm_config::{
-		XcmConfig, XcmRouter, LocationToAccountId,
+		XcmConfig, LocationToAccountId,
 		// weight_trader::{WeightToFeeConverter, XonWeightToFeeRate, DotWeightToFeeRate, UsdtWeightToFeeRate},
 		SelfLocation, RelayLocation
 	}
@@ -91,7 +91,7 @@ use configs::{
 
 use xcm::{
 	latest::prelude::{
-		AssetId, Junctions, Junction, Location,
+		AssetId,
 	},
 	Version as XcmVersion, VersionedAssetId, VersionedAssets, VersionedLocation,
 	VersionedXcm,
@@ -100,7 +100,6 @@ use xcm_runtime_apis::{
 	dry_run::{
 		CallDryRunEffects as ApiCallDryRunEffects, 
 		XcmDryRunEffects as ApiXcmDryRunEffects,
-		Error as XcmDryRunApiError,
 	},
 	fees::Error as XcmPaymentApiError,
 };
@@ -145,7 +144,6 @@ pub type SignedBlock = generic::SignedBlock<Block>;
 pub type BlockId = generic::BlockId<Block>;
 
 /// The SignedExtension to the basic transaction logic.
-#[docify::export(template_signed_extra)]
 pub type TxExtension = cumulus_pallet_weight_reclaim::StorageWeightReclaim<
     Runtime,
     (
@@ -277,7 +275,6 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	system_version: 1,
 };
 
-#[docify::export]
 mod block_times {
 	/// This determines the average expected block time that we are targeting. Blocks will be
 	/// produced at a minimum duration defined by `SLOT_DURATION`. `SLOT_DURATION` is picked up by
@@ -314,14 +311,12 @@ const AVERAGE_ON_INITIALIZE_RATIO: Perbill = Perbill::from_percent(5);
 /// `Operational` extrinsics.
 const NORMAL_DISPATCH_RATIO: Perbill = Perbill::from_percent(75);
 
-#[docify::export(max_block_weight)]
 /// We allow for 2 seconds of compute with a 6 second average block time.
 const MAXIMUM_BLOCK_WEIGHT: Weight = Weight::from_parts(
 	WEIGHT_REF_TIME_PER_SECOND.saturating_mul(2),
 	cumulus_primitives_core::relay_chain::MAX_POV_SIZE as u64,
 );
 
-#[docify::export]
 mod async_backing_params {
 	/// Maximum number of blocks simultaneously accepted by the Runtime, not yet included
 	/// into the relay chain.
@@ -334,7 +329,6 @@ mod async_backing_params {
 }
 pub(crate) use async_backing_params::*;
 
-#[docify::export]
 /// Aura consensus hook
 type ConsensusHook = cumulus_pallet_aura_ext::FixedVelocityConsensusHook<
 	Runtime,
@@ -406,8 +400,8 @@ construct_runtime!(
         // Asset Conversion & Liquidity
         AssetConversion: pallet_asset_conversion = 100,
         PoolAssets: pallet_assets::<Instance2> = 102,
-        AssetsFreezer: pallet_assets_freezer::<Instance1> = 103,
-        PoolAssetsFreezer: pallet_assets_freezer::<Instance2> = 105,
+        // AssetsFreezer: pallet_assets_freezer::<Instance1> = 103,
+        // PoolAssetsFreezer: pallet_assets_freezer::<Instance2> = 105,
         // AssetConversionOps: pallet_asset_conversion_ops = 106,
         AssetRegistry: pallet_asset_registry = 107,
         AssetConversionTxPayment: pallet_asset_conversion_tx_payment = 108,
@@ -418,7 +412,6 @@ construct_runtime!(
     }
 );
 
-#[docify::export(register_validate_block)]
 cumulus_pallet_parachain_system::register_validate_block! {
 	Runtime = Runtime,
 	BlockExecutor = cumulus_pallet_aura_ext::BlockExecutor::<Runtime, Executive>,
@@ -448,20 +441,18 @@ type EventRecord = frame_system::EventRecord<
 //     >;
 
 // we move some impls outside so we can easily use them with `docify`.
-impl Runtime {
-	#[docify::export]
-	fn impl_slot_duration() -> sp_consensus_aura::SlotDuration {
-		sp_consensus_aura::SlotDuration::from_millis(SLOT_DURATION)
-	}
+// impl Runtime {
+// 	fn impl_slot_duration() -> sp_consensus_aura::SlotDuration {
+// 		sp_consensus_aura::SlotDuration::from_millis(SLOT_DURATION)
+// 	}
 
-	#[docify::export]
-	fn impl_can_build_upon(
-		included_hash: <Block as BlockT>::Hash,
-		slot: cumulus_primitives_aura::Slot,
-	) -> bool {
-		ConsensusHook::can_build_upon(included_hash, slot)
-	}
-}
+// 	fn impl_can_build_upon(
+// 		included_hash: <Block as BlockT>::Hash,
+// 		slot: cumulus_primitives_aura::Slot,
+// 	) -> bool {
+// 		ConsensusHook::can_build_upon(included_hash, slot)
+// 	}
+// }
 
 pallet_revive::impl_runtime_apis_plus_revive_traits! (
 	Runtime,
@@ -783,11 +774,11 @@ pallet_revive::impl_runtime_apis_plus_revive_traits! (
 		}
 
 		fn get_preset(id: &Option<sp_genesis_builder::PresetId>) -> Option<Vec<u8>> {
-			get_preset::<RuntimeGenesisConfig>(id, crate::genesis_config_presets::get_preset)
+			get_preset::<RuntimeGenesisConfig>(id, |_| None)
 		}
 
 		fn preset_names() -> Vec<sp_genesis_builder::PresetId> {
-			crate::genesis_config_presets::preset_names()
+			Default::default()
 		}
 	}
 
