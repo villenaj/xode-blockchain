@@ -1,4 +1,4 @@
-use crate::Balance;
+use crate::{Balance, configs::{ForeignAssetId, TokensAdapter}};
 use xcm::latest::prelude::*;
 use xcm_executor::traits::{Error as MatchError, MatchesFungible, MatchesFungibles};
 
@@ -99,5 +99,33 @@ impl MatchesFungibles<u32, Balance> for MultiAssetMatcher {
 
         log::trace!(target: "xcm::matches_fungibles", "AssetMatcher: Final result for asset {:?} → {:?}", asset, match_result);
         match_result
+    }
+}
+
+/// Matches any asset whose `Location` has been registered in `AssetRegistry`, resolving it to its
+/// [`ForeignAssetId`] and routing it to `Tokens` (via `TokensAdapter`). Unlike `MultiAssetMatcher`,
+/// this isn't a fixed allowlist of known chains/pallets baked into the runtime - it recognizes
+/// whatever governance has registered at runtime. Declines (rather than erroring) anything
+/// unregistered, so it's safe to try last in the `AssetTransactor` tuple after the native and
+/// `Assets` matchers.
+pub struct ForeignAssetMatcher;
+
+impl MatchesFungibles<ForeignAssetId, Balance> for ForeignAssetMatcher {
+    fn matches_fungibles(asset: &Asset) -> Result<(ForeignAssetId, Balance), MatchError> {
+        match asset {
+            Asset { id: AssetId(location), fun: Fungibility::Fungible(amount) } => {
+                match TokensAdapter::id_of(location) {
+                    Some(id) => {
+                        log::trace!(target: "xcm::matches_fungibles", "ForeignAssetMatcher: Matched registered foreign asset → location: {:?}, id: {:?}, amount: {:?}", location, id, amount);
+                        Ok((id, *amount))
+                    }
+                    None => {
+                        log::trace!(target: "xcm::matches_fungibles", "ForeignAssetMatcher: Asset not registered → asset: {:?}", asset);
+                        Err(MatchError::AssetNotHandled)
+                    }
+                }
+            }
+            _ => Err(MatchError::AssetNotHandled),
+        }
     }
 }

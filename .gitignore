@@ -1,5 +1,6 @@
 target/
 zombienet/bin/
+zombienet/data/
 zombienet/collator/
 client/node_modules/
 client/.env

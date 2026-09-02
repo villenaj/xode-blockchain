@@ -107,6 +107,10 @@ pallet-asset-conversion-ops = { workspace = true }
 pallet-asset-conversion-tx-payment = { workspace = true }
 pallet-assets-freezer = { workspace = true }
 pallet-xcm-precompiles = { workspace = true }
+# Foreign Assets
+orml-tokens = { workspace = true }
+orml-traits = { workspace = true }
+orml-asset-registry = { workspace = true }
 
 [features]
 default = ["std"]
@@ -186,6 +190,9 @@ std = [
 	"pallet-revive/std",
 	"pallet-assets-precompiles/std",
 	"cumulus-pallet-weight-reclaim/std",
+	"orml-tokens/std",
+	"orml-traits/std",
+	"orml-asset-registry/std",
 ]
 
 runtime-benchmarks = [
@@ -229,6 +236,8 @@ runtime-benchmarks = [
 	"pallet-tx-pause/runtime-benchmarks",
 	"pallet-whitelist/runtime-benchmarks",
 	"pallet-utility/runtime-benchmarks",
+	"orml-tokens/runtime-benchmarks",
+	"orml-asset-registry/runtime-benchmarks",
 ]
 
 try-runtime = [
@@ -271,6 +280,8 @@ try-runtime = [
 	"pallet-whitelist/try-runtime",
 	"pallet-root-testing/try-runtime",
 	"pallet-utility/try-runtime",
+	"orml-tokens/try-runtime",
+	"orml-asset-registry/try-runtime",
 ]
 
 # Enable the metadata hash generation.

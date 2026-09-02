@@ -5,29 +5,75 @@ provider = "native"
 
 [relaychain]
 default_command = "./bin/polkadot"
-default_args = [ "-l=parachain=debug,xcm=trace", "--workers-path=./bin" ]
+default_args = [ "-lparachain=debug,-lxcm=trace,-lruntime=debug" ]
 chain = "rococo-local"
 
   [[relaychain.nodes]]
   name = "alice"
   validator = true
-  ws_port = 9944
+  rpc_port = 9911
 
   [[relaychain.nodes]]
   name = "bob"
   validator = true
-  ws_port = 9955
+  rpc_port = 9922
+
+  [[relaychain.nodes]]
+  name = "charlie"
+  validator = true
+  rpc_port = 9933
+
+  [[relaychain.nodes]]
+  name = "dave"
+  validator = true
+  rpc_port = 9944
 
 [[parachains]]
 id = 1000
 cumulus_based = true
+chain = "asset-hub-rococo-local"
 
   [[parachains.collators]]
-  name = "charlie"
-  command = "../target/release/xode-node"
-  ws_port = 9988
+  name = "assethub-collator-one"
+  command = "./bin/polkadot-parachain"
+  rpc_port = 9955
+  args = [
+    "-lparachain=debug",
+    "-lxcm=trace",
+    "-lruntime=debug"
+  ]
+
+#  [[parachains.collators]]
+#  name = "assethub-collator-two"
+#  command = "./bin/polkadot-parachain"
+#  rpc_port = 9966
+#  args = [
+#    "-lparachain=debug",
+#    "-lxcm=trace",
+#    "-lruntime=debug"
+#  ]
+
+[[parachains]]
+id = 3417
+cumulus_based = true
 
   [[parachains.collators]]
-  name = "dave"
+  name = "xoxe-collator-one"
   command = "../target/release/xode-node"
-  ws_port = 9999
+  rpc_port = 9977
+  args = [
+    "-lparachain=debug",
+    "-lxcm=trace",
+    "-lruntime=debug"
+  ]
+
+#  [[parachains.collators]]
+#  name = "xode-collator-two"
+#  command = "../target/release/xode-node"
+#  rpc_port = 9988
+#  args [
+#    "-lparachain=debug",
+#    "-lxcm=trace",
+#    "-lruntime=debug"
+#  ]
+

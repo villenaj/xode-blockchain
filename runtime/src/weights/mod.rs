@@ -24,7 +24,6 @@ pub mod rocksdb_weights;
 pub mod pallet_asset_conversion_ops;
 pub mod pallet_asset_conversion_tx_payment;
 pub mod pallet_asset_conversion;
-pub mod pallet_assets_foreign;
 pub mod pallet_assets_local;
 pub mod pallet_assets_pool;
 

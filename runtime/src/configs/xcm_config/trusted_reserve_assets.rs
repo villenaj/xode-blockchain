@@ -1,3 +1,4 @@
+use crate::{AssetRegistry, configs::TokensAdapter};
 use frame_support::traits::ContainsPair;
 use xcm::latest::prelude::*;
 
@@ -98,6 +99,13 @@ impl ContainsPair<Asset, Location> for TrustedReserveAssets {
 
             _ => false
         };
+
+        // Registry-driven fallback: trust any origin a registered foreign asset explicitly
+        // declares as its reserve, on top of the hardcoded chains matched above.
+        let result = result || TokensAdapter::id_of(&asset.id.0)
+            .and_then(AssetRegistry::metadata)
+            .and_then(|metadata| metadata.additional.reserve)
+            .is_some_and(|reserve| &reserve == origin);
 
         log::trace!(target: "xcm::contains_pair", "TrustedReserveAssets::contains - asset: {:?}, origin: {:?} → result: {:?}", asset, origin, result);
         result

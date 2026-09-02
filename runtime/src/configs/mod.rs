@@ -27,7 +27,7 @@
 pub mod xcm_config;
 use alloc::vec;
 // Substrate and Polkadot dependencies
-use crate::{Timestamp, XodeStaking, Preimage, AssetsFreezer, PoolAssetsFreezer, Assets, ForeignAssets, ForeignAssetsFreezer, PoolAssets, LocationToAccountId};
+use crate::{Timestamp, XodeStaking, Preimage, AssetsFreezer, PoolAssetsFreezer, Assets, Tokens, AssetRegistry, PoolAssets};
 use cumulus_pallet_parachain_system::RelayNumberMonotonicallyIncreases;
 use cumulus_primitives_core::{AggregateMessageOrigin, ParaId};
 use frame_support::{
@@ -87,13 +87,11 @@ use super::{
 	// Revive
 	Address, Signature, EthExtraImpl
 };
-use xcm_config::{RelayLocation, XcmOriginToTransactDispatchOrigin, TrustBackedAssetsPalletLocation, TokenLocation, PoolAssetsPalletLocation};
+use xcm_config::{RelayLocation, XcmOriginToTransactDispatchOrigin};
 
 use assets_common::{
-	foreign_creators::ForeignCreators,
-	local_and_foreign_assets::{LocalFromLeft, TargetFromLeft, ForeignAssetReserveData},
-	matching::FromSiblingParachain,
-	AssetIdForPoolAssets, AssetIdForPoolAssetsConvert, AssetIdForTrustBackedAssetsConvert,
+	local_and_foreign_assets::TargetFromLeft,
+	AssetIdForPoolAssets,
 };
 use pallet_assets::Call as AssetsCall;
 use pallet_balances::Call as BalancesCall;
@@ -556,29 +554,13 @@ impl pallet_assets_freezer::Config<PoolAssetsFreezerInstance> for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 }
 
-/// Union fungibles implementation for `Assets` and `ForeignAssets`.
+/// Union fungibles implementation for `Assets` and `Tokens` (foreign, orml-tokens-backed assets,
+/// accessed through [`TokensAdapter`]), keyed by [`AssetKind`].
 pub type LocalAndForeignAssets = fungibles::UnionOf<
 	Assets,
-	ForeignAssets,
-	LocalFromLeft<
-		AssetIdForTrustBackedAssetsConvert<TrustBackedAssetsPalletLocation, xcm::v5::Location>,
-		AssetIdForTrustBackedAssets,
-		xcm::v5::Location,
-	>,
-	xcm::v5::Location,
-	AccountId,
->;
-
-/// Union fungibles implementation for `AssetsFreezer` and `ForeignAssetsFreezer`.
-pub type LocalAndForeignAssetsFreezer = fungibles::UnionOf<
-	AssetsFreezer,
-	ForeignAssetsFreezer,
-	LocalFromLeft<
-		AssetIdForTrustBackedAssetsConvert<TrustBackedAssetsPalletLocation, xcm::v5::Location>,
-		AssetIdForTrustBackedAssets,
-		xcm::v5::Location,
-	>,
-	xcm::v5::Location,
+	TokensAdapter,
+	LocalOrForeignFromAssetKind,
+	AssetKind,
 	AccountId,
 >;
 
@@ -586,64 +568,25 @@ pub type LocalAndForeignAssetsFreezer = fungibles::UnionOf<
 pub type NativeAndNonPoolAssets = fungible::UnionOf<
 	Balances,
 	LocalAndForeignAssets,
-	TargetFromLeft<TokenLocation, xcm::v5::Location>,
-	xcm::v5::Location,
-	AccountId,
->;
-
-/// Union fungibles implementation for [`LocalAndForeignAssetsFreezer`] and [`Balances`].
-pub type NativeAndNonPoolAssetsFreezer = fungible::UnionOf<
-	Balances,
-	LocalAndForeignAssetsFreezer,
-	TargetFromLeft<TokenLocation, xcm::v5::Location>,
-	xcm::v5::Location,
-	AccountId,
->;
-
-/// Union fungibles implementation for [`PoolAssets`] and [`NativeAndNonPoolAssets`].
-///
-/// NOTE: Should be kept updated to include ALL balances and assets in the runtime.
-pub type NativeAndAllAssets = fungibles::UnionOf<
-	PoolAssets,
-	NativeAndNonPoolAssets,
-	LocalFromLeft<
-		AssetIdForPoolAssetsConvert<PoolAssetsPalletLocation, xcm::v5::Location>,
-		AssetIdForPoolAssets,
-		xcm::v5::Location,
-	>,
-	xcm::v5::Location,
-	AccountId,
->;
-
-/// Union fungibles implementation for [`PoolAssetsFreezer`] and [`NativeAndNonPoolAssetsFreezer`].
-///
-/// NOTE: Should be kept updated to include ALL balances and assets in the runtime.
-pub type NativeAndAllAssetsFreezer = fungibles::UnionOf<
-	PoolAssetsFreezer,
-	NativeAndNonPoolAssetsFreezer,
-	LocalFromLeft<
-		AssetIdForPoolAssetsConvert<PoolAssetsPalletLocation, xcm::v5::Location>,
-		AssetIdForPoolAssets,
-		xcm::v5::Location,
-	>,
-	xcm::v5::Location,
+	TargetFromLeft<NativeAssetKind, AssetKind>,
+	AssetKind,
 	AccountId,
 >;
 
 pub type PoolIdToAccountId = pallet_asset_conversion::AccountIdConverter<
 	AssetConversionPalletId,
-	(xcm::v5::Location, xcm::v5::Location),
+	(AssetKind, AssetKind),
 >;
 
 impl pallet_asset_conversion::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type Balance = Balance;
 	type HigherPrecisionBalance = sp_core::U256;
-	type AssetKind = xcm::v5::Location;
+	type AssetKind = AssetKind;
 	type Assets = NativeAndNonPoolAssets;
 	type PoolId = (Self::AssetKind, Self::AssetKind);
 	type PoolLocator = pallet_asset_conversion::WithFirstAsset<
-		TokenLocation,
+		NativeAssetKind,
 		AccountId,
 		Self::AssetKind,
 		PoolIdToAccountId,
@@ -651,7 +594,7 @@ impl pallet_asset_conversion::Config for Runtime {
 	type PoolAssetId = u32;
 	type PoolAssets = PoolAssets;
 	type PoolSetupFee = ConstU128<0>; // Asset class deposit fees are sufficient to prevent spam
-	type PoolSetupFeeAsset = TokenLocation;
+	type PoolSetupFeeAsset = NativeAssetKind;
 	type PoolSetupFeeTarget = ResolveAssetTo<AssetConversionOrigin, Self::Assets>;
 	type LiquidityWithdrawalFee = LiquidityWithdrawalFee;
 	type LPFee = ConstU32<3>;
@@ -660,12 +603,7 @@ impl pallet_asset_conversion::Config for Runtime {
 	type MintMinLiquidity = ConstU128<100>;
 	type WeightInfo = weights::pallet_asset_conversion::WeightInfo<Runtime>;
 	#[cfg(feature = "runtime-benchmarks")]
-	type BenchmarkHelper = assets_common::benchmarks::AssetPairFactory<
-		TokenLocation,
-		parachain_info::Pallet<Runtime>,
-		xcm_config::TrustBackedAssetsPalletIndex,
-		xcm::v5::Location,
-	>;
+	type BenchmarkHelper = ();
 }
 
 impl pallet_asset_conversion_ops::Config for Runtime {
@@ -681,57 +619,279 @@ impl pallet_asset_conversion_ops::Config for Runtime {
 }
 
 parameter_types! {
-	pub const CreateForeignAssetDeposit: Balance = 100 * UNIT;
-	pub const ForeignAssetsAssetDeposit: Balance = CreateForeignAssetDeposit::get();
-	pub const ForeignAssetsAssetAccountDeposit: Balance = AssetAccountDeposit::get();
-	pub const ForeignAssetsApprovalDeposit: Balance = ApprovalDeposit::get();
-	pub const ForeignAssetsAssetsStringLimit: u32 = AssetsStringLimit::get();
-	pub const ForeignAssetsMetadataDepositBase: Balance = MetadataDepositBase::get();
-	pub const ForeignAssetsMetadataDepositPerByte: Balance = MetadataDepositPerByte::get();
+	pub const OrmlMaxLocks: u32 = 50;
+	pub const OrmlMaxReserves: u32 = 50;
 }
 
-/// Assets managed by some foreign location. Note: we do not declare a `ForeignAssetsCall` type, as
-/// this type is used in proxy definitions. We assume that a foreign location would not want to set
-/// an individual, local account as a proxy for the issuance of their assets. This issuance should
-/// be managed by the foreign location's governance.
-pub type ForeignAssetsInstance = pallet_assets::Instance2;
-impl pallet_assets::Config<ForeignAssetsInstance> for Runtime {
-	type RuntimeEvent = RuntimeEvent;
+/// The id `orml-tokens` uses internally for a foreign asset's balances/issuance. `orml-tokens`
+/// requires `CurrencyId: Copy`, which `xcm::v5::Location` does not implement, so balances are
+/// keyed by this compact, auto-assigned id instead; [`AssetRegistry`]'s `location_to_asset_id`/
+/// `location` bridge it to the `Location` that identifies the asset on the wire for XCM.
+pub type ForeignAssetId = u32;
+
+/// The identifier for every asset kind traded through `pallet_asset_conversion` or spendable from
+/// `pallet_treasury`: the chain's native token, a local trust-backed asset (`Assets`, by its own
+/// id), or a foreign asset (`Tokens`, by its `AssetRegistry`-assigned [`ForeignAssetId`]).
+///
+/// Exposed directly as the `AssetKind` extrinsic parameter, so a caller (e.g. Polkadot.js Apps)
+/// picks a variant and supplies a plain integer, rather than constructing an XCM `Location` —
+/// `Location` is still what identifies an asset on the XCM wire (see `TokensAdapter`/
+/// `ForeignAssetMatcher`/`TrustedReserveAssets`), it just isn't the local pool/treasury key.
+#[derive(
+	Clone, Eq, PartialEq, Ord, PartialOrd, Debug,
+	codec::Encode, codec::Decode, codec::DecodeWithMemTracking, scale_info::TypeInfo, codec::MaxEncodedLen,
+)]
+pub enum AssetKind {
+	Native,
+	Local(AssetIdForTrustBackedAssets),
+	Foreign(ForeignAssetId),
+}
+
+/// Lets benchmarking (`pallet_asset_conversion`/`pallet_asset_rate`'s blanket `BenchmarkHelper<T>
+/// for () where T: From<u32>`) derive an `AssetKind` from a raw seed.
+impl From<u32> for AssetKind {
+	fn from(id: u32) -> Self {
+		AssetKind::Local(id)
+	}
+}
+
+/// Lets `pallet_asset_rate`'s blanket `AssetKindFactory<T> for () where T: FromEntropy` derive an
+/// `AssetKind` from a random benchmarking seed.
+impl sp_core::crypto::FromEntropy for AssetKind {
+	fn from_entropy(input: &mut impl codec::Input) -> Result<Self, codec::Error> {
+		match input.read_byte()? % 3 {
+			0 => Ok(AssetKind::Native),
+			1 => Ok(AssetKind::Local(AssetIdForTrustBackedAssets::from_entropy(input)?)),
+			_ => Ok(AssetKind::Foreign(ForeignAssetId::from_entropy(input)?)),
+		}
+	}
+}
+
+parameter_types! {
+	pub NativeAssetKind: AssetKind = AssetKind::Native;
+}
+
+/// Routes an [`AssetKind`] to either `Assets` (`Local`) or `Tokens` (`Foreign`) for
+/// [`LocalAndForeignAssets`]. `AssetKind::Native` is intercepted a level up, by
+/// [`NativeAndNonPoolAssets`]'s own `TargetFromLeft<NativeAssetKind, _>` criterion, before it
+/// would ever reach this `Convert` impl; mapped to `Left(0)` defensively (rather than panicking)
+/// in case that invariant is ever violated.
+pub struct LocalOrForeignFromAssetKind;
+impl sp_runtime::traits::Convert<AssetKind, sp_runtime::Either<AssetIdForTrustBackedAssets, ForeignAssetId>>
+	for LocalOrForeignFromAssetKind
+{
+	fn convert(kind: AssetKind) -> sp_runtime::Either<AssetIdForTrustBackedAssets, ForeignAssetId> {
+		match kind {
+			AssetKind::Local(id) => sp_runtime::Either::Left(id),
+			AssetKind::Foreign(id) => sp_runtime::Either::Right(id),
+			AssetKind::Native => sp_runtime::Either::Left(AssetIdForTrustBackedAssets::default()),
+		}
+	}
+}
+
+/// Looks up the existential deposit for a foreign asset from its registered metadata, defaulting
+/// to `0` (no minimum) for an asset that has not been registered yet.
+pub struct AssetRegistryExistentialDeposits;
+impl orml_traits::GetByKey<ForeignAssetId, Balance> for AssetRegistryExistentialDeposits {
+	fn get(id: &ForeignAssetId) -> Balance {
+		AssetRegistry::metadata(id)
+			.map(|metadata| metadata.existential_deposit)
+			.unwrap_or_default()
+	}
+}
+
+/// Foreign assets (assets backed by some foreign location) are held as balances in `Tokens`,
+/// keyed by [`ForeignAssetId`]. Registration/metadata is governed by `AssetRegistry`.
+impl orml_tokens::Config for Runtime {
 	type Balance = Balance;
-	type AssetId = xcm::v5::Location;
-	type AssetIdParameter = xcm::v5::Location;
-	type ReserveData = ForeignAssetReserveData;
-	type Currency = Balances;
-	type CreateOrigin = ForeignCreators<
-		(
-			FromSiblingParachain<parachain_info::Pallet<Runtime>, xcm::v5::Location>,
-		),
-		LocationToAccountId,
-		AccountId,
-		xcm::v5::Location,
-	>;
-	type ForceOrigin = AssetsForceOrigin;
-	type AssetDeposit = ForeignAssetsAssetDeposit;
-	type MetadataDepositBase = ForeignAssetsMetadataDepositBase;
-	type MetadataDepositPerByte = ForeignAssetsMetadataDepositPerByte;
-	type ApprovalDeposit = ForeignAssetsApprovalDeposit;
-	type StringLimit = ForeignAssetsAssetsStringLimit;
-	type Holder = ();
-	type Freezer = ForeignAssetsFreezer;
-	type Extra = ();
-	type WeightInfo = weights::pallet_assets_foreign::WeightInfo<Runtime>;
-	type CallbackHandle = ();
-	type AssetAccountDeposit = ForeignAssetsAssetAccountDeposit;
-	type RemoveItemsLimit = frame_support::traits::ConstU32<1000>;
+	type Amount = i128;
+	type CurrencyId = ForeignAssetId;
+	type WeightInfo = ();
+	type ExistentialDeposits = AssetRegistryExistentialDeposits;
+	type MaxLocks = OrmlMaxLocks;
+	type MaxReserves = OrmlMaxReserves;
+	type ReserveIdentifier = [u8; 8];
+	type DustRemovalWhitelist = frame_support::traits::Nothing;
+	type CurrencyHooks = ();
 	#[cfg(feature = "runtime-benchmarks")]
-	type BenchmarkHelper = assets_common::benchmarks::LocationAssetsBenchmarkHelper;
+	type BenchmarkHelper = ();
 }
 
-// Allow Freezes for the `ForeignAssets` pallet
-pub type ForeignAssetsFreezerInstance = pallet_assets_freezer::Instance2;
-impl pallet_assets_freezer::Config<ForeignAssetsFreezerInstance> for Runtime {
-	type RuntimeFreezeReason = RuntimeFreezeReason;
-	type RuntimeEvent = RuntimeEvent;
+/// Additional, non-standard metadata stored per foreign asset.
+#[derive(
+	Clone, Eq, PartialEq, Debug, Default,
+	codec::Encode, codec::Decode, codec::DecodeWithMemTracking, scale_info::TypeInfo, codec::MaxEncodedLen,
+)]
+pub struct CustomMetadata {
+	/// The origin this chain trusts as the reserve for this asset when it arrives via XCM
+	/// reserve-transfer (see `TrustedReserveAssets`). `None` means the asset is registered for
+	/// bookkeeping (e.g. `pallet_asset_conversion`/`pallet_treasury` pricing) only and cannot be
+	/// moved in or out via XCM.
+	pub reserve: Option<xcm::v5::Location>,
+}
+
+/// Governance-gated registry of foreign assets: sequential [`ForeignAssetId`]s (assigned on
+/// registration by [`orml_asset_registry::SequentialId`]) mapped to name/symbol/decimals/
+/// `Location` metadata. `Tokens` holds balances keyed by the same id; [`TokensAdapter`] below
+/// bridges the `Location`-keyed view the rest of the runtime expects to it.
+impl orml_asset_registry::Config for Runtime {
+	type CustomMetadata = CustomMetadata;
+	type AssetId = ForeignAssetId;
+	type AuthorityOrigin = AssetsForceOrigin;
+	type AssetProcessor = orml_asset_registry::SequentialId<Runtime>;
+	type Balance = Balance;
+	type StringLimit = AssetsStringLimit;
+	type WeightInfo = ();
+}
+
+/// Adapts `Tokens` (already keyed by [`ForeignAssetId`], nothing to translate) to the extra
+/// deposit-lifecycle traits `Create`/`AccountTouch`/`Refund` that `orml-tokens` itself doesn't
+/// implement (every registered [`ForeignAssetId`] implicitly "exists" with no per-account
+/// deposit, so `orml-tokens` has no use for them) but that generic tooling
+/// (`pallet_asset_conversion`, `pallet_treasury`'s `PayAssetFromAccount`) still requires as a
+/// trait bound. Rust's orphan rules don't allow implementing them directly on
+/// `orml_tokens::Pallet<Runtime>` (both the trait and the pallet type are foreign to this crate),
+/// hence this thin local wrapper - `Inspect`/`Unbalanced` below are plain 1:1 delegation.
+pub struct TokensAdapter;
+
+impl TokensAdapter {
+	/// Resolves the [`ForeignAssetId`] `AssetRegistry` assigned to a `Location`, if it has been
+	/// registered. Used by the XCM config (`asset_matcher`/`trusted_reserve_assets`) to bridge
+	/// XCM's `Location`-keyed wire format to the compact id `Tokens`/`TokensAdapter` use.
+	pub fn id_of(location: &xcm::v5::Location) -> Option<ForeignAssetId> {
+		// `orml-asset-registry` (as vendored) indexes `LocationToAssetId` by an XCM v3 `Location`;
+		// downgrade through v4 to reach it.
+		let v4: xcm::v4::Location = location.clone().try_into().ok()?;
+		let v3: xcm::v3::Location = v4.try_into().ok()?;
+		AssetRegistry::location_to_asset_id(v3)
+	}
+}
+
+impl fungibles::Inspect<AccountId> for TokensAdapter {
+	type AssetId = ForeignAssetId;
+	type Balance = Balance;
+
+	fn total_issuance(asset: ForeignAssetId) -> Balance {
+		<Tokens as fungibles::Inspect<AccountId>>::total_issuance(asset)
+	}
+
+	fn minimum_balance(asset: ForeignAssetId) -> Balance {
+		<Tokens as fungibles::Inspect<AccountId>>::minimum_balance(asset)
+	}
+
+	fn total_balance(asset: ForeignAssetId, who: &AccountId) -> Balance {
+		<Tokens as fungibles::Inspect<AccountId>>::total_balance(asset, who)
+	}
+
+	fn balance(asset: ForeignAssetId, who: &AccountId) -> Balance {
+		<Tokens as fungibles::Inspect<AccountId>>::balance(asset, who)
+	}
+
+	fn reducible_balance(
+		asset: ForeignAssetId,
+		who: &AccountId,
+		preservation: frame_support::traits::tokens::Preservation,
+		force: frame_support::traits::tokens::Fortitude,
+	) -> Balance {
+		<Tokens as fungibles::Inspect<AccountId>>::reducible_balance(asset, who, preservation, force)
+	}
+
+	fn can_deposit(
+		asset: ForeignAssetId,
+		who: &AccountId,
+		amount: Balance,
+		provenance: frame_support::traits::tokens::Provenance,
+	) -> frame_support::traits::tokens::DepositConsequence {
+		<Tokens as fungibles::Inspect<AccountId>>::can_deposit(asset, who, amount, provenance)
+	}
+
+	fn can_withdraw(
+		asset: ForeignAssetId,
+		who: &AccountId,
+		amount: Balance,
+	) -> frame_support::traits::tokens::WithdrawConsequence<Balance> {
+		<Tokens as fungibles::Inspect<AccountId>>::can_withdraw(asset, who, amount)
+	}
+
+	fn asset_exists(asset: ForeignAssetId) -> bool {
+		<Tokens as fungibles::Inspect<AccountId>>::asset_exists(asset)
+	}
+}
+
+impl fungibles::Unbalanced<AccountId> for TokensAdapter {
+	fn handle_dust(dust: fungibles::Dust<AccountId, Self>) {
+		<Tokens as fungibles::Unbalanced<AccountId>>::handle_dust(fungibles::Dust(dust.0, dust.1));
+	}
+
+	fn write_balance(
+		asset: ForeignAssetId,
+		who: &AccountId,
+		amount: Balance,
+	) -> Result<Option<Balance>, sp_runtime::DispatchError> {
+		<Tokens as fungibles::Unbalanced<AccountId>>::write_balance(asset, who, amount)
+	}
+
+	fn set_total_issuance(asset: ForeignAssetId, amount: Balance) {
+		<Tokens as fungibles::Unbalanced<AccountId>>::set_total_issuance(asset, amount);
+	}
+}
+
+impl fungibles::Mutate<AccountId> for TokensAdapter {}
+
+impl fungibles::Balanced<AccountId> for TokensAdapter {
+	type OnDropDebt = fungibles::IncreaseIssuance<AccountId, TokensAdapter>;
+	type OnDropCredit = fungibles::DecreaseIssuance<AccountId, TokensAdapter>;
+}
+
+/// Only allow "creating" (i.e. beginning to hold a balance of) a foreign asset that has already
+/// been through governance-gated registration in `AssetRegistry`.
+impl frame_support::traits::fungibles::Create<AccountId> for TokensAdapter {
+	fn create(
+		asset: ForeignAssetId,
+		_admin: AccountId,
+		_is_sufficient: bool,
+		_min_balance: Balance,
+	) -> sp_runtime::DispatchResult {
+		frame_support::ensure!(
+			AssetRegistry::metadata(asset).is_some(),
+			sp_runtime::DispatchError::Other(
+				"foreign asset must be registered in AssetRegistry before use"
+			)
+		);
+		Ok(())
+	}
+}
+
+/// `Tokens` accounts don't need a pre-paid deposit to be created (unlike `pallet-assets`, where a
+/// "sufficient"-less asset account needs one) - touching is always a no-op.
+impl frame_support::traits::AccountTouch<ForeignAssetId, AccountId> for TokensAdapter {
+	type Balance = Balance;
+
+	fn deposit_required(_asset: ForeignAssetId) -> Balance {
+		0
+	}
+
+	fn should_touch(_asset: ForeignAssetId, _who: &AccountId) -> bool {
+		false
+	}
+
+	fn touch(_asset: ForeignAssetId, _who: &AccountId, _depositor: &AccountId) -> sp_runtime::DispatchResult {
+		Ok(())
+	}
+}
+
+/// No deposit is ever taken by [`AccountTouch`] above, so there is never anything to refund.
+impl frame_support::traits::fungibles::Refund<AccountId> for TokensAdapter {
+	type AssetId = ForeignAssetId;
+	type Balance = Balance;
+
+	fn deposit_held(_id: ForeignAssetId, _who: AccountId) -> Option<(AccountId, Balance)> {
+		None
+	}
+
+	fn refund(_id: ForeignAssetId, _who: AccountId) -> sp_runtime::DispatchResult {
+		Ok(())
+	}
 }
 
 /// =========
@@ -834,7 +994,7 @@ impl pallet_asset_rate::Config for Runtime {
 	type RemoveOrigin = EnsureTwoThirdsTreasuryCouncil;
 	type UpdateOrigin = EnsureTwoThirdsTreasuryCouncil;
 	type Currency = Balances;
-	type AssetKind = xcm::v5::Location;
+	type AssetKind = AssetKind;
 	type RuntimeEvent = RuntimeEvent;
 	type WeightInfo = pallet_asset_rate::weights::SubstrateWeight<Runtime>;
 	#[cfg(feature = "runtime-benchmarks")]
@@ -862,7 +1022,7 @@ impl pallet_treasury::Config for Runtime {
 	type SpendFunds = ();  
     type WeightInfo = pallet_treasury::weights::SubstrateWeight<Runtime>;
     type MaxApprovals = MaxApprovals;
-	type AssetKind = xcm::v5::Location;
+	type AssetKind = AssetKind;
 	type Beneficiary = AccountId;
 	type BeneficiaryLookup = pallet_indices::Pallet<Runtime>;
 	type Paymaster = frame_support::traits::tokens::pay::PayAssetFromAccount<

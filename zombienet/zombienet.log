@@ -8,5 +8,1874 @@ Either remove and explicitly install matching versions or dedupe using your pack
 The following conflicting packages were found:
 	cjs 13.3.1	node_modules/@polkadot/keyring/node_modules/@polkadot/util-crypto/cjs
 	cjs 13.5.9	node_modules/@polkadot/util-crypto/cjs
-Running kubernetes provider:
-[7m[31m  ⚠ I can't find the Creds file: undefined[0m[0m
+2026-09-02T02:43:41.101Z zombie Concurrency: 4
+2026-09-02T02:43:41.102Z zombie {
+    "configBasePath": "/home/jowel/Documents/GitHub/villenaj/xode-blockchain/zombienet",
+    "relaychain": {
+        "defaultImage": "parity/polkadot:latest",
+        "defaultCommand": "./bin/polkadot",
+        "defaultArgs": [
+            "-lparachain=debug,-lxcm=trace,-lruntime=debug"
+        ],
+        "defaultKeystoreKeyTypes": [
+            "aura",
+            "babe",
+            "imon",
+            "gran",
+            "audi",
+            "asgn",
+            "para",
+            "beef",
+            "nmbs",
+            "rand",
+            "rate",
+            "bcsv",
+            "ftsv"
+        ],
+        "randomNominatorsCount": 0,
+        "maxNominations": 24,
+        "nodes": [
+            {
+                "name": "alice",
+                "key": "2bd806c97f0e00af1a1fc3328fa763a9269723c8db8fac4f93af71db186d6e90",
+                "accounts": {
+                    "seed": "//Alice",
+                    "mnemonic": "small fade essence group whisper bless amount unit aspect body intact quick",
+                    "sr_account": {
+                        "address": "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY",
+                        "publicKey": "0xd43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d"
+                    },
+                    "sr_stash": {
+                        "address": "5GNJqTPyNqANBkUVMN1LPPrxXnFouWXoe2wNSmmEoLctxiZY",
+                        "publicKey": "0xbe5ddb1579b72e84524fc29e78609e3caf42e85aa118ebfe0b0ad404b5bdd25f"
+                    },
+                    "ed_account": {
+                        "address": "5FA9nQDVg267DEd8m1ZypXLBnvN7SFxYwV7ndqSYGiN9TTpu",
+                        "publicKey": "0x88dc3417d5058ec4b4503e0c12ea1a0a89be200fe98922423d4334014fa6b0ee"
+                    },
+                    "ec_account": {
+                        "publicKey": "0x020a1091341fe5664bfa1782d5e04779689068c916b04cb365ec3153755684d9a1"
+                    }
+                },
+                "command": "./bin/polkadot",
+                "image": "parity/polkadot:latest",
+                "chain": "rococo-local",
+                "validator": true,
+                "balance": 2000000000000,
+                "args": [
+                    "-lparachain=debug,-lxcm=trace,-lruntime=debug"
+                ],
+                "keystoreKeyTypes": [
+                    "aura",
+                    "babe",
+                    "imon",
+                    "gran",
+                    "audi",
+                    "asgn",
+                    "para",
+                    "beef",
+                    "nmbs",
+                    "rand",
+                    "rate",
+                    "bcsv",
+                    "ftsv"
+                ],
+                "env": [
+                    {
+                        "name": "COLORBT_SHOW_HIDDEN",
+                        "value": "1"
+                    },
+                    {
+                        "name": "RUST_BACKTRACE",
+                        "value": "FULL"
+                    }
+                ],
+                "bootnodes": [],
+                "telemetryUrl": "",
+                "telemetry": false,
+                "prometheus": true,
+                "overrides": [],
+                "addToBootnodes": false,
+                "zombieRole": "node",
+                "imagePullPolicy": "Always",
+                "p2pPort": 39643,
+                "wsPort": 38267,
+                "rpcPort": 9911,
+                "prometheusPort": 45395,
+                "externalPorts": {
+                    "p2pPort": 39643,
+                    "wsPort": 38267,
+                    "rpcPort": 9911,
+                    "prometheusPort": 45395
+                },
+                "prometheusPrefix": "substrate",
+                "group": "alice"
+            },
+            {
+                "name": "bob",
+                "key": "81b637d8fcd2c6da6359e6963113a1170de795e4b725b84d1e0b4cfd9ec58ce9",
+                "accounts": {
+                    "seed": "//Bob",
+                    "mnemonic": "march peanut wonder plastic alley image large fancy fix fancy congress museum",
+                    "sr_account": {
+                        "address": "5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty",
+                        "publicKey": "0x8eaf04151687736326c9fea17e25fc5287613693c912909cb226aa4794f26a48"
+                    },
+                    "sr_stash": {
+                        "address": "5HpG9w8EBLe5XCrbczpwq5TSXvedjrBGCwqxK1iQ7qUsSWFc",
+                        "publicKey": "0xfe65717dad0447d715f660a0a58411de509b42e6efb8375f562f58a554d5860e"
+                    },
+                    "ed_account": {
+                        "address": "5GoNkf6WdbxCFnPdAnYYQyCjAKPJgLNxXwPjwTh6DGg6gN3E",
+                        "publicKey": "0xd17c2d7823ebf260fd138f2d7e27d114c0145d968b5ff5006125f2414fadae69"
+                    },
+                    "ec_account": {
+                        "publicKey": "0x0390084fdbf27d2b79d26a4f13f0ccd982cb755a661969143c37cbc49ef5b91f27"
+                    }
+                },
+                "command": "./bin/polkadot",
+                "image": "parity/polkadot:latest",
+                "chain": "rococo-local",
+                "validator": true,
+                "balance": 2000000000000,
+                "args": [
+                    "-lparachain=debug,-lxcm=trace,-lruntime=debug"
+                ],
+                "keystoreKeyTypes": [
+                    "aura",
+                    "babe",
+                    "imon",
+                    "gran",
+                    "audi",
+                    "asgn",
+                    "para",
+                    "beef",
+                    "nmbs",
+                    "rand",
+                    "rate",
+                    "bcsv",
+                    "ftsv"
+                ],
+                "env": [
+                    {
+                        "name": "COLORBT_SHOW_HIDDEN",
+                        "value": "1"
+                    },
+                    {
+                        "name": "RUST_BACKTRACE",
+                        "value": "FULL"
+                    }
+                ],
+                "bootnodes": [],
+                "telemetryUrl": "",
+                "telemetry": false,
+                "prometheus": true,
+                "overrides": [],
+                "addToBootnodes": false,
+                "zombieRole": "node",
+                "imagePullPolicy": "Always",
+                "p2pPort": 36307,
+                "wsPort": 43209,
+                "rpcPort": 9922,
+                "prometheusPort": 35771,
+                "externalPorts": {
+                    "p2pPort": 36307,
+                    "wsPort": 43209,
+                    "rpcPort": 9922,
+                    "prometheusPort": 35771
+                },
+                "prometheusPrefix": "substrate",
+                "group": "bob"
+            },
+            {
+                "name": "charlie",
+                "key": "b9dd960c1753459a78115d3cb845a57d924b6877e805b08bd01086ccdf34433c",
+                "accounts": {
+                    "seed": "//Charlie",
+                    "mnemonic": "clarify focus level transfer youth entire rapid false visa submit organ culture",
+                    "sr_account": {
+                        "address": "5FLSigC9HGRKVhB9FiEo4Y3koPsNmBmLJbpXg2mp1hXcS59Y",
+                        "publicKey": "0x90b5ab205c6974c9ea841be688864633dc9ca8a357843eeacf2314649965fe22"
+                    },
+                    "sr_stash": {
+                        "address": "5Ck5SLSHYac6WFt5UZRSsdJjwmpSZq85fd5TRNAdZQVzEAPT",
+                        "publicKey": "0x1e07379407fecc4b89eb7dbd287c2c781cfb1907a96947a3eb18e4f8e7198625"
+                    },
+                    "ed_account": {
+                        "address": "5DbKjhNLpqX3zqZdNBc9BGb4fHU1cRBaDhJUskrvkwfraDi6",
+                        "publicKey": "0x439660b36c6c03afafca027b910b4fecf99801834c62a5e6006f27d978de234f"
+                    },
+                    "ec_account": {
+                        "publicKey": "0x0389411795514af1627765eceffcbd002719f031604fadd7d188e2dc585b4e1afb"
+                    }
+                },
+                "command": "./bin/polkadot",
+                "image": "parity/polkadot:latest",
+                "chain": "rococo-local",
+                "validator": true,
+                "balance": 2000000000000,
+                "args": [
+                    "-lparachain=debug,-lxcm=trace,-lruntime=debug"
+                ],
+                "keystoreKeyTypes": [
+                    "aura",
+                    "babe",
+                    "imon",
+                    "gran",
+                    "audi",
+                    "asgn",
+                    "para",
+                    "beef",
+                    "nmbs",
+                    "rand",
+                    "rate",
+                    "bcsv",
+                    "ftsv"
+                ],
+                "env": [
+                    {
+                        "name": "COLORBT_SHOW_HIDDEN",
+                        "value": "1"
+                    },
+                    {
+                        "name": "RUST_BACKTRACE",
+                        "value": "FULL"
+                    }
+                ],
+                "bootnodes": [],
+                "telemetryUrl": "",
+                "telemetry": false,
+                "prometheus": true,
+                "overrides": [],
+                "addToBootnodes": false,
+                "zombieRole": "node",
+                "imagePullPolicy": "Always",
+                "p2pPort": 42139,
+                "wsPort": 46241,
+                "rpcPort": 9933,
+                "prometheusPort": 45753,
+                "externalPorts": {
+                    "p2pPort": 42139,
+                    "wsPort": 46241,
+                    "rpcPort": 9933,
+                    "prometheusPort": 45753
+                },
+                "prometheusPrefix": "substrate",
+                "group": "charlie"
+            },
+            {
+                "name": "dave",
+                "key": "61ea0803f8853523b777d414ace3130cd4d3f92de2cd7ff8695c337d79c2eeee",
+                "accounts": {
+                    "seed": "//Dave",
+                    "mnemonic": "olympic close health among roof once crunch alley witness position horror behind",
+                    "sr_account": {
+                        "address": "5DAAnrj7VHTznn2AWBemMuyBwZWs6FNFjdyVXUeYum3PTXFy",
+                        "publicKey": "0x306721211d5404bd9da88e0204360a1a9ab8b87c66c1bc2fcdd37f3c2222cc20"
+                    },
+                    "sr_stash": {
+                        "address": "5HKPmK9GYtE1PSLsS1qiYU9xQ9Si1NcEhdeCq9sw5bqu4ns8",
+                        "publicKey": "0xe860f1b1c7227f7c22602f53f15af80747814dffd839719731ee3bba6edc126c"
+                    },
+                    "ed_account": {
+                        "address": "5ECTwv6cZ5nJQPk6tWfaTrEk8YH2L7X1VT4EL5Tx2ikfFwb7",
+                        "publicKey": "0x5e639b43e0052c47447dac87d6fd2b6ec50bdd4d0f614e4299c665249bbd09d9"
+                    },
+                    "ec_account": {
+                        "publicKey": "0x03bc9d0ca094bd5b8b3225d7651eac5d18c1c04bf8ae8f8b263eebca4e1410ed0c"
+                    }
+                },
+                "command": "./bin/polkadot",
+                "image": "parity/polkadot:latest",
+                "chain": "rococo-local",
+                "validator": true,
+                "balance": 2000000000000,
+                "args": [
+                    "-lparachain=debug,-lxcm=trace,-lruntime=debug"
+                ],
+                "keystoreKeyTypes": [
+                    "aura",
+                    "babe",
+                    "imon",
+                    "gran",
+                    "audi",
+                    "asgn",
+                    "para",
+                    "beef",
+                    "nmbs",
+                    "rand",
+                    "rate",
+                    "bcsv",
+                    "ftsv"
+                ],
+                "env": [
+                    {
+                        "name": "COLORBT_SHOW_HIDDEN",
+                        "value": "1"
+                    },
+                    {
+                        "name": "RUST_BACKTRACE",
+                        "value": "FULL"
+                    }
+                ],
+                "bootnodes": [],
+                "telemetryUrl": "",
+                "telemetry": false,
+                "prometheus": true,
+                "overrides": [],
+                "addToBootnodes": false,
+                "zombieRole": "node",
+                "imagePullPolicy": "Always",
+                "p2pPort": 43047,
+                "wsPort": 44837,
+                "rpcPort": 9944,
+                "prometheusPort": 34835,
+                "externalPorts": {
+                    "p2pPort": 43047,
+                    "wsPort": 44837,
+                    "rpcPort": 9944,
+                    "prometheusPort": 34835
+                },
+                "prometheusPrefix": "substrate",
+                "group": "dave"
+            }
+        ],
+        "chain": "rococo-local",
+        "overrides": [],
+        "defaultPrometheusPrefix": "substrate",
+        "useStashForValidators": true,
+        "chainSpecCommand": "./bin/polkadot build-spec --chain {{chainName}} --disable-default-bootnode"
+    },
+    "parachains": [
+        {
+            "id": 1000,
+            "name": "1000",
+            "para": "generic",
+            "cumulusBased": true,
+            "defaultArgs": [],
+            "addToGenesis": true,
+            "registerPara": true,
+            "onboardAsParachain": true,
+            "withCustomProps": false,
+            "collators": [
+                {
+                    "name": "assethub-collator-one",
+                    "key": "316f13cc1e97b41bb87e9aba9e1a1b8a1a73b7d0a86142eed7254c024f1fae61",
+                    "accounts": {
+                        "seed": "//Assethub-collator-one",
+                        "mnemonic": "dutch romance engine minor rug aerobic minute lawn excite goat spread diesel",
+                        "sr_account": {
+                            "address": "5CDisaxM2EJjv4aujSB7y2Mk5DL66nDZ25TG9dQtQaNqXTGE",
+                            "publicKey": "0x06e0a0d10a73829f3b76a6367da0b990ead6e6f98f4b1ac5a797411c6d892e71"
+                        },
+                        "sr_stash": {
+                            "address": "5ChRs1sztcvAvBS3cGvCfvHqdP7NnEZNHDjgS6rmgkrUoZNM",
+                            "publicKey": "0x1c023d439dcffe8a05b046a98aff4fb737ac10a1de62d5ecbf1f0922fd7ed914"
+                        },
+                        "ed_account": {
+                            "address": "5FY68FjesgCPQrtbfFGbDiteoQGjQpqawN1k68xKdx36mrhN",
+                            "publicKey": "0x99974a1c1f569065853124b004296d8657bc3e0eaa451a404f255fc9eb686bcb"
+                        },
+                        "ec_account": {
+                            "publicKey": "0x03fbf5a9a8c85e6b9dd9b8fa70f4078d208bf6095ed8088caf7f24182025e667f3"
+                        }
+                    },
+                    "validator": true,
+                    "image": "parity/polkadot-parachain:latest",
+                    "command": "./bin/polkadot-parachain",
+                    "keystoreKeyTypes": [
+                        "aura",
+                        "babe",
+                        "imon",
+                        "gran",
+                        "audi",
+                        "asgn",
+                        "para",
+                        "beef",
+                        "nmbs",
+                        "rand",
+                        "rate",
+                        "bcsv",
+                        "ftsv"
+                    ],
+                    "args": [
+                        "-lparachain=debug",
+                        "-lxcm=trace",
+                        "-lruntime=debug"
+                    ],
+                    "chain": "asset-hub-rococo-local_rococo-local",
+                    "bootnodes": [],
+                    "env": [
+                        {
+                            "name": "COLORBT_SHOW_HIDDEN",
+                            "value": "1"
+                        },
+                        {
+                            "name": "RUST_BACKTRACE",
+                            "value": "FULL"
+                        }
+                    ],
+                    "telemetryUrl": "",
+                    "prometheus": true,
+                    "overrides": [],
+                    "zombieRole": "cumulus-collator",
+                    "parachainId": 1000,
+                    "imagePullPolicy": "Always",
+                    "p2pPort": 36417,
+                    "wsPort": 34971,
+                    "rpcPort": 9955,
+                    "prometheusPort": 33885,
+                    "externalPorts": {
+                        "p2pPort": 36417,
+                        "wsPort": 34971,
+                        "rpcPort": 9955,
+                        "prometheusPort": 33885
+                    },
+                    "prometheusPrefix": "substrate",
+                    "group": "assethub-collator-one"
+                }
+            ],
+            "chain": "asset-hub-rococo-local",
+            "chainSpecCommand": "./bin/polkadot-parachain build-spec --chain {{chainName}} --disable-default-bootnode",
+            "genesisWasmGenerator": "./bin/polkadot-parachain export-genesis-wasm {{CLIENT_REMOTE_DIR}}/genesis-wasm",
+            "genesisStateGenerator": "./bin/polkadot-parachain {{GENESIS_GENERATE_SUBCOMMAND}} {{CLIENT_REMOTE_DIR}}/genesis-state"
+        },
+        {
+            "id": 3417,
+            "name": "3417",
+            "para": "generic",
+            "cumulusBased": true,
+            "defaultArgs": [],
+            "addToGenesis": true,
+            "registerPara": true,
+            "onboardAsParachain": true,
+            "withCustomProps": false,
+            "collators": [
+                {
+                    "name": "xoxe-collator-one",
+                    "key": "d6f10dca82713e5d6e74de5df0ff8847657f3ccb8cae653da042dd3943117021",
+                    "accounts": {
+                        "seed": "//Xoxe-collator-one",
+                        "mnemonic": "rescue finger below praise rebel answer theme siege snack tortoise capital manual",
+                        "sr_account": {
+                            "address": "5DWpdrkERDpDvrpTdbW7ejkS1ebK4bBshfofcRj51BEQPDxn",
+                            "publicKey": "0x40276f3f96b4d527f88c290d5ae9aa4ed790a68aaec79d94a8257b2a7868ce23"
+                        },
+                        "sr_stash": {
+                            "address": "5DnrM4CLmVjybXqW1hPa5rEu4zFYvNMXnFpvkSYrsTjRk5Gc",
+                            "publicKey": "0x4c611e50a11e9f6b1896375470560b6b470cdd2dd2aae0b68c06b7d12a7ab013"
+                        },
+                        "ed_account": {
+                            "address": "5FXWSYyQyPm5mfcNB45iqc285qh2T1Rr47xJEuM3on5sxzrt",
+                            "publicKey": "0x9925e5b24d0914c7ffe4bafdef16d771130d4324c16d16aa934e6dd399ad5091"
+                        },
+                        "ec_account": {
+                            "publicKey": "0x03bd4674290ecad5fdd635294a547977876558dbb3aa1ab82c7ebf20bdc5059534"
+                        }
+                    },
+                    "validator": true,
+                    "image": "parity/polkadot-parachain:latest",
+                    "command": "../target/release/xode-node",
+                    "keystoreKeyTypes": [
+                        "aura",
+                        "babe",
+                        "imon",
+                        "gran",
+                        "audi",
+                        "asgn",
+                        "para",
+                        "beef",
+                        "nmbs",
+                        "rand",
+                        "rate",
+                        "bcsv",
+                        "ftsv"
+                    ],
+                    "args": [
+                        "-lparachain=debug",
+                        "-lxcm=trace",
+                        "-lruntime=debug"
+                    ],
+                    "chain": "rococo-local",
+                    "bootnodes": [],
+                    "env": [
+                        {
+                            "name": "COLORBT_SHOW_HIDDEN",
+                            "value": "1"
+                        },
+                        {
+                            "name": "RUST_BACKTRACE",
+                            "value": "FULL"
+                        }
+                    ],
+                    "telemetryUrl": "",
+                    "prometheus": true,
+                    "overrides": [],
+                    "zombieRole": "cumulus-collator",
+                    "parachainId": 3417,
+                    "imagePullPolicy": "Always",
+                    "p2pPort": 40923,
+                    "wsPort": 42185,
+                    "rpcPort": 9977,
+                    "prometheusPort": 44145,
+                    "externalPorts": {
+                        "p2pPort": 40923,
+                        "wsPort": 42185,
+                        "rpcPort": 9977,
+                        "prometheusPort": 44145
+                    },
+                    "prometheusPrefix": "substrate",
+                    "group": "xoxe-collator-one"
+                }
+            ],
+            "chainSpecCommand": "../target/release/xode-node build-spec  --disable-default-bootnode",
+            "genesisWasmGenerator": "../target/release/xode-node export-genesis-wasm {{CLIENT_REMOTE_DIR}}/genesis-wasm",
+            "genesisStateGenerator": "../target/release/xode-node {{GENESIS_GENERATE_SUBCOMMAND}} {{CLIENT_REMOTE_DIR}}/genesis-state"
+        }
+    ],
+    "settings": {
+        "timeout": 1000,
+        "enable_tracing": true,
+        "node_verifier": "None",
+        "provider": "native"
+    },
+    "types": {}
+}
+[90m╔════════════════════[39m[90m╤════════════════════════════════════════════════════════════════════════════════════════════════════╗[39m
+[90m║[39m[31m [32m🧟 Zombienet 🧟[0m    [39m[90m│[39m[31m [32mInitiation[0m                                                                                         [39m[90m║[39m
+[90m╟────────────────────[39m[90m┼────────────────────────────────────────────────────────────────────────────────────────────────────╢[39m
+[90m║[39m [32mProvider[0m           [90m│[39m [34mnative[0m                                                                                             [90m║[39m
+[90m╟────────────────────[39m[90m┼────────────────────────────────────────────────────────────────────────────────────────────────────╢[39m
+[90m║[39m [32mNamespace[0m          [90m│[39m zombie-9e42c1516574ea2dd3d683771cc5b240                                                            [90m║[39m
+[90m╟────────────────────[39m[90m┼────────────────────────────────────────────────────────────────────────────────────────────────────╢[39m
+[90m║[39m [32mTemp Dir[0m           [90m│[39m data                                                                                               [90m║[39m
+[90m╚════════════════════[39m[90m╧════════════════════════════════════════════════════════════════════════════════════════════════════╝[39m
+2026-09-02T02:43:41.107Z zombie 	 Launching network under namespace: zombie-9e42c1516574ea2dd3d683771cc5b240
+2026-09-02T02:43:41.107Z zombie::native::client [ '--help' ]
+2026-09-02T02:43:41.125Z zombie Cleaner job configured
+2026-09-02T02:43:41.125Z zombie Creating static resources (bootnode and backchannel services)
+2026-09-02T02:43:41.126Z zombie::native::client [ '-c', './bin/polkadot --help' ]
+2026-09-02T02:43:41.134Z zombie::native::client [ '-c', './bin/polkadot-parachain --help' ]
+2026-09-02T02:43:41.141Z zombie::native::client [ '-c', '../target/release/xode-node --help' ]
+2026-09-02T02:43:41.159Z zombie::substrateCliArgsVersion returning cliArgsVersion 3
+2026-09-02T02:43:41.186Z zombie::substrateCliArgsVersion returning cliArgsVersion 2
+2026-09-02T02:43:41.194Z zombie::substrateCliArgsVersion returning cliArgsVersion 3
+2026-09-02T02:43:41.196Z zombie::native::client {
+    "metadata": {
+        "name": "temp",
+        "namespace": "zombie-9e42c1516574ea2dd3d683771cc5b240",
+        "labels": {
+            "zombie-role": "temp",
+            "app": "zombienet",
+            "zombie-ns": "zombie-9e42c1516574ea2dd3d683771cc5b240",
+            "name": "zombie-9e42c1516574ea2dd3d683771cc5b240",
+            "instance": "temp"
+        }
+    },
+    "spec": {
+        "cfgPath": "data/temp/cfg",
+        "dataPath": "data/temp/data",
+        "ports": [
+            {
+                "containerPort": 9615,
+                "name": "prometheus",
+                "flag": "--prometheus-port",
+                "hostPort": 36839
+            },
+            {
+                "containerPort": 9933,
+                "name": "rpc",
+                "flag": "--rpc-port",
+                "hostPort": 43651
+            },
+            {
+                "containerPort": 9944,
+                "name": "rpc-ws",
+                "flag": "--ws-port",
+                "hostPort": 42671
+            },
+            {
+                "containerPort": 30333,
+                "name": "p2p",
+                "flag": "--port",
+                "hostPort": 39823
+            }
+        ],
+        "command": [
+            "bash",
+            "-c",
+            "./bin/polkadot build-spec --chain rococo-local --disable-default-bootnode > data/cfg/rococo-local-plain.json"
+        ],
+        "env": {}
+    }
+}
+[90m┌─────────────────────────[39m[90m┬────────────────────────────────────────────────────────────────────────────────────────────────────┐[39m
+[90m│[39m [36mPod[0m                     [90m│[39m [32mtemp[0m                                                                                               [90m│[39m
+[90m├─────────────────────────[39m[90m┼────────────────────────────────────────────────────────────────────────────────────────────────────┤[39m
+[90m│[39m [36mStatus[0m                  [90m│[39m [32mLaunching[0m                                                                                          [90m│[39m
+[90m├─────────────────────────[39m[90m┼────────────────────────────────────────────────────────────────────────────────────────────────────┤[39m
+[90m│[39m [36mCommand[0m                 [90m│[39m [37mbash -c ./bin/polkadot build-spec --chain rococo-local --disable-default-bootnode > data/cfg/roco[39m… [90m│[39m
+[90m└─────────────────────────[39m[90m┴────────────────────────────────────────────────────────────────────────────────────────────────────┘[39m
+2026-09-02T02:43:41.204Z zombie::native::client [
+  '-c',
+  './bin/polkadot build-spec --chain rococo-local --disable-default-bootnode > data/cfg/rococo-local-plain.json'
+]
+[90m┌────────────────────────────────────────[39m[90m┬────────────────────────────────────────────────────────────────────────────────┐[39m
+[90m│[39m [36mPod[0m                                    [90m│[39m [32mtemp[0m                                                                           [90m│[39m
+[90m├────────────────────────────────────────[39m[90m┼────────────────────────────────────────────────────────────────────────────────┤[39m
+[90m│[39m [36mStatus[0m                                 [90m│[39m [32mReady[0m                                                                          [90m│[39m
+[90m└────────────────────────────────────────[39m[90m┴────────────────────────────────────────────────────────────────────────────────┘[39m
+2026-09-02T02:43:42.344Z zombie::paras creating chain spec plain
+2026-09-02T02:43:42.344Z zombie::paras creating chain spec plain
+2026-09-02T02:43:42.345Z zombie::native::client {
+    "metadata": {
+        "name": "temp-1",
+        "namespace": "zombie-9e42c1516574ea2dd3d683771cc5b240",
+        "labels": {
+            "zombie-role": "temp",
+            "app": "zombienet",
+            "zombie-ns": "zombie-9e42c1516574ea2dd3d683771cc5b240",
+            "name": "zombie-9e42c1516574ea2dd3d683771cc5b240",
+            "instance": "temp-1"
+        }
+    },
+    "spec": {
+        "cfgPath": "data/temp-1/cfg",
+        "dataPath": "data/temp-1/data",
+        "ports": [
+            {
+                "containerPort": 9615,
+                "name": "prometheus",
+                "flag": "--prometheus-port",
+                "hostPort": 37349
+            },
+            {
+                "containerPort": 9933,
+                "name": "rpc",
+                "flag": "--rpc-port",
+                "hostPort": 41365
+            },
+            {
+                "containerPort": 9944,
+                "name": "rpc-ws",
+                "flag": "--ws-port",
+                "hostPort": 42375
+            },
+            {
+                "containerPort": 30333,
+                "name": "p2p",
+                "flag": "--port",
+                "hostPort": 40185
+            }
+        ],
+        "command": [
+            "bash",
+            "-c",
+            "./bin/polkadot-parachain build-spec --chain asset-hub-rococo-local --disable-default-bootnode > data/cfg/asset-hub-rococo-local-plain.json"
+        ],
+        "env": {}
+    }
+}
+[90m┌─────────────────────────[39m[90m┬────────────────────────────────────────────────────────────────────────────────────────────────────┐[39m
+[90m│[39m [36mPod[0m                     [90m│[39m [32mtemp-1[0m                                                                                             [90m│[39m
+[90m├─────────────────────────[39m[90m┼────────────────────────────────────────────────────────────────────────────────────────────────────┤[39m
+[90m│[39m [36mStatus[0m                  [90m│[39m [32mLaunching[0m                                                                                          [90m│[39m
+[90m├─────────────────────────[39m[90m┼────────────────────────────────────────────────────────────────────────────────────────────────────┤[39m
+[90m│[39m [36mCommand[0m                 [90m│[39m [37mbash -c ./bin/polkadot-parachain build-spec --chain asset-hub-rococo-local --disable-default-boot[39m… [90m│[39m
+[90m└─────────────────────────[39m[90m┴────────────────────────────────────────────────────────────────────────────────────────────────────┘[39m
+2026-09-02T02:43:42.347Z zombie::native::client {
+    "metadata": {
+        "name": "temp-2",
+        "namespace": "zombie-9e42c1516574ea2dd3d683771cc5b240",
+        "labels": {
+            "zombie-role": "temp",
+            "app": "zombienet",
+            "zombie-ns": "zombie-9e42c1516574ea2dd3d683771cc5b240",
+            "name": "zombie-9e42c1516574ea2dd3d683771cc5b240",
+            "instance": "temp-2"
+        }
+    },
+    "spec": {
+        "cfgPath": "data/temp-2/cfg",
+        "dataPath": "data/temp-2/data",
+        "ports": [
+            {
+                "containerPort": 9615,
+                "name": "prometheus",
+                "flag": "--prometheus-port",
+                "hostPort": 34719
+            },
+            {
+                "containerPort": 9933,
+                "name": "rpc",
+                "flag": "--rpc-port",
+                "hostPort": 43845
+            },
+            {
+                "containerPort": 9944,
+                "name": "rpc-ws",
+                "flag": "--ws-port",
+                "hostPort": 35701
+            },
+            {
+                "containerPort": 30333,
+                "name": "p2p",
+                "flag": "--port",
+                "hostPort": 40873
+            }
+        ],
+        "command": [
+            "bash",
+            "-c",
+            "../target/release/xode-node build-spec  --disable-default-bootnode > data/cfg/undefined-plain.json"
+        ],
+        "env": {}
+    }
+}
+[90m┌─────────────────────────[39m[90m┬────────────────────────────────────────────────────────────────────────────────────────────────────┐[39m
+[90m│[39m [36mPod[0m                     [90m│[39m [32mtemp-2[0m                                                                                             [90m│[39m
+[90m├─────────────────────────[39m[90m┼────────────────────────────────────────────────────────────────────────────────────────────────────┤[39m
+[90m│[39m [36mStatus[0m                  [90m│[39m [32mLaunching[0m                                                                                          [90m│[39m
+[90m├─────────────────────────[39m[90m┼────────────────────────────────────────────────────────────────────────────────────────────────────┤[39m
+[90m│[39m [36mCommand[0m                 [90m│[39m [37mbash -c ../target/release/xode-node build-spec  --disable-default-bootnode > data/cfg/undefined-p[39m… [90m│[39m
+[90m└─────────────────────────[39m[90m┴────────────────────────────────────────────────────────────────────────────────────────────────────┘[39m
+2026-09-02T02:43:42.348Z zombie::native::client [
+  '-c',
+  './bin/polkadot-parachain build-spec --chain asset-hub-rococo-local --disable-default-bootnode > data/cfg/asset-hub-rococo-local-plain.json'
+]
+2026-09-02T02:43:42.359Z zombie::native::client [
+  '-c',
+  '../target/release/xode-node build-spec  --disable-default-bootnode > data/cfg/undefined-plain.json'
+]
+[90m┌────────────────────────────────────────[39m[90m┬────────────────────────────────────────────────────────────────────────────────┐[39m
+[90m│[39m [36mPod[0m                                    [90m│[39m [32mtemp-1[0m                                                                         [90m│[39m
+[90m├────────────────────────────────────────[39m[90m┼────────────────────────────────────────────────────────────────────────────────┤[39m
+[90m│[39m [36mStatus[0m                                 [90m│[39m [32mReady[0m                                                                          [90m│[39m
+[90m└────────────────────────────────────────[39m[90m┴────────────────────────────────────────────────────────────────────────────────┘[39m
+[90m┌────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐[39m
+[90m│[39m [32m🧹 Starting with a fresh authority set...[0m                                                                              [90m│[39m
+[90m└────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘[39m
+[90m┌──────────────────────────────[39m[90m┬────────────────────[39m[90m┬──────────────────────────────────────────────────────────────────────┐[39m
+[90m│[39m [36m👤 Added Genesis Authority[0m   [90m│[39m [32masset[39m              [90m│[39m [35m5ChRs1sztcvAvBS3cGvCfvHqdP7NnEZNHDjgS6rmgkrUoZNM[0m                     [90m│[39m
+[90m│[39m                              [90m│[39m [32mhub-collat[39m         [90m│[39m                                                                      [90m│[39m
+[90m│[39m                              [90m│[39m [32mor-one[0m             [90m│[39m                                                                      [90m│[39m
+[90m│[39m                              [90m│[39m                    [90m│[39m                                                                      [90m│[39m
+[90m└──────────────────────────────[39m[90m┴────────────────────[39m[90m┴──────────────────────────────────────────────────────────────────────┘[39m
+[90m┌──────────────────────────────[39m[90m┬────────────────────[39m[90m┬──────────────────────────────────────────────────────────────────────┐[39m
+[90m│[39m [36m👤 Added CollatorSelection [0m  [90m│[39m [32masset[39m              [90m│[39m [35m5CDisaxM2EJjv4aujSB7y2Mk5DL66nDZ25TG9dQtQaNqXTGE[0m                     [90m│[39m
+[90m│[39m                              [90m│[39m [32mhub-collat[39m         [90m│[39m                                                                      [90m│[39m
+[90m│[39m                              [90m│[39m [32mor-one[0m             [90m│[39m                                                                      [90m│[39m
+[90m│[39m                              [90m│[39m                    [90m│[39m                                                                      [90m│[39m
+[90m└──────────────────────────────[39m[90m┴────────────────────[39m[90m┴──────────────────────────────────────────────────────────────────────┘[39m
+2026-09-02T02:43:44.282Z zombie::paras creating chain spec raw
+2026-09-02T02:43:44.286Z zombie::native::client {
+    "metadata": {
+        "name": "temp-3",
+        "namespace": "zombie-9e42c1516574ea2dd3d683771cc5b240",
+        "labels": {
+            "zombie-role": "temp",
+            "app": "zombienet",
+            "zombie-ns": "zombie-9e42c1516574ea2dd3d683771cc5b240",
+            "name": "zombie-9e42c1516574ea2dd3d683771cc5b240",
+            "instance": "temp-3"
+        }
+    },
+    "spec": {
+        "cfgPath": "data/temp-3/cfg",
+        "dataPath": "data/temp-3/data",
+        "ports": [
+            {
+                "containerPort": 9615,
+                "name": "prometheus",
+                "flag": "--prometheus-port",
+                "hostPort": 42873
+            },
+            {
+                "containerPort": 9933,
+                "name": "rpc",
+                "flag": "--rpc-port",
+                "hostPort": 34353
+            },
+            {
+                "containerPort": 9944,
+                "name": "rpc-ws",
+                "flag": "--ws-port",
+                "hostPort": 46845
+            },
+            {
+                "containerPort": 30333,
+                "name": "p2p",
+                "flag": "--port",
+                "hostPort": 34135
+            }
+        ],
+        "command": [
+            "bash",
+            "-c",
+            "./bin/polkadot-parachain build-spec --chain data/asset-hub-rococo-local-1000-rococo-local-plain.json --disable-default-bootnode  --raw > data/asset-hub-rococo-local-1000-rococo-local-raw.json"
+        ],
+        "env": {}
+    }
+}
+[90m┌─────────────────────────[39m[90m┬────────────────────────────────────────────────────────────────────────────────────────────────────┐[39m
+[90m│[39m [36mPod[0m                     [90m│[39m [32mtemp-3[0m                                                                                             [90m│[39m
+[90m├─────────────────────────[39m[90m┼────────────────────────────────────────────────────────────────────────────────────────────────────┤[39m
+[90m│[39m [36mStatus[0m                  [90m│[39m [32mLaunching[0m                                                                                          [90m│[39m
+[90m├─────────────────────────[39m[90m┼────────────────────────────────────────────────────────────────────────────────────────────────────┤[39m
+[90m│[39m [36mCommand[0m                 [90m│[39m [37mbash -c ./bin/polkadot-parachain build-spec --chain data/asset-hub-rococo-local-1000-[39m              [90m│[39m
+[90m│[39m                         [90m│[39m [37mrococo-local-plain.json --disable-default-bootnode  --raw > data/asset-hub-rococo-local-10[39m         [90m│[39m
+[90m│[39m                         [90m│[39m [37m00-rococo-local-raw.json[0m                                                                           [90m│[39m
+[90m└─────────────────────────[39m[90m┴────────────────────────────────────────────────────────────────────────────────────────────────────┘[39m
+2026-09-02T02:43:44.293Z zombie::native::client [
+  '-c',
+  './bin/polkadot-parachain build-spec --chain data/asset-hub-rococo-local-1000-rococo-local-plain.json --disable-default-bootnode  --raw > data/asset-hub-rococo-local-1000-rococo-local-raw.json'
+]
+[90m┌────────────────────────────────────────[39m[90m┬────────────────────────────────────────────────────────────────────────────────┐[39m
+[90m│[39m [36mPod[0m                                    [90m│[39m [32mtemp-2[0m                                                                         [90m│[39m
+[90m├────────────────────────────────────────[39m[90m┼────────────────────────────────────────────────────────────────────────────────┤[39m
+[90m│[39m [36mStatus[0m                                 [90m│[39m [32mReady[0m                                                                          [90m│[39m
+[90m└────────────────────────────────────────[39m[90m┴────────────────────────────────────────────────────────────────────────────────┘[39m
+[90m┌────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐[39m
+[90m│[39m [32m🧹 Starting with a fresh authority set...[0m                                                                              [90m│[39m
+[90m└────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘[39m
+[90m┌──────────────────────────────[39m[90m┬────────────────────[39m[90m┬──────────────────────────────────────────────────────────────────────┐[39m
+[90m│[39m [36m👤 Added Genesis Authority[0m   [90m│[39m [32mxoxe-[39m              [90m│[39m [35m5DnrM4CLmVjybXqW1hPa5rEu4zFYvNMXnFpvkSYrsTjRk5Gc[0m                     [90m│[39m
+[90m│[39m                              [90m│[39m [32mcollator-o[39m         [90m│[39m                                                                      [90m│[39m
+[90m│[39m                              [90m│[39m [32mne[0m                 [90m│[39m                                                                      [90m│[39m
+[90m└──────────────────────────────[39m[90m┴────────────────────[39m[90m┴──────────────────────────────────────────────────────────────────────┘[39m
+[90m┌──────────────────────────────[39m[90m┬────────────────────[39m[90m┬──────────────────────────────────────────────────────────────────────┐[39m
+[90m│[39m [36m👤 Added CollatorSelection [0m  [90m│[39m [32mxoxe-[39m              [90m│[39m [35m5DWpdrkERDpDvrpTdbW7ejkS1ebK4bBshfofcRj51BEQPDxn[0m                     [90m│[39m
+[90m│[39m                              [90m│[39m [32mcollator-o[39m         [90m│[39m                                                                      [90m│[39m
+[90m│[39m                              [90m│[39m [32mne[0m                 [90m│[39m                                                                      [90m│[39m
+[90m└──────────────────────────────[39m[90m┴────────────────────[39m[90m┴──────────────────────────────────────────────────────────────────────┘[39m
+2026-09-02T02:43:45.023Z zombie::paras creating chain spec raw
+2026-09-02T02:43:45.024Z zombie::native::client {
+    "metadata": {
+        "name": "temp-4",
+        "namespace": "zombie-9e42c1516574ea2dd3d683771cc5b240",
+        "labels": {
+            "zombie-role": "temp",
+            "app": "zombienet",
+            "zombie-ns": "zombie-9e42c1516574ea2dd3d683771cc5b240",
+            "name": "zombie-9e42c1516574ea2dd3d683771cc5b240",
+            "instance": "temp-4"
+        }
+    },
+    "spec": {
+        "cfgPath": "data/temp-4/cfg",
+        "dataPath": "data/temp-4/data",
+        "ports": [
+            {
+                "containerPort": 9615,
+                "name": "prometheus",
+                "flag": "--prometheus-port",
+                "hostPort": 44077
+            },
+            {
+                "containerPort": 9933,
+                "name": "rpc",
+                "flag": "--rpc-port",
+                "hostPort": 37835
+            },
+            {
+                "containerPort": 9944,
+                "name": "rpc-ws",
+                "flag": "--ws-port",
+                "hostPort": 33739
+            },
+            {
+                "containerPort": 30333,
+                "name": "p2p",
+                "flag": "--port",
+                "hostPort": 38637
+            }
+        ],
+        "command": [
+            "bash",
+            "-c",
+            "../target/release/xode-node build-spec  --disable-default-bootnode --chain data/3417-rococo-local-plain.json  --raw > data/3417-rococo-local-raw.json"
+        ],
+        "env": {}
+    }
+}
+[90m┌─────────────────────────[39m[90m┬────────────────────────────────────────────────────────────────────────────────────────────────────┐[39m
+[90m│[39m [36mPod[0m                     [90m│[39m [32mtemp-4[0m                                                                                             [90m│[39m
+[90m├─────────────────────────[39m[90m┼────────────────────────────────────────────────────────────────────────────────────────────────────┤[39m
+[90m│[39m [36mStatus[0m                  [90m│[39m [32mLaunching[0m                                                                                          [90m│[39m
+[90m├─────────────────────────[39m[90m┼────────────────────────────────────────────────────────────────────────────────────────────────────┤[39m
+[90m│[39m [36mCommand[0m                 [90m│[39m [37mbash -c ../target/release/xode-node build-spec  --disable-default-bootnode --chain data/3417-roco[39m… [90m│[39m
+[90m└─────────────────────────[39m[90m┴────────────────────────────────────────────────────────────────────────────────────────────────────┘[39m
+2026-09-02T02:43:45.026Z zombie::native::client [
+  '-c',
+  '../target/release/xode-node build-spec  --disable-default-bootnode --chain data/3417-rococo-local-plain.json  --raw > data/3417-rococo-local-raw.json'
+]
+[90m┌────────────────────────────────────────[39m[90m┬────────────────────────────────────────────────────────────────────────────────┐[39m
+[90m│[39m [36mPod[0m                                    [90m│[39m [32mtemp-3[0m                                                                         [90m│[39m
+[90m├────────────────────────────────────────[39m[90m┼────────────────────────────────────────────────────────────────────────────────┤[39m
+[90m│[39m [36mStatus[0m                                 [90m│[39m [32mReady[0m                                                                          [90m│[39m
+[90m└────────────────────────────────────────[39m[90m┴────────────────────────────────────────────────────────────────────────────────┘[39m
+2026-09-02T02:43:46.105Z zombie::native::client cp data/asset-hub-rococo-local-1000-rococo-local-raw.json  data/asset-hub-rococo-local-1000-rococo-local.json
+2026-09-02T02:43:46.385Z zombie::native::client [ '-c', './bin/polkadot-parachain export-genesis-head --help' ]
+2026-09-02T02:43:46.408Z zombie::paras Injecting tmp dir for ./bin/polkadot-parachain export-genesis-head cmd, paraId 1000
+2026-09-02T02:43:46.410Z zombie::native::client {
+    "metadata": {
+        "name": "temp-collator",
+        "namespace": "zombie-9e42c1516574ea2dd3d683771cc5b240",
+        "labels": {
+            "zombie-role": "temp",
+            "app": "zombienet",
+            "zombie-ns": "zombie-9e42c1516574ea2dd3d683771cc5b240",
+            "name": "zombie-9e42c1516574ea2dd3d683771cc5b240",
+            "instance": "temp-collator"
+        }
+    },
+    "spec": {
+        "cfgPath": "data/temp-collator/cfg",
+        "dataPath": "data/temp-collator/data",
+        "ports": [
+            {
+                "containerPort": 9615,
+                "name": "prometheus",
+                "flag": "--prometheus-port",
+                "hostPort": 37239
+            },
+            {
+                "containerPort": 9933,
+                "name": "rpc",
+                "flag": "--rpc-port",
+                "hostPort": 45813
+            },
+            {
+                "containerPort": 9944,
+                "name": "rpc-ws",
+                "flag": "--ws-port",
+                "hostPort": 36993
+            },
+            {
+                "containerPort": 30333,
+                "name": "p2p",
+                "flag": "--port",
+                "hostPort": 35131
+            }
+        ],
+        "command": [
+            "bash",
+            "-c",
+            "./bin/polkadot-parachain export-genesis-head -d data/export-genesis-state/1000 --chain data/asset-hub-rococo-local-1000-rococo-local.json data/cfg/genesis-state-1000 && ./bin/polkadot-parachain export-genesis-wasm --chain data/asset-hub-rococo-local-1000-rococo-local.json data/cfg/genesis-wasm-1000"
+        ],
+        "env": {}
+    }
+}
+[90m┌─────────────────────────[39m[90m┬────────────────────────────────────────────────────────────────────────────────────────────────────┐[39m
+[90m│[39m [36mPod[0m                     [90m│[39m [32mtemp-collator[0m                                                                                      [90m│[39m
+[90m├─────────────────────────[39m[90m┼────────────────────────────────────────────────────────────────────────────────────────────────────┤[39m
+[90m│[39m [36mStatus[0m                  [90m│[39m [32mLaunching[0m                                                                                          [90m│[39m
+[90m├─────────────────────────[39m[90m┼────────────────────────────────────────────────────────────────────────────────────────────────────┤[39m
+[90m│[39m [36mCommand[0m                 [90m│[39m [37mbash -c ./bin/polkadot-parachain export-genesis-head -d data/export-genesis-state/100[39m              [90m│[39m
+[90m│[39m                         [90m│[39m [37m0 --chain data/asset-hub-rococo-local-1000-rococo-local.json data/cfg/genesis-state-1000 &[39m         [90m│[39m
+[90m│[39m                         [90m│[39m [37m& ./bin/polkadot-parachain export-genesis-wasm --chain data/asset-hub-rococo-local-1000-ro[39m         [90m│[39m
+[90m│[39m                         [90m│[39m [37mcoco-local.json data/cfg/genesis-wasm-1000[0m                                                         [90m│[39m
+[90m└─────────────────────────[39m[90m┴────────────────────────────────────────────────────────────────────────────────────────────────────┘[39m
+2026-09-02T02:43:46.420Z zombie::native::client localFilePath data/asset-hub-rococo-local-1000-rococo-local.json
+2026-09-02T02:43:46.421Z zombie::native::client remoteFilePath data/cfg/asset-hub-rococo-local-1000-rococo-local.json
+2026-09-02T02:43:46.421Z zombie::native::client remote dir data/cfg
+2026-09-02T02:43:46.421Z zombie::native::client data dir data/data
+2026-09-02T02:43:46.425Z zombie::native::client [
+  '-c',
+  './bin/polkadot-parachain export-genesis-head -d data/export-genesis-state/1000 --chain data/asset-hub-rococo-local-1000-rococo-local.json data/cfg/genesis-state-1000 && ./bin/polkadot-parachain export-genesis-wasm --chain data/asset-hub-rococo-local-1000-rococo-local.json data/cfg/genesis-wasm-1000'
+]
+[90m┌────────────────────────────────────────[39m[90m┬────────────────────────────────────────────────────────────────────────────────┐[39m
+[90m│[39m [36mPod[0m                                    [90m│[39m [32mtemp-4[0m                                                                         [90m│[39m
+[90m├────────────────────────────────────────[39m[90m┼────────────────────────────────────────────────────────────────────────────────┤[39m
+[90m│[39m [36mStatus[0m                                 [90m│[39m [32mReady[0m                                                                          [90m│[39m
+[90m└────────────────────────────────────────[39m[90m┴────────────────────────────────────────────────────────────────────────────────┘[39m
+2026-09-02T02:43:47.443Z zombie::native::client cp data/3417-rococo-local-raw.json  data/3417-rococo-local.json
+2026-09-02T02:43:47.935Z zombie::native::client [ '-c', '../target/release/xode-node export-genesis-head --help' ]
+2026-09-02T02:43:47.977Z zombie::paras Injecting tmp dir for ../target/release/xode-node export-genesis-head cmd, paraId 3417
+2026-09-02T02:43:47.979Z zombie::native::client {
+    "metadata": {
+        "name": "temp-collator-1",
+        "namespace": "zombie-9e42c1516574ea2dd3d683771cc5b240",
+        "labels": {
+            "zombie-role": "temp",
+            "app": "zombienet",
+            "zombie-ns": "zombie-9e42c1516574ea2dd3d683771cc5b240",
+            "name": "zombie-9e42c1516574ea2dd3d683771cc5b240",
+            "instance": "temp-collator-1"
+        }
+    },
+    "spec": {
+        "cfgPath": "data/temp-collator-1/cfg",
+        "dataPath": "data/temp-collator-1/data",
+        "ports": [
+            {
+                "containerPort": 9615,
+                "name": "prometheus",
+                "flag": "--prometheus-port",
+                "hostPort": 38289
+            },
+            {
+                "containerPort": 9933,
+                "name": "rpc",
+                "flag": "--rpc-port",
+                "hostPort": 34693
+            },
+            {
+                "containerPort": 9944,
+                "name": "rpc-ws",
+                "flag": "--ws-port",
+                "hostPort": 45627
+            },
+            {
+                "containerPort": 30333,
+                "name": "p2p",
+                "flag": "--port",
+                "hostPort": 45507
+            }
+        ],
+        "command": [
+            "bash",
+            "-c",
+            "../target/release/xode-node export-genesis-head -d data/export-genesis-state/3417 --chain data/3417-rococo-local.json data/cfg/genesis-state-3417 && ../target/release/xode-node export-genesis-wasm --chain data/3417-rococo-local.json data/cfg/genesis-wasm-3417"
+        ],
+        "env": {}
+    }
+}
+[90m┌─────────────────────────[39m[90m┬────────────────────────────────────────────────────────────────────────────────────────────────────┐[39m
+[90m│[39m [36mPod[0m                     [90m│[39m [32mtemp-collator-1[0m                                                                                    [90m│[39m
+[90m├─────────────────────────[39m[90m┼────────────────────────────────────────────────────────────────────────────────────────────────────┤[39m
+[90m│[39m [36mStatus[0m                  [90m│[39m [32mLaunching[0m                                                                                          [90m│[39m
+[90m├─────────────────────────[39m[90m┼────────────────────────────────────────────────────────────────────────────────────────────────────┤[39m
+[90m│[39m [36mCommand[0m                 [90m│[39m [37mbash -c ../target/release/xode-node export-genesis-head -d data/export-genesis-state/[39m              [90m│[39m
+[90m│[39m                         [90m│[39m [37m3417 --chain data/3417-rococo-local.json data/cfg/genesis-state-3417 && ../target/release/[39m         [90m│[39m
+[90m│[39m                         [90m│[39m [37mxode-node export-genesis-wasm --chain data/3417-rococo-local.json data/cfg/genesis-wasm-34[39m         [90m│[39m
+[90m│[39m                         [90m│[39m [37m17[0m                                                                                                 [90m│[39m
+[90m└─────────────────────────[39m[90m┴────────────────────────────────────────────────────────────────────────────────────────────────────┘[39m
+2026-09-02T02:43:47.995Z zombie::native::client localFilePath data/3417-rococo-local.json
+2026-09-02T02:43:47.995Z zombie::native::client remoteFilePath data/cfg/3417-rococo-local.json
+2026-09-02T02:43:47.995Z zombie::native::client remote dir data/cfg
+2026-09-02T02:43:47.995Z zombie::native::client data dir data/data
+2026-09-02T02:43:48.002Z zombie::native::client [
+  '-c',
+  '../target/release/xode-node export-genesis-head -d data/export-genesis-state/3417 --chain data/3417-rococo-local.json data/cfg/genesis-state-3417 && ../target/release/xode-node export-genesis-wasm --chain data/3417-rococo-local.json data/cfg/genesis-wasm-3417'
+]
+[90m┌────────────────────────────────────────[39m[90m┬────────────────────────────────────────────────────────────────────────────────┐[39m
+[90m│[39m [36mPod[0m                                    [90m│[39m [32mtemp-collator[0m                                                                  [90m│[39m
+[90m├────────────────────────────────────────[39m[90m┼────────────────────────────────────────────────────────────────────────────────┤[39m
+[90m│[39m [36mStatus[0m                                 [90m│[39m [32mReady[0m                                                                          [90m│[39m
+[90m└────────────────────────────────────────[39m[90m┴────────────────────────────────────────────────────────────────────────────────┘[39m
+2026-09-02T02:43:48.210Z zombie::native::client cp data/cfg/genesis-state-1000  data/1000/genesis-state
+2026-09-02T02:43:48.210Z zombie::native::client cp data/cfg/genesis-wasm-1000  data/1000/genesis-wasm
+[90m┌────────────────────────────────────────[39m[90m┬────────────────────────────────────────────────────────────────────────────────┐[39m
+[90m│[39m [36mPod[0m                                    [90m│[39m [32mtemp-collator-1[0m                                                                [90m│[39m
+[90m├────────────────────────────────────────[39m[90m┼────────────────────────────────────────────────────────────────────────────────┤[39m
+[90m│[39m [36mStatus[0m                                 [90m│[39m [32mReady[0m                                                                          [90m│[39m
+[90m└────────────────────────────────────────[39m[90m┴────────────────────────────────────────────────────────────────────────────────┘[39m
+2026-09-02T02:43:49.601Z zombie::native::client cp data/cfg/genesis-state-3417  data/3417/genesis-state
+2026-09-02T02:43:49.602Z zombie::native::client cp data/cfg/genesis-wasm-3417  data/3417/genesis-wasm
+[90m╔════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════╗[39m
+[90m║[39m [32m✓ Added Genesis Parachain[0m 1000                                                                                         [90m║[39m
+[90m╚════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════╝[39m
+[90m╔════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════╗[39m
+[90m║[39m [32m✓ Added Genesis Parachain[0m 3417                                                                                         [90m║[39m
+[90m╚════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════╝[39m
+[90m┌────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐[39m
+[90m│[39m [32m🧹 Starting with a fresh authority set...[0m                                                                              [90m│[39m
+[90m└────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘[39m
+[90m╔════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════╗[39m
+[90m║[39m 👤 Added Balance 2000000000000 for [32malice[0m - [35m5GNJqTPyNqANBkUVMN1LPPrxXnFouWXoe2wNSmmEoLctxiZY[0m                            [90m║[39m
+[90m╚════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════╝[39m
+[90m╔════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════╗[39m
+[90m║[39m 👤 Added Balance 2000000000000 for [32mbob[0m - [35m5HpG9w8EBLe5XCrbczpwq5TSXvedjrBGCwqxK1iQ7qUsSWFc[0m                              [90m║[39m
+[90m╚════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════╝[39m
+[90m╔════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════╗[39m
+[90m║[39m 👤 Added Balance 2000000000000 for [32mcharlie[0m - [35m5Ck5SLSHYac6WFt5UZRSsdJjwmpSZq85fd5TRNAdZQVzEAPT[0m                          [90m║[39m
+[90m╚════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════╝[39m
+[90m╔════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════╗[39m
+[90m║[39m 👤 Added Balance 2000000000000 for [32mdave[0m - [35m5HKPmK9GYtE1PSLsS1qiYU9xQ9Si1NcEhdeCq9sw5bqu4ns8[0m                             [90m║[39m
+[90m╚════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════╝[39m
+[90m┌──────────────────────────────[39m[90m┬────────────────────[39m[90m┬──────────────────────────────────────────────────────────────────────┐[39m
+[90m│[39m [36m👤 Added Genesis Authority[0m   [90m│[39m [32malice[0m              [90m│[39m [35m5GNJqTPyNqANBkUVMN1LPPrxXnFouWXoe2wNSmmEoLctxiZY[0m                     [90m│[39m
+[90m└──────────────────────────────[39m[90m┴────────────────────[39m[90m┴──────────────────────────────────────────────────────────────────────┘[39m
+[90m┌──────────────────────────────[39m[90m┬────────────────────[39m[90m┬──────────────────────────────────────────────────────────────────────┐[39m
+[90m│[39m [36m👤 Added Genesis Authority[0m   [90m│[39m [32mbob[0m                [90m│[39m [35m5HpG9w8EBLe5XCrbczpwq5TSXvedjrBGCwqxK1iQ7qUsSWFc[0m                     [90m│[39m
+[90m└──────────────────────────────[39m[90m┴────────────────────[39m[90m┴──────────────────────────────────────────────────────────────────────┘[39m
+[90m┌──────────────────────────────[39m[90m┬────────────────────[39m[90m┬──────────────────────────────────────────────────────────────────────┐[39m
+[90m│[39m [36m👤 Added Genesis Authority[0m   [90m│[39m [32mcharlie[0m            [90m│[39m [35m5Ck5SLSHYac6WFt5UZRSsdJjwmpSZq85fd5TRNAdZQVzEAPT[0m                     [90m│[39m
+[90m└──────────────────────────────[39m[90m┴────────────────────[39m[90m┴──────────────────────────────────────────────────────────────────────┘[39m
+[90m┌──────────────────────────────[39m[90m┬────────────────────[39m[90m┬──────────────────────────────────────────────────────────────────────┐[39m
+[90m│[39m [36m👤 Added Genesis Authority[0m   [90m│[39m [32mdave[0m               [90m│[39m [35m5HKPmK9GYtE1PSLsS1qiYU9xQ9Si1NcEhdeCq9sw5bqu4ns8[0m                     [90m│[39m
+[90m└──────────────────────────────[39m[90m┴────────────────────[39m[90m┴──────────────────────────────────────────────────────────────────────┘[39m
+2026-09-02T02:43:52.271Z zombie::native::client {
+    "metadata": {
+        "name": "temp-5",
+        "namespace": "zombie-9e42c1516574ea2dd3d683771cc5b240",
+        "labels": {
+            "zombie-role": "temp",
+            "app": "zombienet",
+            "zombie-ns": "zombie-9e42c1516574ea2dd3d683771cc5b240",
+            "name": "zombie-9e42c1516574ea2dd3d683771cc5b240",
+            "instance": "temp-5"
+        }
+    },
+    "spec": {
+        "cfgPath": "data/temp-5/cfg",
+        "dataPath": "data/temp-5/data",
+        "ports": [
+            {
+                "containerPort": 9615,
+                "name": "prometheus",
+                "flag": "--prometheus-port",
+                "hostPort": 40671
+            },
+            {
+                "containerPort": 9933,
+                "name": "rpc",
+                "flag": "--rpc-port",
+                "hostPort": 43963
+            },
+            {
+                "containerPort": 9944,
+                "name": "rpc-ws",
+                "flag": "--ws-port",
+                "hostPort": 36159
+            },
+            {
+                "containerPort": 30333,
+                "name": "p2p",
+                "flag": "--port",
+                "hostPort": 40917
+            }
+        ],
+        "command": [
+            "bash",
+            "-c",
+            "./bin/polkadot build-spec --chain data/rococo-local-plain.json --disable-default-bootnode  --raw > data/rococo-local-raw.json"
+        ],
+        "env": {}
+    }
+}
+[90m┌─────────────────────────[39m[90m┬────────────────────────────────────────────────────────────────────────────────────────────────────┐[39m
+[90m│[39m [36mPod[0m                     [90m│[39m [32mtemp-5[0m                                                                                             [90m│[39m
+[90m├─────────────────────────[39m[90m┼────────────────────────────────────────────────────────────────────────────────────────────────────┤[39m
+[90m│[39m [36mStatus[0m                  [90m│[39m [32mLaunching[0m                                                                                          [90m│[39m
+[90m├─────────────────────────[39m[90m┼────────────────────────────────────────────────────────────────────────────────────────────────────┤[39m
+[90m│[39m [36mCommand[0m                 [90m│[39m [37mbash -c ./bin/polkadot build-spec --chain data/rococo-local-plain.json --disable-default-bootnode[39m… [90m│[39m
+[90m└─────────────────────────[39m[90m┴────────────────────────────────────────────────────────────────────────────────────────────────────┘[39m
+2026-09-02T02:43:52.275Z zombie::native::client [
+  '-c',
+  './bin/polkadot build-spec --chain data/rococo-local-plain.json --disable-default-bootnode  --raw > data/rococo-local-raw.json'
+]
+[90m┌────────────────────────────────────────[39m[90m┬────────────────────────────────────────────────────────────────────────────────┐[39m
+[90m│[39m [36mPod[0m                                    [90m│[39m [32mtemp-5[0m                                                                         [90m│[39m
+[90m├────────────────────────────────────────[39m[90m┼────────────────────────────────────────────────────────────────────────────────┤[39m
+[90m│[39m [36mStatus[0m                                 [90m│[39m [32mReady[0m                                                                          [90m│[39m
+[90m└────────────────────────────────────────[39m[90m┴────────────────────────────────────────────────────────────────────────────────┘[39m
+2026-09-02T02:43:54.341Z zombie::native::client cp data/rococo-local-raw.json  data/rococo-local.json
+2026-09-02T02:43:54.726Z zombie Chain name: Rococo Local Testnet
+[90m╔════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════╗[39m
+[90m║[39m Chain name: [32mRococo Local Testnet[0m                                                                                       [90m║[39m
+[90m╚════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════╝[39m
+[90m┌────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐[39m
+[90m│[39m [32mRococo Local Testnet[0m ⚙ Clear Boot Nodes                                                                                [90m│[39m
+[90m└────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘[39m
+2026-09-02T02:43:54.962Z zombie::spawner creating node: alice
+2026-09-02T02:43:54.984Z zombie::native::client {
+    "metadata": {
+        "name": "alice",
+        "namespace": "zombie-9e42c1516574ea2dd3d683771cc5b240",
+        "labels": {
+            "zombie-role": "node",
+            "app": "zombienet",
+            "zombie-ns": "zombie-9e42c1516574ea2dd3d683771cc5b240",
+            "name": "zombie-9e42c1516574ea2dd3d683771cc5b240",
+            "instance": "alice"
+        }
+    },
+    "spec": {
+        "cfgPath": "data/alice/cfg",
+        "dataPath": "data/alice/data",
+        "ports": [
+            {
+                "containerPort": 9615,
+                "name": "prometheus",
+                "flag": "--prometheus-port",
+                "hostPort": 45395
+            },
+            {
+                "containerPort": 9933,
+                "name": "rpc",
+                "flag": "--rpc-port",
+                "hostPort": 9911
+            },
+            {
+                "containerPort": 9944,
+                "name": "rpc-ws",
+                "flag": "--ws-port",
+                "hostPort": 38267
+            },
+            {
+                "containerPort": 30333,
+                "name": "p2p",
+                "flag": "--port",
+                "hostPort": 39643
+            }
+        ],
+        "command": [
+            "./bin/polkadot --chain data/alice/cfg/rococo-local.json --name alice --rpc-cors all  --rpc-methods unsafe -lparachain=debug,-lxcm=trace,-lruntime=debug --no-mdns --node-key 2bd806c97f0e00af1a1fc3328fa763a9269723c8db8fac4f93af71db186d6e90 --no-telemetry --prometheus-external --validator --insecure-validator-i-know-what-i-do --prometheus-port 45395 --rpc-port 9911 --listen-addr /ip4/127.0.0.1/tcp/39643/ws --base-path data/alice/data"
+        ],
+        "env": {
+            "COLORBT_SHOW_HIDDEN": "1",
+            "RUST_BACKTRACE": "FULL"
+        }
+    }
+}
+[90m┌─────────────────────────[39m[90m┬────────────────────────────────────────────────────────────────────────────────────────────────────┐[39m
+[90m│[39m [36mPod[0m                     [90m│[39m [32malice[0m                                                                                              [90m│[39m
+[90m├─────────────────────────[39m[90m┼────────────────────────────────────────────────────────────────────────────────────────────────────┤[39m
+[90m│[39m [36mStatus[0m                  [90m│[39m [32mLaunching[0m                                                                                          [90m│[39m
+[90m├─────────────────────────[39m[90m┼────────────────────────────────────────────────────────────────────────────────────────────────────┤[39m
+[90m│[39m [36mCommand[0m                 [90m│[39m [37m./bin/polkadot --chain data/alice/cfg/rococo-local.json --name alice --rpc-cors all  [39m              [90m│[39m
+[90m│[39m                         [90m│[39m [37m--rpc-methods unsafe -lparachain=debug,-lxcm=trace,-lruntime=debug --no-mdns --node-key 2b[39m         [90m│[39m
+[90m│[39m                         [90m│[39m [37md806c97f0e00af1a1fc3328fa763a9269723c8db8fac4f93af71db186d6e90 --no-telemetry --prometheus[39m         [90m│[39m
+[90m│[39m                         [90m│[39m [37m-external --validator --insecure-validator-i-know-what-i-do --prometheus-port 45395 --rpc-[39m         [90m│[39m
+[90m│[39m                         [90m│[39m [37mport 9911 --listen-addr /ip4/127.0.0.1/tcp/39643/ws --base-path data/alice/data[0m                    [90m│[39m
+[90m└─────────────────────────[39m[90m┴────────────────────────────────────────────────────────────────────────────────────────────────────┘[39m
+2026-09-02T02:43:55.010Z zombie::native::client localFilePath data/rococo-local.json
+2026-09-02T02:43:55.010Z zombie::native::client remoteFilePath data/cfg/rococo-local.json
+2026-09-02T02:43:55.010Z zombie::native::client remote dir data/cfg
+2026-09-02T02:43:55.010Z zombie::native::client data dir data/data
+2026-09-02T02:43:55.020Z zombie::native::client localFilePath data/zombie-wrapper.sh
+2026-09-02T02:43:55.020Z zombie::native::client remoteFilePath data/cfg/zombie-wrapper.sh
+2026-09-02T02:43:55.020Z zombie::native::client remote dir data/cfg
+2026-09-02T02:43:55.020Z zombie::native::client data dir data/data
+2026-09-02T02:43:55.021Z zombie::native::client bash
+2026-09-02T02:43:55.021Z zombie::native::client [
+  './bin/polkadot --chain data/alice/cfg/rococo-local.json --name alice --rpc-cors all  --rpc-methods unsafe -lparachain=debug,-lxcm=trace,-lruntime=debug --no-mdns --node-key 2bd806c97f0e00af1a1fc3328fa763a9269723c8db8fac4f93af71db186d6e90 --no-telemetry --prometheus-external --validator --insecure-validator-i-know-what-i-do --prometheus-port 45395 --rpc-port 9911 --listen-addr /ip4/127.0.0.1/tcp/39643/ws --base-path data/alice/data'
+]
+2026-09-02T02:43:55.032Z zombie::native::client 67617
+2026-09-02T02:43:56.034Z zombie::native::client [ '-c', 'ps 67617' ]
+2026-09-02T02:43:56.059Z zombie::native::client [ '-c', 'wc -l data/alice.log' ]
+2026-09-02T02:43:57.080Z zombie::native::client [ '-c', 'wc -l data/alice.log' ]
+2026-09-02T02:43:58.126Z zombie::native::client [ '-c', 'wc -l data/alice.log' ]
+[90m┌────────────────────────────────────────[39m[90m┬────────────────────────────────────────────────────────────────────────────────┐[39m
+[90m│[39m [36mPod[0m                                    [90m│[39m [32malice[0m                                                                          [90m│[39m
+[90m├────────────────────────────────────────[39m[90m┼────────────────────────────────────────────────────────────────────────────────┤[39m
+[90m│[39m [36mStatus[0m                                 [90m│[39m [32mReady[0m                                                                          [90m│[39m
+[90m└────────────────────────────────────────[39m[90m┴────────────────────────────────────────────────────────────────────────────────┘[39m
+[90m╔════════════════════[39m[90m╤════════════════════════════════════════════════════════════════════════════════════════════════════╗[39m
+[90m║[39m Pod                [90m│[39m [32malice[0m                                                                                              [90m║[39m
+[90m╟────────────────────[39m[90m┼────────────────────────────────────────────────────────────────────────────────────────────────────╢[39m
+[90m║[39m Status             [90m│[39m [32mRunning[0m                                                                                            [90m║[39m
+[90m╟────────────────────╧────────────────────────────────────────────────────────────────────────────────────────────────────╢[39m
+[90m║[39m [35mYou can follow the logs of the node by running this command: [0m                                                           [90m║[39m
+[90m╚═════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════╝[39m
+tail -f  data/alice.log
+
+
+[90m┌────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐[39m
+[90m│[39m [32mRococo Local Testnet[0m ⚙ Added Boot Nodes                                                                                [90m│[39m
+[90m├────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤[39m
+[90m│[39m /ip4/127.0.0.1/tcp/39643/ws/p2p/12D3KooWQCkBm1BYtkHpocxCwMgR8yjitEeHGx8spzcDLGt2gkBm                                   [90m│[39m
+[90m└────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘[39m
+2026-09-02T02:44:00.422Z zombie::spawner creating node: bob
+2026-09-02T02:44:00.423Z zombie::spawner creating node: charlie
+2026-09-02T02:44:00.423Z zombie::spawner creating node: dave
+2026-09-02T02:44:00.438Z zombie::native::client {
+    "metadata": {
+        "name": "dave",
+        "namespace": "zombie-9e42c1516574ea2dd3d683771cc5b240",
+        "labels": {
+            "zombie-role": "node",
+            "app": "zombienet",
+            "zombie-ns": "zombie-9e42c1516574ea2dd3d683771cc5b240",
+            "name": "zombie-9e42c1516574ea2dd3d683771cc5b240",
+            "instance": "dave"
+        }
+    },
+    "spec": {
+        "cfgPath": "data/dave/cfg",
+        "dataPath": "data/dave/data",
+        "ports": [
+            {
+                "containerPort": 9615,
+                "name": "prometheus",
+                "flag": "--prometheus-port",
+                "hostPort": 34835
+            },
+            {
+                "containerPort": 9933,
+                "name": "rpc",
+                "flag": "--rpc-port",
+                "hostPort": 9944
+            },
+            {
+                "containerPort": 9944,
+                "name": "rpc-ws",
+                "flag": "--ws-port",
+                "hostPort": 44837
+            },
+            {
+                "containerPort": 30333,
+                "name": "p2p",
+                "flag": "--port",
+                "hostPort": 43047
+            }
+        ],
+        "command": [
+            "./bin/polkadot --chain data/dave/cfg/rococo-local.json --name dave --rpc-cors all  --rpc-methods unsafe -lparachain=debug,-lxcm=trace,-lruntime=debug --no-mdns --node-key 61ea0803f8853523b777d414ace3130cd4d3f92de2cd7ff8695c337d79c2eeee --no-telemetry --prometheus-external --validator --insecure-validator-i-know-what-i-do --bootnodes /ip4/127.0.0.1/tcp/39643/ws/p2p/12D3KooWQCkBm1BYtkHpocxCwMgR8yjitEeHGx8spzcDLGt2gkBm --prometheus-port 34835 --rpc-port 9944 --listen-addr /ip4/127.0.0.1/tcp/43047/ws --base-path data/dave/data"
+        ],
+        "env": {
+            "COLORBT_SHOW_HIDDEN": "1",
+            "RUST_BACKTRACE": "FULL"
+        }
+    }
+}
+[90m┌─────────────────────────[39m[90m┬────────────────────────────────────────────────────────────────────────────────────────────────────┐[39m
+[90m│[39m [36mPod[0m                     [90m│[39m [32mdave[0m                                                                                               [90m│[39m
+[90m├─────────────────────────[39m[90m┼────────────────────────────────────────────────────────────────────────────────────────────────────┤[39m
+[90m│[39m [36mStatus[0m                  [90m│[39m [32mLaunching[0m                                                                                          [90m│[39m
+[90m├─────────────────────────[39m[90m┼────────────────────────────────────────────────────────────────────────────────────────────────────┤[39m
+[90m│[39m [36mCommand[0m                 [90m│[39m [37m./bin/polkadot --chain data/dave/cfg/rococo-local.json --name dave --rpc-cors all  --[39m              [90m│[39m
+[90m│[39m                         [90m│[39m [37mrpc-methods unsafe -lparachain=debug,-lxcm=trace,-lruntime=debug --no-mdns --node-key 61ea[39m         [90m│[39m
+[90m│[39m                         [90m│[39m [37m0803f8853523b777d414ace3130cd4d3f92de2cd7ff8695c337d79c2eeee --no-telemetry --prometheus-e[39m         [90m│[39m
+[90m│[39m                         [90m│[39m [37mxternal --validator --insecure-validator-i-know-what-i-do --bootnodes /ip4/127.0.0.1/tcp/3[39m         [90m│[39m
+[90m│[39m                         [90m│[39m [37m9643/ws/p2p/12D3KooWQCkBm1BYtkHpocxCwMgR8yjitEeHGx8spzcDLGt2gkBm --prometheus-port 34835 -[39m         [90m│[39m
+[90m│[39m                         [90m│[39m [37m-rpc-port 9944 --listen-addr /ip4/127.0.0.1/tcp/43047/ws --base-path data/dave/data[0m                [90m│[39m
+[90m└─────────────────────────[39m[90m┴────────────────────────────────────────────────────────────────────────────────────────────────────┘[39m
+2026-09-02T02:44:00.471Z zombie::native::client {
+    "metadata": {
+        "name": "charlie",
+        "namespace": "zombie-9e42c1516574ea2dd3d683771cc5b240",
+        "labels": {
+            "zombie-role": "node",
+            "app": "zombienet",
+            "zombie-ns": "zombie-9e42c1516574ea2dd3d683771cc5b240",
+            "name": "zombie-9e42c1516574ea2dd3d683771cc5b240",
+            "instance": "charlie"
+        }
+    },
+    "spec": {
+        "cfgPath": "data/charlie/cfg",
+        "dataPath": "data/charlie/data",
+        "ports": [
+            {
+                "containerPort": 9615,
+                "name": "prometheus",
+                "flag": "--prometheus-port",
+                "hostPort": 45753
+            },
+            {
+                "containerPort": 9933,
+                "name": "rpc",
+                "flag": "--rpc-port",
+                "hostPort": 9933
+            },
+            {
+                "containerPort": 9944,
+                "name": "rpc-ws",
+                "flag": "--ws-port",
+                "hostPort": 46241
+            },
+            {
+                "containerPort": 30333,
+                "name": "p2p",
+                "flag": "--port",
+                "hostPort": 42139
+            }
+        ],
+        "command": [
+            "./bin/polkadot --chain data/charlie/cfg/rococo-local.json --name charlie --rpc-cors all  --rpc-methods unsafe -lparachain=debug,-lxcm=trace,-lruntime=debug --no-mdns --node-key b9dd960c1753459a78115d3cb845a57d924b6877e805b08bd01086ccdf34433c --no-telemetry --prometheus-external --validator --insecure-validator-i-know-what-i-do --bootnodes /ip4/127.0.0.1/tcp/39643/ws/p2p/12D3KooWQCkBm1BYtkHpocxCwMgR8yjitEeHGx8spzcDLGt2gkBm --prometheus-port 45753 --rpc-port 9933 --listen-addr /ip4/127.0.0.1/tcp/42139/ws --base-path data/charlie/data"
+        ],
+        "env": {
+            "COLORBT_SHOW_HIDDEN": "1",
+            "RUST_BACKTRACE": "FULL"
+        }
+    }
+}
+[90m┌─────────────────────────[39m[90m┬────────────────────────────────────────────────────────────────────────────────────────────────────┐[39m
+[90m│[39m [36mPod[0m                     [90m│[39m [32mcharlie[0m                                                                                            [90m│[39m
+[90m├─────────────────────────[39m[90m┼────────────────────────────────────────────────────────────────────────────────────────────────────┤[39m
+[90m│[39m [36mStatus[0m                  [90m│[39m [32mLaunching[0m                                                                                          [90m│[39m
+[90m├─────────────────────────[39m[90m┼────────────────────────────────────────────────────────────────────────────────────────────────────┤[39m
+[90m│[39m [36mCommand[0m                 [90m│[39m [37m./bin/polkadot --chain data/charlie/cfg/rococo-local.json --name charlie --rpc-cors a[39m              [90m│[39m
+[90m│[39m                         [90m│[39m [37mll  --rpc-methods unsafe -lparachain=debug,-lxcm=trace,-lruntime=debug --no-mdns --node-ke[39m         [90m│[39m
+[90m│[39m                         [90m│[39m [37my b9dd960c1753459a78115d3cb845a57d924b6877e805b08bd01086ccdf34433c --no-telemetry --promet[39m         [90m│[39m
+[90m│[39m                         [90m│[39m [37mheus-external --validator --insecure-validator-i-know-what-i-do --bootnodes /ip4/127.0.0.1[39m         [90m│[39m
+[90m│[39m                         [90m│[39m [37m/tcp/39643/ws/p2p/12D3KooWQCkBm1BYtkHpocxCwMgR8yjitEeHGx8spzcDLGt2gkBm --prometheus-port 4[39m         [90m│[39m
+[90m│[39m                         [90m│[39m [37m5753 --rpc-port 9933 --listen-addr /ip4/127.0.0.1/tcp/42139/ws --base-path data/charlie/da[39m         [90m│[39m
+[90m│[39m                         [90m│[39m [37mta[0m                                                                                                 [90m│[39m
+[90m└─────────────────────────[39m[90m┴────────────────────────────────────────────────────────────────────────────────────────────────────┘[39m
+2026-09-02T02:44:00.510Z zombie::native::client {
+    "metadata": {
+        "name": "bob",
+        "namespace": "zombie-9e42c1516574ea2dd3d683771cc5b240",
+        "labels": {
+            "zombie-role": "node",
+            "app": "zombienet",
+            "zombie-ns": "zombie-9e42c1516574ea2dd3d683771cc5b240",
+            "name": "zombie-9e42c1516574ea2dd3d683771cc5b240",
+            "instance": "bob"
+        }
+    },
+    "spec": {
+        "cfgPath": "data/bob/cfg",
+        "dataPath": "data/bob/data",
+        "ports": [
+            {
+                "containerPort": 9615,
+                "name": "prometheus",
+                "flag": "--prometheus-port",
+                "hostPort": 35771
+            },
+            {
+                "containerPort": 9933,
+                "name": "rpc",
+                "flag": "--rpc-port",
+                "hostPort": 9922
+            },
+            {
+                "containerPort": 9944,
+                "name": "rpc-ws",
+                "flag": "--ws-port",
+                "hostPort": 43209
+            },
+            {
+                "containerPort": 30333,
+                "name": "p2p",
+                "flag": "--port",
+                "hostPort": 36307
+            }
+        ],
+        "command": [
+            "./bin/polkadot --chain data/bob/cfg/rococo-local.json --name bob --rpc-cors all  --rpc-methods unsafe -lparachain=debug,-lxcm=trace,-lruntime=debug --no-mdns --node-key 81b637d8fcd2c6da6359e6963113a1170de795e4b725b84d1e0b4cfd9ec58ce9 --no-telemetry --prometheus-external --validator --insecure-validator-i-know-what-i-do --bootnodes /ip4/127.0.0.1/tcp/39643/ws/p2p/12D3KooWQCkBm1BYtkHpocxCwMgR8yjitEeHGx8spzcDLGt2gkBm --prometheus-port 35771 --rpc-port 9922 --listen-addr /ip4/127.0.0.1/tcp/36307/ws --base-path data/bob/data"
+        ],
+        "env": {
+            "COLORBT_SHOW_HIDDEN": "1",
+            "RUST_BACKTRACE": "FULL"
+        }
+    }
+}
+[90m┌─────────────────────────[39m[90m┬────────────────────────────────────────────────────────────────────────────────────────────────────┐[39m
+[90m│[39m [36mPod[0m                     [90m│[39m [32mbob[0m                                                                                                [90m│[39m
+[90m├─────────────────────────[39m[90m┼────────────────────────────────────────────────────────────────────────────────────────────────────┤[39m
+[90m│[39m [36mStatus[0m                  [90m│[39m [32mLaunching[0m                                                                                          [90m│[39m
+[90m├─────────────────────────[39m[90m┼────────────────────────────────────────────────────────────────────────────────────────────────────┤[39m
+[90m│[39m [36mCommand[0m                 [90m│[39m [37m./bin/polkadot --chain data/bob/cfg/rococo-local.json --name bob --rpc-cors all  --rp[39m              [90m│[39m
+[90m│[39m                         [90m│[39m [37mc-methods unsafe -lparachain=debug,-lxcm=trace,-lruntime=debug --no-mdns --node-key 81b637[39m         [90m│[39m
+[90m│[39m                         [90m│[39m [37md8fcd2c6da6359e6963113a1170de795e4b725b84d1e0b4cfd9ec58ce9 --no-telemetry --prometheus-ext[39m         [90m│[39m
+[90m│[39m                         [90m│[39m [37mernal --validator --insecure-validator-i-know-what-i-do --bootnodes /ip4/127.0.0.1/tcp/396[39m         [90m│[39m
+[90m│[39m                         [90m│[39m [37m43/ws/p2p/12D3KooWQCkBm1BYtkHpocxCwMgR8yjitEeHGx8spzcDLGt2gkBm --prometheus-port 35771 --r[39m         [90m│[39m
+[90m│[39m                         [90m│[39m [37mpc-port 9922 --listen-addr /ip4/127.0.0.1/tcp/36307/ws --base-path data/bob/data[0m                   [90m│[39m
+[90m└─────────────────────────[39m[90m┴────────────────────────────────────────────────────────────────────────────────────────────────────┘[39m
+2026-09-02T02:44:00.549Z zombie::native::client localFilePath data/rococo-local.json
+2026-09-02T02:44:00.549Z zombie::native::client remoteFilePath data/cfg/rococo-local.json
+2026-09-02T02:44:00.549Z zombie::native::client remote dir data/cfg
+2026-09-02T02:44:00.549Z zombie::native::client data dir data/data
+2026-09-02T02:44:00.549Z zombie::native::client localFilePath data/rococo-local.json
+2026-09-02T02:44:00.549Z zombie::native::client remoteFilePath data/cfg/rococo-local.json
+2026-09-02T02:44:00.549Z zombie::native::client remote dir data/cfg
+2026-09-02T02:44:00.549Z zombie::native::client data dir data/data
+2026-09-02T02:44:00.550Z zombie::native::client localFilePath data/rococo-local.json
+2026-09-02T02:44:00.550Z zombie::native::client remoteFilePath data/cfg/rococo-local.json
+2026-09-02T02:44:00.550Z zombie::native::client remote dir data/cfg
+2026-09-02T02:44:00.550Z zombie::native::client data dir data/data
+2026-09-02T02:44:00.563Z zombie::native::client localFilePath data/zombie-wrapper.sh
+2026-09-02T02:44:00.564Z zombie::native::client remoteFilePath data/cfg/zombie-wrapper.sh
+2026-09-02T02:44:00.564Z zombie::native::client remote dir data/cfg
+2026-09-02T02:44:00.564Z zombie::native::client data dir data/data
+2026-09-02T02:44:00.566Z zombie::native::client bash
+2026-09-02T02:44:00.566Z zombie::native::client [
+  './bin/polkadot --chain data/bob/cfg/rococo-local.json --name bob --rpc-cors all  --rpc-methods unsafe -lparachain=debug,-lxcm=trace,-lruntime=debug --no-mdns --node-key 81b637d8fcd2c6da6359e6963113a1170de795e4b725b84d1e0b4cfd9ec58ce9 --no-telemetry --prometheus-external --validator --insecure-validator-i-know-what-i-do --bootnodes /ip4/127.0.0.1/tcp/39643/ws/p2p/12D3KooWQCkBm1BYtkHpocxCwMgR8yjitEeHGx8spzcDLGt2gkBm --prometheus-port 35771 --rpc-port 9922 --listen-addr /ip4/127.0.0.1/tcp/36307/ws --base-path data/bob/data'
+]
+2026-09-02T02:44:00.575Z zombie::native::client 67835
+2026-09-02T02:44:00.575Z zombie::native::client localFilePath data/zombie-wrapper.sh
+2026-09-02T02:44:00.575Z zombie::native::client remoteFilePath data/cfg/zombie-wrapper.sh
+2026-09-02T02:44:00.575Z zombie::native::client remote dir data/cfg
+2026-09-02T02:44:00.575Z zombie::native::client data dir data/data
+2026-09-02T02:44:00.575Z zombie::native::client localFilePath data/zombie-wrapper.sh
+2026-09-02T02:44:00.575Z zombie::native::client remoteFilePath data/cfg/zombie-wrapper.sh
+2026-09-02T02:44:00.575Z zombie::native::client remote dir data/cfg
+2026-09-02T02:44:00.575Z zombie::native::client data dir data/data
+2026-09-02T02:44:00.577Z zombie::native::client bash
+2026-09-02T02:44:00.577Z zombie::native::client [
+  './bin/polkadot --chain data/charlie/cfg/rococo-local.json --name charlie --rpc-cors all  --rpc-methods unsafe -lparachain=debug,-lxcm=trace,-lruntime=debug --no-mdns --node-key b9dd960c1753459a78115d3cb845a57d924b6877e805b08bd01086ccdf34433c --no-telemetry --prometheus-external --validator --insecure-validator-i-know-what-i-do --bootnodes /ip4/127.0.0.1/tcp/39643/ws/p2p/12D3KooWQCkBm1BYtkHpocxCwMgR8yjitEeHGx8spzcDLGt2gkBm --prometheus-port 45753 --rpc-port 9933 --listen-addr /ip4/127.0.0.1/tcp/42139/ws --base-path data/charlie/data'
+]
+2026-09-02T02:44:00.587Z zombie::native::client 67856
+2026-09-02T02:44:00.588Z zombie::native::client bash
+2026-09-02T02:44:00.588Z zombie::native::client [
+  './bin/polkadot --chain data/dave/cfg/rococo-local.json --name dave --rpc-cors all  --rpc-methods unsafe -lparachain=debug,-lxcm=trace,-lruntime=debug --no-mdns --node-key 61ea0803f8853523b777d414ace3130cd4d3f92de2cd7ff8695c337d79c2eeee --no-telemetry --prometheus-external --validator --insecure-validator-i-know-what-i-do --bootnodes /ip4/127.0.0.1/tcp/39643/ws/p2p/12D3KooWQCkBm1BYtkHpocxCwMgR8yjitEeHGx8spzcDLGt2gkBm --prometheus-port 34835 --rpc-port 9944 --listen-addr /ip4/127.0.0.1/tcp/43047/ws --base-path data/dave/data'
+]
+2026-09-02T02:44:00.597Z zombie::native::client 67859
+2026-09-02T02:44:01.577Z zombie::native::client [ '-c', 'ps 67835' ]
+2026-09-02T02:44:01.596Z zombie::native::client [ '-c', 'ps 67856' ]
+2026-09-02T02:44:01.613Z zombie::native::client [ '-c', 'wc -l data/bob.log' ]
+2026-09-02T02:44:01.627Z zombie::native::client [ '-c', 'ps 67859' ]
+2026-09-02T02:44:01.647Z zombie::native::client [ '-c', 'wc -l data/charlie.log' ]
+2026-09-02T02:44:01.667Z zombie::native::client [ '-c', 'wc -l data/dave.log' ]
+2026-09-02T02:44:02.668Z zombie::native::client [ '-c', 'wc -l data/bob.log' ]
+2026-09-02T02:44:02.685Z zombie::native::client [ '-c', 'wc -l data/charlie.log' ]
+2026-09-02T02:44:02.724Z zombie::native::client [ '-c', 'wc -l data/dave.log' ]
+2026-09-02T02:44:03.687Z zombie::native::client [ '-c', 'wc -l data/bob.log' ]
+2026-09-02T02:44:03.818Z zombie::native::client [ '-c', 'wc -l data/charlie.log' ]
+2026-09-02T02:44:03.932Z zombie::native::client [ '-c', 'wc -l data/dave.log' ]
+2026-09-02T02:44:04.098Z zombie::native::client [ '-c', 'ps 67835' ]
+2026-09-02T02:44:04.248Z zombie::native::client [ '-c', 'ps 67856' ]
+2026-09-02T02:44:04.389Z zombie::native::client [ '-c', 'ps 67859' ]
+[90m┌────────────────────────────────────────[39m[90m┬────────────────────────────────────────────────────────────────────────────────┐[39m
+[90m│[39m [36mPod[0m                                    [90m│[39m [32mbob[0m                                                                            [90m│[39m
+[90m├────────────────────────────────────────[39m[90m┼────────────────────────────────────────────────────────────────────────────────┤[39m
+[90m│[39m [36mStatus[0m                                 [90m│[39m [32mReady[0m                                                                          [90m│[39m
+[90m└────────────────────────────────────────[39m[90m┴────────────────────────────────────────────────────────────────────────────────┘[39m
+[90m╔════════════════════[39m[90m╤════════════════════════════════════════════════════════════════════════════════════════════════════╗[39m
+[90m║[39m Pod                [90m│[39m [32mbob[0m                                                                                                [90m║[39m
+[90m╟────────────────────[39m[90m┼────────────────────────────────────────────────────────────────────────────────────────────────────╢[39m
+[90m║[39m Status             [90m│[39m [32mRunning[0m                                                                                            [90m║[39m
+[90m╟────────────────────╧────────────────────────────────────────────────────────────────────────────────────────────────────╢[39m
+[90m║[39m [35mYou can follow the logs of the node by running this command: [0m                                                           [90m║[39m
+[90m╚═════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════╝[39m
+tail -f  data/bob.log
+
+
+[90m┌────────────────────────────────────────[39m[90m┬────────────────────────────────────────────────────────────────────────────────┐[39m
+[90m│[39m [36mPod[0m                                    [90m│[39m [32mcharlie[0m                                                                        [90m│[39m
+[90m├────────────────────────────────────────[39m[90m┼────────────────────────────────────────────────────────────────────────────────┤[39m
+[90m│[39m [36mStatus[0m                                 [90m│[39m [32mReady[0m                                                                          [90m│[39m
+[90m└────────────────────────────────────────[39m[90m┴────────────────────────────────────────────────────────────────────────────────┘[39m
+[90m╔════════════════════[39m[90m╤════════════════════════════════════════════════════════════════════════════════════════════════════╗[39m
+[90m║[39m Pod                [90m│[39m [32mcharlie[0m                                                                                            [90m║[39m
+[90m╟────────────────────[39m[90m┼────────────────────────────────────────────────────────────────────────────────────────────────────╢[39m
+[90m║[39m Status             [90m│[39m [32mRunning[0m                                                                                            [90m║[39m
+[90m╟────────────────────╧────────────────────────────────────────────────────────────────────────────────────────────────────╢[39m
+[90m║[39m [35mYou can follow the logs of the node by running this command: [0m                                                           [90m║[39m
+[90m╚═════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════╝[39m
+tail -f  data/charlie.log
+
+
+[90m┌────────────────────────────────────────[39m[90m┬────────────────────────────────────────────────────────────────────────────────┐[39m
+[90m│[39m [36mPod[0m                                    [90m│[39m [32mdave[0m                                                                           [90m│[39m
+[90m├────────────────────────────────────────[39m[90m┼────────────────────────────────────────────────────────────────────────────────┤[39m
+[90m│[39m [36mStatus[0m                                 [90m│[39m [32mReady[0m                                                                          [90m│[39m
+[90m└────────────────────────────────────────[39m[90m┴────────────────────────────────────────────────────────────────────────────────┘[39m
+[90m╔════════════════════[39m[90m╤════════════════════════════════════════════════════════════════════════════════════════════════════╗[39m
+[90m║[39m Pod                [90m│[39m [32mdave[0m                                                                                               [90m║[39m
+[90m╟────────────────────[39m[90m┼────────────────────────────────────────────────────────────────────────────────────────────────────╢[39m
+[90m║[39m Status             [90m│[39m [32mRunning[0m                                                                                            [90m║[39m
+[90m╟────────────────────╧────────────────────────────────────────────────────────────────────────────────────────────────────╢[39m
+[90m║[39m [35mYou can follow the logs of the node by running this command: [0m                                                           [90m║[39m
+[90m╚═════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════╝[39m
+tail -f  data/dave.log
+
+
+[90m╔════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════╗[39m
+[90m║[39m [32mAll relay chain nodes spawned...[0m                                                                                       [90m║[39m
+[90m╚════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════╝[39m
+2026-09-02T02:44:04.631Z zombie 	 All relay chain nodes spawned...
+2026-09-02T02:44:04.631Z zombie::spawner creating node: assethub-collator-one
+2026-09-02T02:44:04.648Z zombie::cmdGenerator Added --port with value 32957
+2026-09-02T02:44:04.649Z zombie::cmdGenerator Added --rpc-port with value 43855
+2026-09-02T02:44:04.654Z zombie::cmdGenerator Added --prometheus-port with value 34877
+2026-09-02T02:44:04.671Z zombie::chain-spec data: asset-hub-rococo-local
+2026-09-02T02:44:04.717Z zombie::native::client {
+    "metadata": {
+        "name": "assethub-collator-one",
+        "namespace": "zombie-9e42c1516574ea2dd3d683771cc5b240",
+        "labels": {
+            "zombie-role": "cumulus-collator",
+            "app": "zombienet",
+            "zombie-ns": "zombie-9e42c1516574ea2dd3d683771cc5b240",
+            "name": "zombie-9e42c1516574ea2dd3d683771cc5b240",
+            "instance": "assethub-collator-one"
+        }
+    },
+    "spec": {
+        "cfgPath": "data/assethub-collator-one/cfg",
+        "dataPath": "data/assethub-collator-one/data",
+        "ports": [
+            {
+                "containerPort": 9615,
+                "name": "prometheus",
+                "flag": "--prometheus-port",
+                "hostPort": 33885
+            },
+            {
+                "containerPort": 9933,
+                "name": "rpc",
+                "flag": "--rpc-port",
+                "hostPort": 9955
+            },
+            {
+                "containerPort": 9944,
+                "name": "rpc-ws",
+                "flag": "--ws-port",
+                "hostPort": 34971
+            },
+            {
+                "containerPort": 30333,
+                "name": "p2p",
+                "flag": "--port",
+                "hostPort": 36417
+            }
+        ],
+        "command": [
+            "./bin/polkadot-parachain --name assethub-collator-one --node-key 316f13cc1e97b41bb87e9aba9e1a1b8a1a73b7d0a86142eed7254c024f1fae61 --chain data/assethub-collator-one/cfg/asset-hub-rococo-local_rococo-local-1000.json --base-path data/assethub-collator-one/data --listen-addr /ip4/127.0.0.1/tcp/36417/ws --prometheus-external --rpc-cors all  --rpc-methods unsafe --prometheus-port 33885 --rpc-port 9955 --collator -lparachain=debug -lxcm=trace -lruntime=debug -- --base-path data/assethub-collator-one/relay-data --chain data/assethub-collator-one/cfg/rococo-local.json --execution wasm --port 32957 --rpc-port 43855 --prometheus-port 34877"
+        ],
+        "env": {
+            "COLORBT_SHOW_HIDDEN": "1",
+            "RUST_BACKTRACE": "FULL"
+        }
+    }
+}
+[90m┌─────────────────────────[39m[90m┬────────────────────────────────────────────────────────────────────────────────────────────────────┐[39m
+[90m│[39m [36mPod[0m                     [90m│[39m [32massethub-collator-one[0m                                                                              [90m│[39m
+[90m├─────────────────────────[39m[90m┼────────────────────────────────────────────────────────────────────────────────────────────────────┤[39m
+[90m│[39m [36mStatus[0m                  [90m│[39m [32mLaunching[0m                                                                                          [90m│[39m
+[90m├─────────────────────────[39m[90m┼────────────────────────────────────────────────────────────────────────────────────────────────────┤[39m
+[90m│[39m [36mCommand[0m                 [90m│[39m [37m./bin/polkadot-parachain --name assethub-collator-one --node-key 316f13cc1e97b41bb87e[39m              [90m│[39m
+[90m│[39m                         [90m│[39m [37m9aba9e1a1b8a1a73b7d0a86142eed7254c024f1fae61 --chain data/assethub-collator-one/cfg/asset-[39m         [90m│[39m
+[90m│[39m                         [90m│[39m [37mhub-rococo-local_rococo-local-1000.json --base-path data/assethub-collator-one/data --list[39m         [90m│[39m
+[90m│[39m                         [90m│[39m [37men-addr /ip4/127.0.0.1/tcp/36417/ws --prometheus-external --rpc-cors all  --rpc-methods un[39m         [90m│[39m
+[90m│[39m                         [90m│[39m [37msafe --prometheus-port 33885 --rpc-port 9955 --collator -lparachain=debug -lxcm=trace -lru[39m         [90m│[39m
+[90m│[39m                         [90m│[39m [37mntime=debug -- --base-path data/assethub-collator-one/relay-data --chain data/assethub-col[39m         [90m│[39m
+[90m│[39m                         [90m│[39m [37mlator-one/cfg/rococo-local.json --execution wasm --port 32957 --rpc-port 43855 --prometheu[39m         [90m│[39m
+[90m│[39m                         [90m│[39m [37ms-port 34877[0m                                                                                       [90m│[39m
+[90m└─────────────────────────[39m[90m┴────────────────────────────────────────────────────────────────────────────────────────────────────┘[39m
+2026-09-02T02:44:04.793Z zombie::native::client localFilePath data/rococo-local.json
+2026-09-02T02:44:04.793Z zombie::native::client remoteFilePath data/cfg/rococo-local.json
+2026-09-02T02:44:04.793Z zombie::native::client remote dir data/cfg
+2026-09-02T02:44:04.793Z zombie::native::client data dir data/data
+2026-09-02T02:44:04.802Z zombie::native::client localFilePath data/zombie-wrapper.sh
+2026-09-02T02:44:04.803Z zombie::native::client remoteFilePath data/cfg/zombie-wrapper.sh
+2026-09-02T02:44:04.803Z zombie::native::client remote dir data/cfg
+2026-09-02T02:44:04.803Z zombie::native::client data dir data/data
+2026-09-02T02:44:04.803Z zombie::native::client localFilePath data/asset-hub-rococo-local-1000-rococo-local.json
+2026-09-02T02:44:04.803Z zombie::native::client remoteFilePath data/cfg/asset-hub-rococo-local_rococo-local-1000.json
+2026-09-02T02:44:04.803Z zombie::native::client remote dir data/cfg
+2026-09-02T02:44:04.803Z zombie::native::client data dir data/data
+2026-09-02T02:44:04.807Z zombie::native::client bash
+2026-09-02T02:44:04.807Z zombie::native::client [
+  './bin/polkadot-parachain --name assethub-collator-one --node-key 316f13cc1e97b41bb87e9aba9e1a1b8a1a73b7d0a86142eed7254c024f1fae61 --chain data/assethub-collator-one/cfg/asset-hub-rococo-local_rococo-local-1000.json --base-path data/assethub-collator-one/data --listen-addr /ip4/127.0.0.1/tcp/36417/ws --prometheus-external --rpc-cors all  --rpc-methods unsafe --prometheus-port 33885 --rpc-port 9955 --collator -lparachain=debug -lxcm=trace -lruntime=debug -- --base-path data/assethub-collator-one/relay-data --chain data/assethub-collator-one/cfg/rococo-local.json --execution wasm --port 32957 --rpc-port 43855 --prometheus-port 34877'
+]
+2026-09-02T02:44:04.821Z zombie::native::client 68135
+2026-09-02T02:44:05.823Z zombie::native::client [ '-c', 'ps 68135' ]
+2026-09-02T02:44:05.841Z zombie::native::client [ '-c', 'wc -l data/assethub-collator-one.log' ]
+2026-09-02T02:44:06.854Z zombie::native::client [ '-c', 'wc -l data/assethub-collator-one.log' ]
+2026-09-02T02:44:07.868Z zombie::native::client [ '-c', 'wc -l data/assethub-collator-one.log' ]
+[90m┌────────────────────────────────────────[39m[90m┬────────────────────────────────────────────────────────────────────────────────┐[39m
+[90m│[39m [36mPod[0m                                    [90m│[39m [32massethub-collator-one[0m                                                          [90m│[39m
+[90m├────────────────────────────────────────[39m[90m┼────────────────────────────────────────────────────────────────────────────────┤[39m
+[90m│[39m [36mStatus[0m                                 [90m│[39m [32mReady[0m                                                                          [90m│[39m
+[90m└────────────────────────────────────────[39m[90m┴────────────────────────────────────────────────────────────────────────────────┘[39m
+[90m╔════════════════════[39m[90m╤════════════════════════════════════════════════════════════════════════════════════════════════════╗[39m
+[90m║[39m Pod                [90m│[39m [32massethub-collator-one[0m                                                                              [90m║[39m
+[90m╟────────────────────[39m[90m┼────────────────────────────────────────────────────────────────────────────────────────────────────╢[39m
+[90m║[39m Status             [90m│[39m [32mRunning[0m                                                                                            [90m║[39m
+[90m╟────────────────────╧────────────────────────────────────────────────────────────────────────────────────────────────────╢[39m
+[90m║[39m [35mYou can follow the logs of the node by running this command: [0m                                                           [90m║[39m
+[90m╚═════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════╝[39m
+tail -f  data/assethub-collator-one.log
+
+
+[90m┌────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐[39m
+[90m│[39m [32mRococo Asset Hub Local[0m ⚙ Added Boot Nodes                                                                              [90m│[39m
+[90m├────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤[39m
+[90m│[39m /ip4/127.0.0.1/tcp/36417/ws/p2p/12D3KooWHiqZPfuPpPZ3A5bVNNC3UUzN4iKycUaXxBQQfo2cMpXA                                   [90m│[39m
+[90m└────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘[39m
+2026-09-02T02:44:09.964Z zombie::spawner creating node: xoxe-collator-one
+2026-09-02T02:44:09.964Z zombie::cmdGenerator Added --port with value 40397
+2026-09-02T02:44:09.965Z zombie::cmdGenerator Added --rpc-port with value 43837
+2026-09-02T02:44:09.965Z zombie::cmdGenerator Added --prometheus-port with value 44315
+2026-09-02T02:44:09.965Z zombie::chain-spec data: local_testnet
+2026-09-02T02:44:09.980Z zombie::native::client {
+    "metadata": {
+        "name": "xoxe-collator-one",
+        "namespace": "zombie-9e42c1516574ea2dd3d683771cc5b240",
+        "labels": {
+            "zombie-role": "cumulus-collator",
+            "app": "zombienet",
+            "zombie-ns": "zombie-9e42c1516574ea2dd3d683771cc5b240",
+            "name": "zombie-9e42c1516574ea2dd3d683771cc5b240",
+            "instance": "xoxe-collator-one"
+        }
+    },
+    "spec": {
+        "cfgPath": "data/xoxe-collator-one/cfg",
+        "dataPath": "data/xoxe-collator-one/data",
+        "ports": [
+            {
+                "containerPort": 9615,
+                "name": "prometheus",
+                "flag": "--prometheus-port",
+                "hostPort": 44145
+            },
+            {
+                "containerPort": 9933,
+                "name": "rpc",
+                "flag": "--rpc-port",
+                "hostPort": 9977
+            },
+            {
+                "containerPort": 9944,
+                "name": "rpc-ws",
+                "flag": "--ws-port",
+                "hostPort": 42185
+            },
+            {
+                "containerPort": 30333,
+                "name": "p2p",
+                "flag": "--port",
+                "hostPort": 40923
+            }
+        ],
+        "command": [
+            "../target/release/xode-node --name xoxe-collator-one --node-key d6f10dca82713e5d6e74de5df0ff8847657f3ccb8cae653da042dd3943117021 --chain data/xoxe-collator-one/cfg/rococo-local-3417.json --base-path data/xoxe-collator-one/data --listen-addr /ip4/127.0.0.1/tcp/40923/ws --prometheus-external --rpc-cors all  --rpc-methods unsafe --prometheus-port 44145 --rpc-port 9977 --collator -lparachain=debug -lxcm=trace -lruntime=debug -- --base-path data/xoxe-collator-one/relay-data --chain data/xoxe-collator-one/cfg/rococo-local.json --execution wasm --port 40397 --rpc-port 43837 --prometheus-port 44315"
+        ],
+        "env": {
+            "COLORBT_SHOW_HIDDEN": "1",
+            "RUST_BACKTRACE": "FULL"
+        }
+    }
+}
+[90m┌─────────────────────────[39m[90m┬────────────────────────────────────────────────────────────────────────────────────────────────────┐[39m
+[90m│[39m [36mPod[0m                     [90m│[39m [32mxoxe-collator-one[0m                                                                                  [90m│[39m
+[90m├─────────────────────────[39m[90m┼────────────────────────────────────────────────────────────────────────────────────────────────────┤[39m
+[90m│[39m [36mStatus[0m                  [90m│[39m [32mLaunching[0m                                                                                          [90m│[39m
+[90m├─────────────────────────[39m[90m┼────────────────────────────────────────────────────────────────────────────────────────────────────┤[39m
+[90m│[39m [36mCommand[0m                 [90m│[39m [37m../target/release/xode-node --name xoxe-collator-one --node-key d6f10dca82713e5d6e74d[39m              [90m│[39m
+[90m│[39m                         [90m│[39m [37me5df0ff8847657f3ccb8cae653da042dd3943117021 --chain data/xoxe-collator-one/cfg/rococo-loca[39m         [90m│[39m
+[90m│[39m                         [90m│[39m [37ml-3417.json --base-path data/xoxe-collator-one/data --listen-addr /ip4/127.0.0.1/tcp/40923[39m         [90m│[39m
+[90m│[39m                         [90m│[39m [37m/ws --prometheus-external --rpc-cors all  --rpc-methods unsafe --prometheus-port 44145 --r[39m         [90m│[39m
+[90m│[39m                         [90m│[39m [37mpc-port 9977 --collator -lparachain=debug -lxcm=trace -lruntime=debug -- --base-path data/[39m         [90m│[39m
+[90m│[39m                         [90m│[39m [37mxoxe-collator-one/relay-data --chain data/xoxe-collator-one/cfg/rococo-local.json --execut[39m         [90m│[39m
+[90m│[39m                         [90m│[39m [37mion wasm --port 40397 --rpc-port 43837 --prometheus-port 44315[0m                                     [90m│[39m
+[90m└─────────────────────────[39m[90m┴────────────────────────────────────────────────────────────────────────────────────────────────────┘[39m
+2026-09-02T02:44:10.032Z zombie::native::client localFilePath data/rococo-local.json
+2026-09-02T02:44:10.032Z zombie::native::client remoteFilePath data/cfg/rococo-local.json
+2026-09-02T02:44:10.032Z zombie::native::client remote dir data/cfg
+2026-09-02T02:44:10.032Z zombie::native::client data dir data/data
+2026-09-02T02:44:10.037Z zombie::native::client localFilePath data/zombie-wrapper.sh
+2026-09-02T02:44:10.038Z zombie::native::client remoteFilePath data/cfg/zombie-wrapper.sh
+2026-09-02T02:44:10.038Z zombie::native::client remote dir data/cfg
+2026-09-02T02:44:10.038Z zombie::native::client data dir data/data
+2026-09-02T02:44:10.038Z zombie::native::client localFilePath data/3417-rococo-local.json
+2026-09-02T02:44:10.038Z zombie::native::client remoteFilePath data/cfg/rococo-local-3417.json
+2026-09-02T02:44:10.038Z zombie::native::client remote dir data/cfg
+2026-09-02T02:44:10.038Z zombie::native::client data dir data/data
+2026-09-02T02:44:10.042Z zombie::native::client bash
+2026-09-02T02:44:10.042Z zombie::native::client [
+  '../target/release/xode-node --name xoxe-collator-one --node-key d6f10dca82713e5d6e74de5df0ff8847657f3ccb8cae653da042dd3943117021 --chain data/xoxe-collator-one/cfg/rococo-local-3417.json --base-path data/xoxe-collator-one/data --listen-addr /ip4/127.0.0.1/tcp/40923/ws --prometheus-external --rpc-cors all  --rpc-methods unsafe --prometheus-port 44145 --rpc-port 9977 --collator -lparachain=debug -lxcm=trace -lruntime=debug -- --base-path data/xoxe-collator-one/relay-data --chain data/xoxe-collator-one/cfg/rococo-local.json --execution wasm --port 40397 --rpc-port 43837 --prometheus-port 44315'
+]
+2026-09-02T02:44:10.051Z zombie::native::client 68753
+2026-09-02T02:44:11.053Z zombie::native::client [ '-c', 'ps 68753' ]
+2026-09-02T02:44:11.083Z zombie::native::client [ '-c', 'wc -l data/xoxe-collator-one.log' ]
+2026-09-02T02:44:12.095Z zombie::native::client [ '-c', 'wc -l data/xoxe-collator-one.log' ]
+[90m┌────────────────────────────────────────[39m[90m┬────────────────────────────────────────────────────────────────────────────────┐[39m
+[90m│[39m [36mPod[0m                                    [90m│[39m [32mxoxe-collator-one[0m                                                              [90m│[39m
+[90m├────────────────────────────────────────[39m[90m┼────────────────────────────────────────────────────────────────────────────────┤[39m
+[90m│[39m [36mStatus[0m                                 [90m│[39m [32mReady[0m                                                                          [90m│[39m
+[90m└────────────────────────────────────────[39m[90m┴────────────────────────────────────────────────────────────────────────────────┘[39m
+[90m╔════════════════════[39m[90m╤════════════════════════════════════════════════════════════════════════════════════════════════════╗[39m
+[90m║[39m Pod                [90m│[39m [32mxoxe-collator-one[0m                                                                                  [90m║[39m
+[90m╟────────────────────[39m[90m┼────────────────────────────────────────────────────────────────────────────────────────────────────╢[39m
+[90m║[39m Status             [90m│[39m [32mRunning[0m                                                                                            [90m║[39m
+[90m╟────────────────────╧────────────────────────────────────────────────────────────────────────────────────────────────────╢[39m
+[90m║[39m [35mYou can follow the logs of the node by running this command: [0m                                                           [90m║[39m
+[90m╚═════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════╝[39m
+tail -f  data/xoxe-collator-one.log
+
+
+[90m┌────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐[39m
+[90m│[39m [32mLocal Testnet[0m ⚙ Added Boot Nodes                                                                                       [90m│[39m
+[90m├────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤[39m
+[90m│[39m /ip4/127.0.0.1/tcp/40923/ws/p2p/12D3KooWEm9zxNfAubnhLbNkRHkETqPik7xihY7ab6oM3fXzVvsj                                   [90m│[39m
+[90m└────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘[39m
+2026-09-02T02:44:16.209Z zombie::helper::verifier Node verification disabled!
+2026-09-02T02:44:16.210Z zombie 	 🚀 LAUNCH COMPLETE under namespace [32mzombie-9e42c1516574ea2dd3d683771cc5b240[0m 🚀
+2026-09-02T02:44:16.210Z zombie 	 🕰 [Spawn] elapsed time: 35 secs
+[90m┌───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐[39m
+[90m│[39m[31m                                                       [32mNetwork launched 🚀🚀[0m                                                       [39m[90m│[39m
+[90m├──────────────────────────────[39m[90m┬────────────────────────────────────────────────────────────────────────────────────────────────────┤[39m
+[90m│[39m Namespace                    [90m│[39m zombie-9e42c1516574ea2dd3d683771cc5b240                                                            [90m│[39m
+[90m├──────────────────────────────[39m[90m┼────────────────────────────────────────────────────────────────────────────────────────────────────┤[39m
+[90m│[39m Provider                     [90m│[39m native                                                                                             [90m│[39m
+[90m├──────────────────────────────┴────────────────────────────────────────────────────────────────────────────────────────────────────┤[39m
+[90m│[39m                                                         Node Information                                                          [90m│[39m
+[90m├──────────────────────────────[39m[90m┬────────────────────────────────────────────────────────────────────────────────────────────────────┤[39m
+[90m│[39m [36mName[0m                         [90m│[39m [32malice[0m                                                                                              [90m│[39m
+[90m├──────────────────────────────[39m[90m┼────────────────────────────────────────────────────────────────────────────────────────────────────┤[39m
+[90m│[39m [36mDirect Link (pjs)[0m            [90m│[39m https://polkadot.js.org/apps/?rpc=ws://127.0.0.1:9911#/explorer                                    [90m│[39m
+[90m├──────────────────────────────[39m[90m┼────────────────────────────────────────────────────────────────────────────────────────────────────┤[39m
+[90m│[39m [36mDirect Link (papi)[0m           [90m│[39m https://dev.papi.how/explorer#networkId=custom&endpoint=ws://127.0.0.1:9911                        [90m│[39m
+[90m├──────────────────────────────[39m[90m┼────────────────────────────────────────────────────────────────────────────────────────────────────┤[39m
+[90m│[39m [36mPrometheus Link[0m              [90m│[39m http://127.0.0.1:45395/metrics                                                                     [90m│[39m
+[90m├──────────────────────────────[39m[90m┼────────────────────────────────────────────────────────────────────────────────────────────────────┤[39m
+[90m│[39m [36mLog Cmd[0m                      [90m│[39m tail -f  data/alice.log                                                                            [90m│[39m
+[90m├──────────────────────────────┴────────────────────────────────────────────────────────────────────────────────────────────────────┤[39m
+[90m│[39m                                                         Node Information                                                          [90m│[39m
+[90m├──────────────────────────────[39m[90m┬────────────────────────────────────────────────────────────────────────────────────────────────────┤[39m
+[90m│[39m [36mName[0m                         [90m│[39m [32mbob[0m                                                                                                [90m│[39m
+[90m├──────────────────────────────[39m[90m┼────────────────────────────────────────────────────────────────────────────────────────────────────┤[39m
+[90m│[39m [36mDirect Link (pjs)[0m            [90m│[39m https://polkadot.js.org/apps/?rpc=ws://127.0.0.1:9922#/explorer                                    [90m│[39m
+[90m├──────────────────────────────[39m[90m┼────────────────────────────────────────────────────────────────────────────────────────────────────┤[39m
+[90m│[39m [36mDirect Link (papi)[0m           [90m│[39m https://dev.papi.how/explorer#networkId=custom&endpoint=ws://127.0.0.1:9922                        [90m│[39m
+[90m├──────────────────────────────[39m[90m┼────────────────────────────────────────────────────────────────────────────────────────────────────┤[39m
+[90m│[39m [36mPrometheus Link[0m              [90m│[39m http://127.0.0.1:35771/metrics                                                                     [90m│[39m
+[90m├──────────────────────────────[39m[90m┼────────────────────────────────────────────────────────────────────────────────────────────────────┤[39m
+[90m│[39m [36mLog Cmd[0m                      [90m│[39m tail -f  data/bob.log                                                                              [90m│[39m
+[90m├──────────────────────────────┴────────────────────────────────────────────────────────────────────────────────────────────────────┤[39m
+[90m│[39m                                                         Node Information                                                          [90m│[39m
+[90m├──────────────────────────────[39m[90m┬────────────────────────────────────────────────────────────────────────────────────────────────────┤[39m
+[90m│[39m [36mName[0m                         [90m│[39m [32mcharlie[0m                                                                                            [90m│[39m
+[90m├──────────────────────────────[39m[90m┼────────────────────────────────────────────────────────────────────────────────────────────────────┤[39m
+[90m│[39m [36mDirect Link (pjs)[0m            [90m│[39m https://polkadot.js.org/apps/?rpc=ws://127.0.0.1:9933#/explorer                                    [90m│[39m
+[90m├──────────────────────────────[39m[90m┼────────────────────────────────────────────────────────────────────────────────────────────────────┤[39m
+[90m│[39m [36mDirect Link (papi)[0m           [90m│[39m https://dev.papi.how/explorer#networkId=custom&endpoint=ws://127.0.0.1:9933                        [90m│[39m
+[90m├──────────────────────────────[39m[90m┼────────────────────────────────────────────────────────────────────────────────────────────────────┤[39m
+[90m│[39m [36mPrometheus Link[0m              [90m│[39m http://127.0.0.1:45753/metrics                                                                     [90m│[39m
+[90m├──────────────────────────────[39m[90m┼────────────────────────────────────────────────────────────────────────────────────────────────────┤[39m
+[90m│[39m [36mLog Cmd[0m                      [90m│[39m tail -f  data/charlie.log                                                                          [90m│[39m
+[90m├──────────────────────────────┴────────────────────────────────────────────────────────────────────────────────────────────────────┤[39m
+[90m│[39m                                                         Node Information                                                          [90m│[39m
+[90m├──────────────────────────────[39m[90m┬────────────────────────────────────────────────────────────────────────────────────────────────────┤[39m
+[90m│[39m [36mName[0m                         [90m│[39m [32mdave[0m                                                                                               [90m│[39m
+[90m├──────────────────────────────[39m[90m┼────────────────────────────────────────────────────────────────────────────────────────────────────┤[39m
+[90m│[39m [36mDirect Link (pjs)[0m            [90m│[39m https://polkadot.js.org/apps/?rpc=ws://127.0.0.1:9944#/explorer                                    [90m│[39m
+[90m├──────────────────────────────[39m[90m┼────────────────────────────────────────────────────────────────────────────────────────────────────┤[39m
+[90m│[39m [36mDirect Link (papi)[0m           [90m│[39m https://dev.papi.how/explorer#networkId=custom&endpoint=ws://127.0.0.1:9944                        [90m│[39m
+[90m├──────────────────────────────[39m[90m┼────────────────────────────────────────────────────────────────────────────────────────────────────┤[39m
+[90m│[39m [36mPrometheus Link[0m              [90m│[39m http://127.0.0.1:34835/metrics                                                                     [90m│[39m
+[90m├──────────────────────────────[39m[90m┼────────────────────────────────────────────────────────────────────────────────────────────────────┤[39m
+[90m│[39m [36mLog Cmd[0m                      [90m│[39m tail -f  data/dave.log                                                                             [90m│[39m
+[90m├──────────────────────────────┴────────────────────────────────────────────────────────────────────────────────────────────────────┤[39m
+[90m│[39m                                                         Node Information                                                          [90m│[39m
+[90m├──────────────────────────────[39m[90m┬────────────────────────────────────────────────────────────────────────────────────────────────────┤[39m
+[90m│[39m [36mName[0m                         [90m│[39m [32massethub-collator-one[0m                                                                              [90m│[39m
+[90m├──────────────────────────────[39m[90m┼────────────────────────────────────────────────────────────────────────────────────────────────────┤[39m
+[90m│[39m [36mDirect Link (pjs)[0m            [90m│[39m https://polkadot.js.org/apps/?rpc=ws://127.0.0.1:9955#/explorer                                    [90m│[39m
+[90m├──────────────────────────────[39m[90m┼────────────────────────────────────────────────────────────────────────────────────────────────────┤[39m
+[90m│[39m [36mDirect Link (papi)[0m           [90m│[39m https://dev.papi.how/explorer#networkId=custom&endpoint=ws://127.0.0.1:9955                        [90m│[39m
+[90m├──────────────────────────────[39m[90m┼────────────────────────────────────────────────────────────────────────────────────────────────────┤[39m
+[90m│[39m [36mPrometheus Link[0m              [90m│[39m http://127.0.0.1:33885/metrics                                                                     [90m│[39m
+[90m├──────────────────────────────[39m[90m┼────────────────────────────────────────────────────────────────────────────────────────────────────┤[39m
+[90m│[39m [36mLog Cmd[0m                      [90m│[39m tail -f  data/assethub-collator-one.log                                                            [90m│[39m
+[90m├──────────────────────────────[39m[90m┼────────────────────────────────────────────────────────────────────────────────────────────────────┤[39m
+[90m│[39m [36mParachain ID[0m                 [90m│[39m 1000                                                                                               [90m│[39m
+[90m├──────────────────────────────[39m[90m┼────────────────────────────────────────────────────────────────────────────────────────────────────┤[39m
+[90m│[39m [36mChainSpec Path[0m               [90m│[39m data/asset-hub-rococo-local-1000-rococo-local.json                                                 [90m│[39m
+[90m├──────────────────────────────┴────────────────────────────────────────────────────────────────────────────────────────────────────┤[39m
+[90m│[39m                                                         Node Information                                                          [90m│[39m
+[90m├──────────────────────────────[39m[90m┬────────────────────────────────────────────────────────────────────────────────────────────────────┤[39m
+[90m│[39m [36mName[0m                         [90m│[39m [32mxoxe-collator-one[0m                                                                                  [90m│[39m
+[90m├──────────────────────────────[39m[90m┼────────────────────────────────────────────────────────────────────────────────────────────────────┤[39m
+[90m│[39m [36mDirect Link (pjs)[0m            [90m│[39m https://polkadot.js.org/apps/?rpc=ws://127.0.0.1:9977#/explorer                                    [90m│[39m
+[90m├──────────────────────────────[39m[90m┼────────────────────────────────────────────────────────────────────────────────────────────────────┤[39m
+[90m│[39m [36mDirect Link (papi)[0m           [90m│[39m https://dev.papi.how/explorer#networkId=custom&endpoint=ws://127.0.0.1:9977                        [90m│[39m
+[90m├──────────────────────────────[39m[90m┼────────────────────────────────────────────────────────────────────────────────────────────────────┤[39m
+[90m│[39m [36mPrometheus Link[0m              [90m│[39m http://127.0.0.1:44145/metrics                                                                     [90m│[39m
+[90m├──────────────────────────────[39m[90m┼────────────────────────────────────────────────────────────────────────────────────────────────────┤[39m
+[90m│[39m [36mLog Cmd[0m                      [90m│[39m tail -f  data/xoxe-collator-one.log                                                                [90m│[39m
+[90m├──────────────────────────────[39m[90m┼────────────────────────────────────────────────────────────────────────────────────────────────────┤[39m
+[90m│[39m [36mParachain ID[0m                 [90m│[39m 3417                                                                                               [90m│[39m
+[90m├──────────────────────────────[39m[90m┼────────────────────────────────────────────────────────────────────────────────────────────────────┤[39m
+[90m│[39m [36mChainSpec Path[0m               [90m│[39m data/3417-rococo-local.json                                                                        [90m│[39m
+[90m└──────────────────────────────[39m[90m┴────────────────────────────────────────────────────────────────────────────────────────────────────┘[39m

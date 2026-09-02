@@ -13,8 +13,11 @@ use crate::{
     XcmpQueue,
     PoolAssets,
 
+    // Foreign assets
+    configs::TokensAdapter,
+
     // XCM config modules
-    configs::xcm_config::asset_matcher::{NativeAssetMatcher, MultiAssetMatcher},
+    configs::xcm_config::asset_matcher::{NativeAssetMatcher, MultiAssetMatcher, ForeignAssetMatcher},
     configs::xcm_config::trusted_reserve_assets::TrustedReserveAssets,
     configs::xcm_config::origin_filters::ParentOrTrustedSiblings,
     configs::xcm_config::weight_trader::DynamicWeightTrader,
@@ -108,11 +111,37 @@ pub type PalletAssetsTransactor = FungiblesAdapter<
     CheckingAccount,
 >;
 
-/// The overall asset transactor for XCM, combining local native asset handling
-/// and pallet-assets handling for other fungible assets.
+/// The asset transactor for handling foreign assets registered in `AssetRegistry`.
+///
+/// Unlike `PalletAssetsTransactor`, this isn't limited to a fixed set of chains/asset ids baked
+/// into the runtime - it recognizes whatever `Location`s governance has registered via
+/// `AssetRegistry` at runtime, backed by `Tokens` (through `TokensAdapter`).
+pub type ForeignAssetsTransactor = FungiblesAdapter<
+    // The asset handler used to inspect, mint, and burn tokens (orml-tokens, via the adapter).
+    TokensAdapter,
+    // Only matches `Location`s that have been registered in `AssetRegistry`.
+    ForeignAssetMatcher,
+    // Resolves `Location` origin accounts into native `AccountId`s.
+    LocationToAccountId,
+    // Native account identifier type used by the runtime.
+    AccountId,
+    // Handles minting tokens when assets arrive via XCM.
+    // NonZeroIssuance ensures no minting of zero-valued assets.
+    LocalMint<parachains_common::impls::NonZeroIssuance<AccountId, TokensAdapter>>,
+    // The system account used for internal checks during XCM asset handling.
+    CheckingAccount,
+>;
+
+/// The overall asset transactor for XCM, combining local native asset handling,
+/// pallet-assets handling, and registry-driven foreign asset handling for other fungible assets.
+///
+/// Tried in order: `ForeignAssetsTransactor` only ever sees assets the first two declined, so a
+/// `Location` registered in `AssetRegistry` that happens to also match one of
+/// `PalletAssetsTransactor`'s hardcoded schemes is still handled by `Assets`, unambiguously.
 pub type AssetTransactor = (
     LocalAssetTransactor,
-    PalletAssetsTransactor
+    PalletAssetsTransactor,
+    ForeignAssetsTransactor,
 );
 
 /// This is the type we use to convert an (incoming) XCM origin into a local Origin instance,
