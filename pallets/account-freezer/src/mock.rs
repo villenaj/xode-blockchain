@@ -47,10 +47,7 @@ impl pallet_balances::Config for Test {
 	type RuntimeFreezeReason = RuntimeFreezeReason;
 	type FreezeIdentifier = RuntimeFreezeReason;
 	type MaxFreezes = VariantCountOf<RuntimeFreezeReason>;
-}
-
-parameter_types! {
-	pub const MaxFreezeDuration: Option<u64> = Some(100_800); // ~1 week at 6s blocks
+	type DoneSlashHandler = ();
 }
 
 impl crate::Config for Test {
@@ -58,7 +55,6 @@ impl crate::Config for Test {
 	type Currency = Balances;
 	type RuntimeFreezeReason = RuntimeFreezeReason;
 	type FreezeOrigin = frame_system::EnsureRoot<AccountId>;
-	type MaxFreezeDuration = MaxFreezeDuration;
 	type WeightInfo = ();
 }
 

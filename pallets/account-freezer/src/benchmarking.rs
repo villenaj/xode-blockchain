@@ -10,26 +10,16 @@ mod benchmarks {
 	#[benchmark]
 	fn freeze_account() {
 		let who: T::AccountId = whitelisted_caller();
-		let duration = T::MaxFreezeDuration::get().unwrap_or_else(|| 1_000u32.into());
-		#[extrinsic_call]
-		_(RawOrigin::Root, who, duration);
-	}
-
-	#[benchmark]
-	fn thaw_account() {
-		let who: T::AccountId = whitelisted_caller();
-		let duration = T::MaxFreezeDuration::get().unwrap_or_else(|| 1_000u32.into());
-		AccountFreezer::<T>::freeze_account(RawOrigin::Root.into(), who.clone(), duration).unwrap();
 		#[extrinsic_call]
 		_(RawOrigin::Root, who);
 	}
 
 	#[benchmark]
-	fn thaw_expired() {
+	fn thaw_account() {
 		let who: T::AccountId = whitelisted_caller();
-		AccountFreezer::<T>::freeze_account(RawOrigin::Root.into(), who.clone(), 0u32.into()).unwrap();
+		AccountFreezer::<T>::freeze_account(RawOrigin::Root.into(), who.clone()).unwrap();
 		#[extrinsic_call]
-		_(RawOrigin::Signed(who.clone()), who);
+		_(RawOrigin::Root, who);
 	}
 
 	impl_benchmark_test_suite!(AccountFreezer, crate::mock::new_test_ext(), crate::mock::Test);

@@ -23,7 +23,6 @@ pub mod pallet {
 	use frame_support::traits::fungible::{InspectFreeze, MutateFreeze};
 	use frame_system::pallet_prelude::*;
 	use sp_runtime::traits::Bounded;
-	use sp_runtime::Saturating;
 
 	pub type BalanceOf<T> = <<T as Config>::Currency as frame_support::traits::fungible::Inspect<
 		<T as frame_system::Config>::AccountId,
@@ -40,13 +39,8 @@ pub mod pallet {
 		/// Overarching freeze reason; must be constructible from this pallet's own reason.
 		type RuntimeFreezeReason: From<FreezeReason>;
 
-		/// Origin allowed to freeze an account, and to force-thaw before expiry.
+		/// Origin allowed to freeze and thaw accounts.
 		type FreezeOrigin: EnsureOrigin<Self::RuntimeOrigin>;
-
-		/// Optional upper bound on the duration (in blocks) accepted by `freeze_account`.
-		/// `None` means no maximum — any duration is accepted.
-		#[pallet::constant]
-		type MaxFreezeDuration: Get<Option<BlockNumberFor<Self>>>;
 
 		type WeightInfo: WeightInfo;
 	}
@@ -60,18 +54,17 @@ pub mod pallet {
 		AccountFrozen,
 	}
 
-	/// Frozen accounts, mapped to the block at which they become eligible for thaw.
+	/// Accounts currently frozen by this pallet.
 	#[pallet::storage]
-	#[pallet::getter(fn frozen_until)]
-	pub type FrozenUntil<T: Config> =
-		StorageMap<_, Blake2_128Concat, T::AccountId, BlockNumberFor<T>, OptionQuery>;
+	pub type Frozen<T: Config> =
+		StorageMap<_, Blake2_128Concat, T::AccountId, (), OptionQuery>;
 
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event<T: Config> {
-		/// An account was frozen until the given block.
-		AccountFrozen { who: T::AccountId, until: BlockNumberFor<T> },
-		/// An account was thawed, either early by `FreezeOrigin` or after expiry.
+		/// An account was frozen indefinitely.
+		AccountFrozen { who: T::AccountId },
+		/// An account was thawed by `FreezeOrigin`.
 		AccountThawed { who: T::AccountId },
 	}
 
@@ -81,60 +74,32 @@ pub mod pallet {
 		AlreadyFrozen,
 		/// The account has no active freeze.
 		NotFrozen,
-		/// `thaw_expired` was called before the freeze's expiry block.
-		NotYetExpired,
-		/// Requested duration exceeds `MaxFreezeDuration`.
-		DurationTooLong,
 	}
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
-		/// Freeze `who`'s entire transferable native balance for `duration` blocks.
+		/// Freeze `who`'s entire transferable native balance indefinitely.
 		#[pallet::call_index(0)]
 		#[pallet::weight(<T as Config>::WeightInfo::freeze_account())]
-		pub fn freeze_account(
-			origin: OriginFor<T>,
-			who: T::AccountId,
-			duration: BlockNumberFor<T>,
-		) -> DispatchResult {
+		pub fn freeze_account(origin: OriginFor<T>, who: T::AccountId) -> DispatchResult {
 			T::FreezeOrigin::ensure_origin(origin)?;
-			ensure!(!FrozenUntil::<T>::contains_key(&who), Error::<T>::AlreadyFrozen);
-			if let Some(max) = T::MaxFreezeDuration::get() {
-				ensure!(duration <= max, Error::<T>::DurationTooLong);
-			}
+			ensure!(!Frozen::<T>::contains_key(&who), Error::<T>::AlreadyFrozen);
 
-			let until = frame_system::Pallet::<T>::block_number().saturating_add(duration);
 			T::Currency::set_freeze(&FreezeReason::AccountFrozen.into(), &who, BalanceOf::<T>::max_value())?;
-			FrozenUntil::<T>::insert(&who, until);
+			Frozen::<T>::insert(&who, ());
 
-			Self::deposit_event(Event::AccountFrozen { who, until });
+			Self::deposit_event(Event::AccountFrozen { who });
 			Ok(())
 		}
 
-		/// Force-thaw an account before expiry. Restricted to `FreezeOrigin`.
+		/// Thaw a previously frozen account. Restricted to `FreezeOrigin`.
 		#[pallet::call_index(1)]
 		#[pallet::weight(<T as Config>::WeightInfo::thaw_account())]
 		pub fn thaw_account(origin: OriginFor<T>, who: T::AccountId) -> DispatchResult {
 			T::FreezeOrigin::ensure_origin(origin)?;
-			Self::do_thaw(who)
-		}
-
-		/// Permissionless cleanup: lift a freeze once its expiry block has passed.
-		#[pallet::call_index(2)]
-		#[pallet::weight(<T as Config>::WeightInfo::thaw_expired())]
-		pub fn thaw_expired(origin: OriginFor<T>, who: T::AccountId) -> DispatchResult {
-			ensure_signed(origin)?;
-			let until = FrozenUntil::<T>::get(&who).ok_or(Error::<T>::NotFrozen)?;
-			ensure!(frame_system::Pallet::<T>::block_number() >= until, Error::<T>::NotYetExpired);
-			Self::do_thaw(who)
-		}
-	}
-
-	impl<T: Config> Pallet<T> {
-		fn do_thaw(who: T::AccountId) -> DispatchResult {
-			ensure!(FrozenUntil::<T>::contains_key(&who), Error::<T>::NotFrozen);
+			ensure!(Frozen::<T>::contains_key(&who), Error::<T>::NotFrozen);
 			T::Currency::thaw(&FreezeReason::AccountFrozen.into(), &who)?;
-			FrozenUntil::<T>::remove(&who);
+			Frozen::<T>::remove(&who);
 			Self::deposit_event(Event::AccountThawed { who });
 			Ok(())
 		}
