@@ -49,7 +49,7 @@ use frame_support::{
 };
 use frame_system::{
 	limits::{BlockLength, BlockWeights},
-	EnsureSigned, EnsureSignedBy, pallet_prelude::BlockNumberFor,
+	EnsureRoot, EnsureSigned, EnsureSignedBy, pallet_prelude::BlockNumberFor,
 	EnsureWithSuccess,
 };
 use pallet_xcm::{EnsureXcm, IsVoiceOfBody};
