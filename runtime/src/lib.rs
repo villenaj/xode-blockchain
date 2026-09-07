@@ -426,6 +426,9 @@ mod runtime {
 	#[runtime::pallet_index(70)]
 	pub type XodeStaking = pallet_xode_staking;
 
+	#[runtime::pallet_index(71)]
+	pub type AccountFreezer = pallet_xode_account_freezer;
+
 	// Utility
 	#[runtime::pallet_index(80)]	
 	pub type Utility = pallet_utility;

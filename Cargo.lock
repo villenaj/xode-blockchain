@@ -9268,6 +9268,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "pallet-xode-account-freezer"
+version = "0.1.0"
+dependencies = [
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "pallet-balances",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+]
+
+[[package]]
 name = "pallet-xode-staking"
 version = "0.1.1"
 dependencies = [
@@ -18336,6 +18351,7 @@ dependencies = [
  "pallet-whitelist",
  "pallet-xcm",
  "pallet-xcm-precompiles",
+ "pallet-xode-account-freezer",
  "pallet-xode-staking",
  "parachains-common",
  "parity-scale-codec",
