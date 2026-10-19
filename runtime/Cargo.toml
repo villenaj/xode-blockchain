@@ -112,6 +112,9 @@ orml-tokens = { workspace = true }
 orml-traits = { workspace = true }
 orml-asset-registry = { workspace = true }
 
+[dev-dependencies]
+sp-io = { workspace = true, default-features = true }
+
 [features]
 default = ["std"]
 std = [

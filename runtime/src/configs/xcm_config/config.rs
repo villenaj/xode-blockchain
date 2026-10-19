@@ -18,6 +18,7 @@ use crate::{
 
     // XCM config modules
     configs::xcm_config::asset_matcher::{NativeAssetMatcher, MultiAssetMatcher, ForeignAssetMatcher},
+    configs::xcm_config::asset_exchanger::GatedAssetExchanger,
     configs::xcm_config::trusted_reserve_assets::TrustedReserveAssets,
     configs::xcm_config::origin_filters::ParentOrTrustedSiblings,
     configs::xcm_config::weight_trader::DynamicWeightTrader,
@@ -213,7 +214,7 @@ impl xcm_executor::Config for XcmConfig {
     type PalletInstancesInfo = AllPalletsWithSystem;
     type MaxAssetsIntoHolding = MaxAssetsIntoHolding;
     type AssetLocker = ();
-    type AssetExchanger = ();
+    type AssetExchanger = GatedAssetExchanger;
     type FeeManager = ();
     type MessageExporter = ();
     type UniversalAliases = Nothing;

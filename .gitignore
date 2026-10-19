@@ -1,6 +1,12 @@
 target/
 zombienet/bin/
+zombienet/bin2/
 zombienet/data/
+zombienet/zombienet.log
+zombienet/eth-rpc-xode.log
+zombienet/eth-rpc-assethub.log
+zombienet/anvil.log
+zombienet/anvil-state.json
 zombienet/collator/
 client/node_modules/
 client/.env

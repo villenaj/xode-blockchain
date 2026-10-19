@@ -1,4 +1,4 @@
-use crate::{Balance, configs::{ForeignAssetId, TokensAdapter}};
+use crate::{Balance, configs::{AssetKind, ForeignAssetId, TokensAdapter}};
 use xcm::latest::prelude::*;
 use xcm_executor::traits::{Error as MatchError, MatchesFungible, MatchesFungibles};
 
@@ -127,5 +127,24 @@ impl MatchesFungibles<ForeignAssetId, Balance> for ForeignAssetMatcher {
             }
             _ => Err(MatchError::AssetNotHandled),
         }
+    }
+}
+
+/// Resolves a `Location` to the [`AssetKind`] `pallet_asset_conversion`/`pallet_asset_waiting` key
+/// it identifies, by trying `NativeAssetMatcher`, then `MultiAssetMatcher`, then
+/// `ForeignAssetMatcher` in turn - the same three matchers `AssetTransactor` already tries for
+/// XCM asset transacting, just unified into the single `AssetKind` key the AMM uses. Used by
+/// `GatedAssetExchanger` to back `ExchangeAsset` (a swap "along the way" of an XCM message).
+pub struct AssetKindMatcher;
+
+impl MatchesFungibles<AssetKind, Balance> for AssetKindMatcher {
+    fn matches_fungibles(asset: &Asset) -> Result<(AssetKind, Balance), MatchError> {
+        if let Some(amount) = NativeAssetMatcher::matches_fungible(asset) {
+            return Ok((AssetKind::Native, amount));
+        }
+        if let Ok((id, amount)) = MultiAssetMatcher::matches_fungibles(asset) {
+            return Ok((AssetKind::Local(id), amount));
+        }
+        ForeignAssetMatcher::matches_fungibles(asset).map(|(id, amount)| (AssetKind::Foreign(id), amount))
     }
 }

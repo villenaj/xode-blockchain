@@ -43,6 +43,12 @@ impl WeightToFeeAssetParams for UsdtWeightToFeeRate {
 	const FEE_PER_SECOND: u128 = 10_000; // 0.01 USDT
 }
 
+/// Weight-to-fee parameters for bridged Ether (Snowbridge) with a rate of 0.01 ETH per second.
+pub struct EthWeightToFeeRate;
+impl WeightToFeeAssetParams for EthWeightToFeeRate {
+	const FEE_PER_SECOND: u128 = 10_000_000_000_000_000; // 0.01 ETH (18 decimals)
+}
+
 /// A generic weight-to-fee converter that calculates the fee based on the weight
 /// of the XCM execution and the fee rate defined by the implementer of
 /// `WeightToFeeAssetParams`.
@@ -66,7 +72,8 @@ impl<T: WeightToFeeAssetParams> WeightToFeeT for WeightToFeeConverter<T> {
 
 /// Dynamic weight trader that calculates fees based on the asset used for payment.
 /// 
-/// It supports XON (native token), DOT (relay chain token), and USDT (AssetHub token).
+/// It supports XON (native token), DOT (relay chain token), USDT (AssetHub token), and bridged
+/// Ether (Snowbridge).
 /// The fee is calculated based on the weight of the XCM execution and a fixed fee
 /// of 0.01 units of the respective asset.
 /// 
@@ -113,7 +120,18 @@ impl WeightTrader for DynamicWeightTrader {
 					Junction::GeneralIndex(1984)
 				]
 			) => handle_payment(usdt_location.clone(), payment, WeightToFeeConverter::<UsdtWeightToFeeRate>::weight_to_fee(&weight)),
-			
+
+			// Bridged Ether (Snowbridge): identified purely by GlobalConsensus(Ethereum), any
+			// chain ID - so this recognizes both a real Ethereum mainnet bridge and a Sepolia/
+			// local-devnet bridge the same way; only the network differs, not the asset.
+			AssetId(eth_location @ Location {
+				parents: 2,
+				interior: Junctions::X1(junctions),
+			}) if matches!(
+				junctions.as_ref(),
+				[Junction::GlobalConsensus(NetworkId::Ethereum { .. })]
+			) => handle_payment(eth_location.clone(), payment, WeightToFeeConverter::<EthWeightToFeeRate>::weight_to_fee(&weight)),
+
 			_ => {
 				log::trace!(target: "xcm::weight_trader", "DynamicWeightTrader::buy_weight - Unsupported asset: {:?}", asset_id);
 				Err(XcmError::AssetNotFound)
@@ -163,6 +181,15 @@ fn handle_payment(
 				Junction::GeneralIndex(1984)
 			]
 		) => 10_000,
+
+		// Bridged Ether (Snowbridge): 18 decimals -> 0.01 ETH = 10_000_000_000_000_000
+		Location {
+			parents: 2,
+			interior: Junctions::X1(junctions),
+		} if matches!(
+			junctions.as_ref(),
+			[Junction::GlobalConsensus(NetworkId::Ethereum { .. })]
+		) => 10_000_000_000_000_000,
 
 		_ => {
 			log::error!(
