@@ -18,6 +18,7 @@ use crate::{
     configs::xcm_config::trusted_reserve_assets::TrustedReserveAssets,
     configs::xcm_config::origin_filters::ParentOrTrustedSiblings,
     configs::xcm_config::weight_trader::DynamicWeightTrader,
+    configs::xcm_config::asset_exchanger::XodeAssetExchanger,
 };
 use frame_support::{
     parameter_types,
@@ -184,7 +185,8 @@ impl xcm_executor::Config for XcmConfig {
     type PalletInstancesInfo = AllPalletsWithSystem;
     type MaxAssetsIntoHolding = MaxAssetsIntoHolding;
     type AssetLocker = ();
-    type AssetExchanger = ();
+    // Lets XCM `ExchangeAsset` swap on the DEX, subject to `TxPause` and `AssetWaiting`.
+    type AssetExchanger = XodeAssetExchanger;
     type FeeManager = ();
     type MessageExporter = ();
     type UniversalAliases = Nothing;

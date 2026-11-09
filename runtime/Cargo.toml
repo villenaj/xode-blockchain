@@ -111,6 +111,9 @@ pallet-asset-conversion-tx-payment = { workspace = true }
 pallet-assets-freezer = { workspace = true }
 pallet-xcm-precompiles = { workspace = true }
 
+[dev-dependencies]
+sp-io = { workspace = true, features = ["std"] }
+
 [features]
 default = ["std"]
 std = [

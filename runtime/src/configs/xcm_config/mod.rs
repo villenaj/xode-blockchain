@@ -1,4 +1,5 @@
 mod asset_matcher;
+pub mod asset_exchanger;
 mod trusted_reserve_assets;
 mod origin_filters;
 pub mod weight_trader;
